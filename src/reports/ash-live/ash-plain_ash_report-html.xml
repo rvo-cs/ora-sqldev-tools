@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="1047bd7a-0168-1000-8001-c0a8010c00de" type="" style="Script" enable="true">
+	<name><![CDATA[ASH - Plain ASH report - HTML]]></name>
+	<description><![CDATA[Generates, and spools to an output file, an ASH report in HTML format.]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[whenever sqlerror exit failure rollback
+whenever oserror exit failure rollback
+
+set long 5000000
+set linesize 10000
+set trimspool on
+set heading off
+set feedback off
+set pagesize 0
+
+set termout off
+set verify off
+
+define spool_directory
+define spool_filename
+
+column spool_directory noprint new_value spool_directory
+column spool_filename noprint new_value spool_filename
+
+select NVL(:SPOOL_DIR, :DEFAULT_SPOOL_DIR) as spool_directory 
+from dual;
+
+select NVL(:SPOOL_FILENAME, 
+        'ASH' 
+            || case when :DBID is not null then '-' || to_char(:DBID) end
+            || '-' || sys_context('USERENV', 'INSTANCE_NAME')
+            || case when :SERVICE_HASH is not null then '-' || to_char(:SERVICE_HASH) end
+            || '-' || to_char(
+                        case when :DATETIME_FROM is not null 
+                            then to_date(:DATETIME_FROM, 'YYYY-MM-DD HH24:MI:SS')
+                        else 
+                            (case when :DATETIME_TO is null then sysdate
+                                    else to_date(:DATETIME_TO, 'YYYY-MM-DD HH24:MI:SS') end)
+                            - nvl(:TIME_SPAN_MINS, nvl(:DEFAULT_TIME_SPAN_MINS, 5)) / 1440
+                        end, 'YYYYMMDD_HH24MISS')
+            || '-' || to_char(
+                        case when :DATETIME_TO is not null 
+                            then to_date(:DATETIME_TO, 'YYYY-MM-DD HH24:MI:SS') 
+                        else
+                            case when :DATETIME_FROM is null then sysdate
+                                else to_date(:DATETIME_FROM, 'YYYY-MM-DD HH24:MI:SS')
+                                    + nvl(:TIME_SPAN_MINS, nvl(:DEFAULT_TIME_SPAN_MINS, 5)) / 1440 
+                            end
+                        end, 'YYYYMMDD_HH24MISS')
+            || case when :SQL_ID is not null then '-' || :SQL_ID end
+            || case when :WAIT_CLASS_LIKE is not null then '-' || :WAIT_CLASS_LIKE end
+            || case when :MODULE_LIKE is not null then '-' || :MODULE_LIKE end
+            || case when :ACTION_LIKE is not null then '-' || :ACTION_LIKE end
+            || case when :CLIENT_ID_LIKE is not null then '-' || :CLIENT_ID_LIKE end
+            || case when :PLSQL_ENTRY is not null then '-' || :PLSQL_ENTRY end
+            || '.html')
+    as spool_filename 
+from dual;
+
+cd "&spool_directory"
+
+spool "&spool_filename"
+
+select * from table(
+    dbms_workload_repository.ash_report_html(
+        l_dbid => nvl(:DBID, (select dbid from v$database)),
+        l_inst_num => nvl(:INST_ID, sys_context('USERENV', 'INSTANCE')),
+        l_btime => case when :DATETIME_FROM is not null 
+                        then to_date(:DATETIME_FROM, 'YYYY-MM-DD HH24:MI:SS')
+                    else 
+                        (case when :DATETIME_TO is null then sysdate
+                                else to_date(:DATETIME_TO, 'YYYY-MM-DD HH24:MI:SS') end)
+                        - nvl(:TIME_SPAN_MINS, nvl(:DEFAULT_TIME_SPAN_MINS, 5)) / 1440
+                    end,
+        l_etime => case when :DATETIME_TO is not null 
+                        then to_date(:DATETIME_TO, 'YYYY-MM-DD HH24:MI:SS') 
+                    else
+                        case when :DATETIME_FROM is null then sysdate
+                            else to_date(:DATETIME_FROM, 'YYYY-MM-DD HH24:MI:SS')
+                                + nvl(:TIME_SPAN_MINS, nvl(:DEFAULT_TIME_SPAN_MINS, 5)) / 1440 
+                        end
+                    end,
+        l_slot_width => to_number(:SLOT_WIDTH_SECS),
+        l_sid => to_number(:SESSION_ID),
+        l_sql_id => :SQL_ID,
+        l_wait_class => :WAIT_CLASS_LIKE,
+        l_service_hash => :SERVICE_HASH,
+        l_module => :MODULE_LIKE,
+        l_action => :ACTION_LIKE,
+        l_client_id => :CLIENT_ID_LIKE,
+        l_plsql_entry => :PLSQL_ENTRY,
+        l_data_src => 0
+    ))
+;
+
+spool off
+
+set termout on
+
+select 'ASH report completed: ' 
+    || '&spool_filename' 
+    || chr(10) || '(directory: &spool_directory)'
+from dual;]]></sql>
+		<binds>
+			<bind id="SPOOL_DIR">
+				<prompt><![CDATA[Spool directory?]]></prompt>
+				<tooltip><![CDATA[Spool directory (NULL: use default)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DEFAULT_SPOOL_DIR">
+				<prompt><![CDATA[Default spool directory?]]></prompt>
+				<tooltip><![CDATA[Default spool directory]]></tooltip>
+				<value><![CDATA[E:\Home\romain\SQL_Developer\output\ash_html]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SPOOL_FILENAME">
+				<prompt><![CDATA[Spool filename?]]></prompt>
+				<tooltip><![CDATA[Spool filename (NULL: use default naming conventions)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DBID">
+				<prompt><![CDATA[DB Id?]]></prompt>
+				<tooltip><![CDATA[DB Id (NULL = use current DB Id)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SERVICE_HASH">
+				<prompt><![CDATA[Service hash?]]></prompt>
+				<tooltip><![CDATA[Service hash (NULL = all services)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DATETIME_FROM">
+				<prompt><![CDATA[From datetime?]]></prompt>
+				<tooltip><![CDATA[From datetime (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+				<value><![CDATA[2019-01-02 21:34:00]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DATETIME_TO">
+				<prompt><![CDATA[To datetime?]]></prompt>
+				<tooltip><![CDATA[To datetime (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+				<value><![CDATA[2019-01-02 21:50:00]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="TIME_SPAN_MINS">
+				<prompt><![CDATA[Time span (mins)?]]></prompt>
+				<tooltip><![CDATA[Time span (mins)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DEFAULT_TIME_SPAN_MINS">
+				<prompt><![CDATA[Default time span (mins)?]]></prompt>
+				<tooltip><![CDATA[Default time span]]></tooltip>
+				<value><![CDATA[10]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SQL_ID">
+				<prompt><![CDATA[Target SQL id?]]></prompt>
+				<tooltip><![CDATA[Target SQL id (NULL = none)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="WAIT_CLASS_LIKE">
+				<prompt><![CDATA[Target wait class?]]></prompt>
+				<tooltip><![CDATA[Target wait class (lLIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="MODULE_LIKE">
+				<prompt><![CDATA[Target module name?]]></prompt>
+				<tooltip><![CDATA[Target module name (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="ACTION_LIKE">
+				<prompt><![CDATA[Target action name?]]></prompt>
+				<tooltip><![CDATA[Target action name (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="CLIENT_ID_LIKE">
+				<prompt><![CDATA[Target client identifier?]]></prompt>
+				<tooltip><![CDATA[Target client identifier (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="PLSQL_ENTRY">
+				<prompt><![CDATA[PLSQL entry name?]]></prompt>
+				<tooltip><![CDATA[PLSQL entry name]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="INST_ID">
+				<prompt><![CDATA[Instance number?]]></prompt>
+				<tooltip><![CDATA[Instance number (NULL = use current instance)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SLOT_WIDTH_SECS">
+				<prompt><![CDATA[Time slot width?]]></prompt>
+				<tooltip><![CDATA[Time slot width for the 'Top Activity' section (seconds; NULL = divide into 10 slots)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SESSION_ID">
+				<prompt><![CDATA[Target session id?]]></prompt>
+				<tooltip><![CDATA[SESSION_ID]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				
+					
+				
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																															</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+</display>
+</displays>

@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="4aa0808b-0169-1000-8001-c0a8010c0219" type="" style="Chart" enable="true">
+	<name><![CDATA[AWR - SGA stats graph]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+		<Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+		<Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+		<Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+		<Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+		<LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+		<PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-65536,-13421569,-16738048,-39424,-16737793]]></PLOT_SERIES_OPTIONS_COLOR>
+		<LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+		<XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+		<DATA_MAP_COLUMNS><![CDATA[\,"START_TIME","START_TIME","START_TIME","START_TIME",,]]></DATA_MAP_COLUMNS>
+		<Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+		<XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+		<Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+		<TYPE><![CDATA[LINE_VERT_ABS_2Y]]></TYPE>
+		<GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+		<PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+		<FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+		<DATA_MAP_COLNAMES><![CDATA[\,"BUFFER_CACHE_MB","DBID","END_TIME","FREE_MEM_MB","INSTANCE_NUMBER","PRTMV_MB","SNAP_ID","SQLA_MB","START_TIME"]]></DATA_MAP_COLNAMES>
+		<DATA_MAP_SERIES><![CDATA[\,Buffer cache,Free memory,SQLA,PRTMV,,]]></DATA_MAP_SERIES>
+		<Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+		<DATA_MAP_COUNT><![CDATA[6]]></DATA_MAP_COUNT>
+		<STYLE><![CDATA[Default]]></STYLE>
+		<TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+		<Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+		<PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THINNER,THINNER,THINNER,THINNER,THINNER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+		<Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+		<DATA_MAP_VALUES><![CDATA[\,"BUFFER_CACHE_MB","FREE_MEM_MB","SQLA_MB","PRTMV_MB",,]]></DATA_MAP_VALUES>
+		<Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+		<PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+		<Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+		<SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with 
+time_upper_bound as (
+    select 
+        date '1970-01-01' 
+                + round((nvl(to_date(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate)
+                                - date '1970-01-01') * 24 / :SNAP_INTERVAL_HR) 
+                        / 24 * :SNAP_INTERVAL_HR
+            as end_time
+    from dual
+),
+time_span as (
+    select
+        date '1970-01-01' 
+                + round((nvl(to_date(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), end_time - 14)
+                                - date '1970-01-01') * 24 / :SNAP_INTERVAL_HR) 
+                        / 24 * :SNAP_INTERVAL_HR
+            as start_time,
+        end_time
+    from
+        time_upper_bound
+),
+gen_50 as (
+    select /*+ materialize no_eliminate_oby */
+        level - 1 as n 
+    from dual 
+    connect by level <= 50
+    order by 1
+),
+gen_125k as (
+    select /*+ leading(a b c) use_nl(b) use_nl(c) */
+        2500 * a.n + 50 * b.n + c.n as n
+    from 
+        gen_50 a, gen_50 b, gen_50 c
+),
+time_slots as (
+    select
+        a.end_time - (b.n + 1) * :SNAP_INTERVAL_HR / 24 as start_time,
+        a.end_time - b.n * :SNAP_INTERVAL_HR / 24 as end_time
+    from
+        time_span a,
+        gen_125k b
+    where
+        a.end_time - (b.n + 1) * :SNAP_INTERVAL_HR / 24 >= a.start_time
+),
+dba_hist_snapshot_rnd as (
+    select 
+        dbid,
+        instance_number,
+        snap_id,
+        date '1970-01-01' 
+                + round((cast(begin_interval_time as date) - date '1970-01-01') * 24 / :SNAP_INTERVAL_HR) 
+                        / 24 * :SNAP_INTERVAL_HR as begin_interval_time,
+        date '1970-01-01' 
+                + round((cast(end_interval_time as date) - date '1970-01-01') * 24 / :SNAP_INTERVAL_HR)
+                        / 24 * :SNAP_INTERVAL_HR as end_interval_time
+    from 
+        dba_hist_snapshot
+    where
+        dbid = nvl(:DBID, (select dbid from v$database))
+        and instance_number = nvl(:INSTANCE_NUMBER, sys_context('USERENV', 'INSTANCE'))
+),
+time_slots_wt_snap_id as (
+    select
+        nvl(:DBID, (select dbid from v$database)) as dbid,
+        nvl(:INSTANCE_NUMBER, sys_context('USERENV', 'INSTANCE')) as instance_number,
+        a.start_time,
+        a.end_time,
+        b.snap_id
+    from
+        time_slots a
+        left outer join
+        dba_hist_snapshot_rnd b on
+            (a.start_time = b.begin_interval_time
+            or a.end_time = b.end_interval_time)
+),
+time_slots_wt_sgastat as (
+    select
+        a.dbid,
+        a.instance_number,
+        a.start_time,
+        a.end_time,
+        a.snap_id,
+        b.name,
+        nvl(b.pool, '[NULL]') as pool,
+        b.bytes
+    from
+        time_slots_wt_snap_id a,
+        (select 
+            dbid, instance_number, snap_id,
+            name, pool, bytes 
+        from 
+            dba_hist_sgastat 
+        where
+            (pool, name) in (('shared pool', 'PRTMV'), ('shared pool', 'SQLA'),
+                    ('shared pool', 'free memory'))
+            or (pool is null and name = 'buffer_cache')
+        ) b
+    where
+        a.dbid = b.dbid (+)
+        and a.instance_number = b.instance_number (+)
+        and a.snap_id = b.snap_id (+)
+)
+select
+    dbid, instance_number, snap_id, start_time, end_time, 
+    round(prtmv_mb) as prtmv_mb,
+    round(sqla_mb) as sqla_mb,
+    round(free_mem_mb) as free_mem_mb,
+    round(buffer_cache_mb) as buffer_cache_mb
+from 
+    time_slots_wt_sgastat
+pivot
+    (sum(bytes / power(2, 20)) for (pool, name) in (
+        ('shared pool', 'PRTMV') as prtmv_mb,
+        ('shared pool', 'SQLA') as sqla_mb,
+        ('shared pool', 'free memory') as free_mem_mb,
+        ('[NULL]', 'buffer_cache') as buffer_cache_mb
+    ))
+order by
+    start_time asc]]></sql>
+		<binds>
+			<bind id="TO_TIME">
+				<prompt><![CDATA[TO_TIME]]></prompt>
+				<tooltip><![CDATA[TO_TIME]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SNAP_INTERVAL_HR">
+				<prompt><![CDATA[SNAP_INTERVAL_HR]]></prompt>
+				<tooltip><![CDATA[SNAP_INTERVAL_HR]]></tooltip>
+				<value><![CDATA[1]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="FROM_TIME">
+				<prompt><![CDATA[FROM_TIME]]></prompt>
+				<tooltip><![CDATA[FROM_TIME]]></tooltip>
+				<value><![CDATA[2019-03-02 00:00:00]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DBID">
+				<prompt><![CDATA[DBID]]></prompt>
+				<tooltip><![CDATA[DBID]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="INSTANCE_NUMBER">
+				<prompt><![CDATA[INSTANCE_NUMBER]]></prompt>
+				<tooltip><![CDATA[INSTANCE_NUMBER]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				null				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+</display>
+</displays>

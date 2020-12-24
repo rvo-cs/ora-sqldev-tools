@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="d958355d-016f-1000-8002-c0a8010c12cc" type="" style="Table" enable="true">
+	<name><![CDATA[All System Parameters]]></name>
+	<description><![CDATA[Al Systeml Parameters]]></description>
+	<tooltip><![CDATA[All System Parameters]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+    <queries>
+    <query minversion="12.1">
+		<sql><![CDATA[select b.name as pdb
+     , a.name as "Paramater_Name" 
+     , decode(a.type, 1, 'Boolean'
+             , 2, 'String'
+             , 3, 'Integer'
+             , 4, 'Parameter file'
+             , 5, 'Reserved'
+             , 6, 'Big Integer'
+             ) as type
+     , a.value                as "Value"
+     , a.isdefault            as "Default?" 
+     , a.isses_modifiable     as "Session Modifiable?"
+     , a.issys_modifiable     as "System Modifiable?"
+     , a.description          as "Description"
+     , a.inst_id
+  from gv$system_parameter a
+     , gv$pdbs b
+ where ((:INSTANCE_NUM is null and a.inst_id = sys_context('USERENV', 'INSTANCE'))
+        or :INSTANCE_NUM = '*'
+        or (regexp_like(:INSTANCE_NUM, '^\s*[0-9]+\s*$') and to_number(:INSTANCE_NUM) = a.inst_id)
+       )
+   and (:PARAMETER_NAME is null or instr(lower(a.name), lower(:PARAMETER_NAME)) > 0)
+   and substr(a.name, 1, 2) <> '__'
+   and a.inst_id = b.inst_id (+)
+   and a.con_id = b.con_id (+)
+   and (:PDB_NAME is null 
+        or :PDB_NAME = '*' 
+        or ( :PDB_NAME = '.' 
+             and ( (sys_context('USERENV', 'CON_NAME') = 'CDB$ROOT' and b.name is null)
+                   or sys_context('USERENV', 'CON_NAME') = b.name )
+           )
+        or (upper(:PDB_NAME) = 'CDB$ROOT' and b.name is null)
+        or upper(:PDB_NAME) = upper(b.name)
+       )
+ order by a.name
+        , b.name nulls first 
+        , a.inst_id]]></sql>
+        <binds>   
+			<bind id="PDB_NAME">
+				<prompt><![CDATA[PDB Name?]]></prompt>
+				<tooltip><![CDATA[PDB name, or "CDB$ROOT"; NULL / * = all, "." = current container]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="INSTANCE_NUM">
+				<prompt><![CDATA[Instance number?]]></prompt>
+				<tooltip><![CDATA[Instance number; NULL = current, * = all]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="PARAMETER_NAME">
+				<prompt><![CDATA[Parameter Name?]]></prompt>
+				<tooltip><![CDATA[Parameter name (or part thereof), case insensitive]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+        </binds>
+    </query>
+	<query>
+		<sql><![CDATA[select name as "Paramater_Name" 
+     , decode(type, 1, 'Boolean'
+             , 2, 'String'
+             , 3, 'Integer'
+             , 4, 'Parameter file'
+             , 5, 'Reserved'
+             , 6, 'Big Integer'
+             ) as type
+     , value                as "Value"
+     , isdefault            as "Default?" 
+     , isses_modifiable     as "Session Modifiable?"
+     , issys_modifiable     as "System Modifiable?"
+     , description          as "Description"
+     , inst_id
+  from gv$system_parameter
+ where ((:INSTANCE_NUM is null and inst_id = sys_context('USERENV', 'INSTANCE'))
+        or :INSTANCE_NUM = '*'
+        or (regexp_like(:INSTANCE_NUM, '^\s*[0-9]+\s*$') and to_number(:INSTANCE_NUM) = inst_id))
+   and (:PARAMETER_NAME is null or instr(lower(name), lower(:PARAMETER_NAME)) > 0)
+   and substr(name, 1, 2) <> '__'
+ order by name
+        , inst_id]]></sql>
+		<binds>
+			<bind id="INSTANCE_NUM">
+				<prompt><![CDATA[Instance number?]]></prompt>
+				<tooltip><![CDATA[Instance number; NULL = current, * = all]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="PARAMETER_NAME">
+				<prompt><![CDATA[Parameter Name?]]></prompt>
+				<tooltip><![CDATA[Parameter name (or part thereof), case insensitive]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+</display>
+</displays>

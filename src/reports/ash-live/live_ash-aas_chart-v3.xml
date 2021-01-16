@@ -436,9 +436,10 @@ top3_user as (
             event,
             user_id
         ) a,
-        all_users b        
+        cdb_users b        
     where
         a.rn_user_id <= 3
+        and a.con_id = b.con_id (+)
         and a.user_id = b.user_id (+)
     group by
         a.con_id,
@@ -1392,9 +1393,10 @@ top3_user as (
             event,
             user_id
         ) a,
-        all_users b        
+        cdb_users b        
     where
         a.rn_user_id <= 3
+        and a.con_id = b.con_id (+)
         and a.user_id = b.user_id (+)
     group by
         a.con_id,
@@ -2348,9 +2350,10 @@ top3_user as (
             event,
             user_id
         ) a,
-        all_users b        
+        cdb_users b        
     where
         a.rn_user_id <= 3
+        and a.con_id = b.con_id (+)
         and a.user_id = b.user_id (+)
     group by
         a.con_id,
@@ -3763,6 +3766,7 @@ ash_sessions as (
         session_type,
         session_id,
         session_serial#,
+        min(con_id) as con_id,
         max(user_id) as user_id,
         max(machine) as machine,
         max(program) as program,
@@ -3826,7 +3830,7 @@ from
     top3_blksess_status k,
     top3_blocking_session n,
     top3_container p,
-    all_users u
+    cdb_users u
 where
     a.rn <= greatest(nvl(:TOP_SESSION_MAX_ROWS, 20), 10)
     --
@@ -3874,6 +3878,7 @@ where
     and a.session_id        = p.session_id (+)
     and a.session_serial#   = p.session_serial# (+)
     --
+    and a.con_id = u.con_id (+)
     and a.user_id = u.user_id (+)
 order by
     session_type desc,
@@ -5145,6 +5150,7 @@ ash_sessions as (
         session_type,
         session_id,
         session_serial#,
+        min(con_id) as con_id,
         max(user_id) as user_id,
         max(machine) as machine,
         max(program) as program,
@@ -5208,7 +5214,7 @@ from
     top3_blksess_status k,
     top3_blocking_session n,
     top3_container p,
-    all_users u
+    cdb_users u
 where
     a.rn <= greatest(nvl(:TOP_SESSION_MAX_ROWS, 20), 10)
     --
@@ -5256,6 +5262,7 @@ where
     and a.session_id        = p.session_id (+)
     and a.session_serial#   = p.session_serial# (+)
     --
+    and a.con_id = u.con_id (+)
     and a.user_id = u.user_id (+)
 order by
     session_type desc,
@@ -6120,9 +6127,10 @@ top3_user as (
             sql_id,
             user_id
         ) a,
-        all_users b
+        cdb_users b
     where
         a.rn_user_id <= 3
+        and a.con_id = b.con_id (+)
         and a.user_id = b.user_id (+)
     group by
         a.con_id,
@@ -6249,13 +6257,15 @@ select
     nvl(e.command_name, 
             (select e2.command_name from v$sqlcommand e2, dba_hist_sqltext h 
               where h.con_id = a.con_id and h.sql_id = a.sql_id
-                and e2.con_id = 0 and e2.command_type = h.command_type)
+                and e2.con_id = 0 and e2.command_type = h.command_type
+                and rownum = 1)
        ) as sql_command,
     a.cnt_exec_id as "# EXEC ID",
     b.top3_wait_classes as "TOP-3 WAIT CLASS",
     c.top3_events as "TOP-3 WAIT EVENT",
     nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h 
-                          where h.con_id = a.con_id and h.sql_id = a.sql_id)
+                          where h.con_id = a.con_id and h.sql_id = a.sql_id
+                            and rownum = 1)
        ) as sql_text,
     u.top3_username as "TOP-3 USER",
     case when f.top3_module <> '(null) [100%]' then f.top3_module end as "TOP-3 MODULE",
@@ -6853,9 +6863,10 @@ top3_user as (
             sql_id,
             user_id
         ) a,
-        all_users b
+        cdb_users b
     where
         a.rn_user_id <= 3
+        and a.con_id = b.con_id (+)
         and a.user_id = b.user_id (+)
     group by
         a.con_id,
@@ -6982,13 +6993,15 @@ select
     nvl(e.command_name, 
             (select e2.command_name from v$sqlcommand e2, dba_hist_sqltext h 
               where h.con_id = a.con_id and h.sql_id = a.sql_id
-                and e2.con_id = 0 and e2.command_type = h.command_type)
+                and e2.con_id = 0 and e2.command_type = h.command_type
+                and rownum = 1)
        ) as sql_command,
     a.cnt_exec_id as "# EXEC ID",
     b.top3_wait_classes as "TOP-3 WAIT CLASS",
     c.top3_events as "TOP-3 WAIT EVENT",
     nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h 
-                          where h.con_id = a.con_id and h.sql_id = a.sql_id)
+                          where h.con_id = a.con_id and h.sql_id = a.sql_id
+                            and rownum = 1)
        ) as sql_text,
     u.top3_username as "TOP-3 USER",
     case when f.top3_module <> '(null) [100%]' then f.top3_module end as "TOP-3 MODULE",

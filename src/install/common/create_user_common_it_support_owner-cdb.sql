@@ -38,6 +38,15 @@ create or replace public synonym c##pkg_pub_partition_helper for pkg_pub_partiti
 
 /*----------------------------------------------------------------------------*/
 
+@@pkg_pub_call_stack_helper.pks
+@@pkg_pub_call_stack_helper.pkb
+
+grant execute on pkg_pub_call_stack_helper to public;
+
+create or replace public synonym c##pkg_pub_call_stack_helper for pkg_pub_call_stack_helper;
+
+/*----------------------------------------------------------------------------*/
+
 @@cr_function_clob_as_varchar2list.sql
 
 grant execute on clob_as_varchar2list to public;

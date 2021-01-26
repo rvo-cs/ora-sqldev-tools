@@ -24,10 +24,12 @@ create or replace package body pkg_pub_call_stack_helper as
     ) 
     return varchar2;
     
+   $IF not dbms_db_version.ver_le_11_2 $THEN
     procedure process_uqn(
         p_uqn in out nocopy utl_call_stack.unit_qualified_name,
         p_quote_names in boolean
     );
+   $END
 
     function call_stack(
         p_skip_frames     in number   default 1,
@@ -44,13 +46,19 @@ create or replace package body pkg_pub_call_stack_helper as
 
         /* Call stack data */
         l_depth       pls_integer;
-        l_uqn         utl_call_stack.unit_qualified_name;
         l_tab_line    t_tab_line;
-        l_tab_owner   t_tab_owner;
         l_tab_spnam   t_tab_subprgnam;
-
+       $IF dbms_db_version.ver_le_11_2 $THEN
+        l_call_stack  varchar2(2000 byte);
+        l_frame       varchar2(2000 byte);
+        l_pos0        number;
+        l_pos         number;
+       $ELSE
+        l_tab_owner   t_tab_owner;
+        l_uqn         utl_call_stack.unit_qualified_name;
         /* Widths of columns */
         l_colsz_owner pls_integer := 0;
+       $END
         l_colsz_line  pls_integer := 0;
         l_colsz_uqn   pls_integer := 0;
     begin
@@ -58,6 +66,64 @@ create or replace package body pkg_pub_call_stack_helper as
         l_use_pprint := (upper(p_pretty_print) = 'Y');
         l_show_start_end := (upper(p_show_start_end) = 'Y');
         
+        if l_show_start_end then
+            l_out := gc_stack_start_marker;
+        end if;
+        
+       $IF dbms_db_version.ver_le_11_2 $THEN
+        /*
+            Oracle <= 11.2: UTL_CALL_STACK is not yet available,
+            so we must use DBMS_UTILITY.FORMAT_CALL_STACK  :-(
+         */
+        l_call_stack := substrb(dbms_utility.format_call_stack, 1, 2000);
+        l_call_stack := rtrim(l_call_stack, gc_newln) || gc_newln;
+        l_depth := -3;  /* Skip the first 3 lines in the readout (= header) */
+        l_pos0 := 1;
+        l_pos := instr(l_call_stack, gc_newln, l_pos0);
+        while l_pos > 0 loop
+            l_depth := l_depth + 1;
+            if l_depth > p_skip_frames then
+                l_frame := substr(l_call_stack, l_pos0, l_pos - l_pos0);
+                l_tab_line(l_depth) := to_number(
+                        regexp_substr(l_frame, '^\s*\w+\s+(\d+)', 1, 1, null, 1));
+                l_tab_spnam(l_depth) := 
+                        regexp_substr(l_frame, '^\s*\w+\s+\d+\s+(.*)', 1, 1, null, 1);
+                if l_use_pprint then
+                    /* Adjust column lengths */
+                    l_colsz_line  := greatest(l_colsz_line, 
+                            ceil(log(10, nvl(greatest(l_tab_line(l_depth), 1), 0.1))));
+                    l_colsz_uqn   := greatest(l_colsz_uqn, length(l_tab_spnam(l_depth)));
+                end if;
+            end if;
+            l_pos0 := l_pos + 1;
+            l_pos := instr(l_call_stack, gc_newln, l_pos0);
+        end loop;
+        if l_use_pprint then
+            /* Pretty-print the stack */
+            l_colsz_line  := greatest(l_colsz_line, gc_colsz_min_line);
+            l_colsz_uqn   := greatest(l_colsz_uqn, gc_colsz_min_uqn);
+            l_out := case when l_out is not null then l_out || gc_newln end
+                    || rpad('Line', l_colsz_line)
+                    || gc_colsep || 'Object Name' || gc_newln
+                    || rpad('-', l_colsz_line, '-')
+                    || gc_colsep || rpad('-', l_colsz_uqn, '-');
+            
+            for i in 1 + p_skip_frames .. l_depth loop
+                l_out := l_out || gc_newln
+                        || lpad(nvl(to_char(l_tab_line(i)), ' '), l_colsz_line)
+                        || gc_colsep || l_tab_spnam(i);
+            end loop;
+        else
+            /* No pretty-printing */
+            for i in 1 + p_skip_frames .. l_depth loop
+                l_out := case when l_out is not null then l_out || gc_newln end
+                        || l_tab_spnam(i)
+                        || case when l_tab_line(i) is not null 
+                                then ', at line ' || l_tab_line(i) end;
+            end loop;
+        end if;
+
+       $ELSE
         /* Read stack data */
         l_depth := utl_call_stack.dynamic_depth;
         for i in 1 + p_skip_frames .. l_depth loop
@@ -80,10 +146,6 @@ create or replace package body pkg_pub_call_stack_helper as
             end if;
         end loop;
 
-        if l_show_start_end then
-            l_out := gc_stack_start_marker;
-        end if;
-        
         if l_use_pprint then
             /* Pretty-print the stack */
             l_colsz_owner := greatest(l_colsz_owner, gc_colsz_min_owner);
@@ -93,7 +155,7 @@ create or replace package body pkg_pub_call_stack_helper as
             l_out := case when l_out is not null then l_out || gc_newln end
                     || rpad('Line', l_colsz_line)
                     || gc_colsep || rpad('Owner', l_colsz_owner)
-                    || gc_colsep || rpad('Name', l_colsz_uqn) || gc_newln
+                    || gc_colsep || 'Object Name' || gc_newln
                     || rpad('-', l_colsz_line, '-')
                     || gc_colsep || rpad('-', l_colsz_owner, '-')
                     || gc_colsep || rpad('-', l_colsz_uqn, '-');
@@ -102,7 +164,7 @@ create or replace package body pkg_pub_call_stack_helper as
                 l_out := l_out || gc_newln
                         || lpad(nvl(to_char(l_tab_line(i)), ' '), l_colsz_line)
                         || gc_colsep || rpad(nvl(l_tab_owner(i), ' '), l_colsz_owner)
-                        || gc_colsep || rpad(l_tab_spnam(i), l_colsz_uqn);
+                        || gc_colsep || l_tab_spnam(i);
             end loop;
         else
             /* No pretty-printing */
@@ -115,14 +177,15 @@ create or replace package body pkg_pub_call_stack_helper as
                                 then ', at line ' || l_tab_line(i) end;
             end loop;
         end if;
+       $END
 
         if l_show_start_end then
             l_out := l_out || gc_newln || gc_stack_end_marker;
         end if;
-
+        
         return l_out;
     end call_stack;
-    
+
     procedure print_call_stack(
         p_skip_frames     in number   default 1,
         p_pretty_print    in varchar2 default 'Y',
@@ -163,6 +226,7 @@ create or replace package body pkg_pub_call_stack_helper as
         return l_base32;
     end;
     
+   $IF not dbms_db_version.ver_le_11_2 $THEN
     procedure process_uqn(
         p_uqn in out nocopy utl_call_stack.unit_qualified_name,
         p_quote_names in boolean
@@ -180,6 +244,7 @@ create or replace package body pkg_pub_call_stack_helper as
             end loop;
         end if;
     end process_uqn;
+   $END
 
 end pkg_pub_call_stack_helper;
 /

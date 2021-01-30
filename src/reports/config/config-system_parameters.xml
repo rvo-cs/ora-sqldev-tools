@@ -22,6 +22,7 @@
      , a.value                as "Value"
      , a.isdefault            as "Default?" 
      , a.isses_modifiable     as "Session Modifiable?"
+     , a.ispdb_modifiable     as "PDB Modifiable?"
      , a.issys_modifiable     as "System Modifiable?"
      , a.description          as "Description"
      , a.inst_id

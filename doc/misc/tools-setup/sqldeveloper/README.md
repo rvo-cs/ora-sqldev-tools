@@ -41,8 +41,7 @@ logon to the database. There's no equivalent for SQL\*Plus `/nolog` mode.
 
 (\*) Path: Preferences dialog, "Database" root node, "Filename for connection startup script" input field.
 
-This is distinct from the "Select default path to look for scripts" field on the "Database" -> "Worksheet" node,
-and not to be confused with it.
+This is distinct from (and not to be confused with) the "Select default path to look for scripts" field on the "Database" -> "Worksheet" node.
 
 ### Preferences
 

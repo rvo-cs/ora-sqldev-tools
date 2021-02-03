@@ -5,8 +5,8 @@
 This is a personal reminder about how to configure and get started using 
 the following tools:
 * [SQL*Plus](sqlplus)
-* SQLcl
-* SQL Developer
+* [SQLcl](sqlcl)
+* [SQL Developer](sqldeveloper)
 
 Remark: I use the above clients on Windows workstations mostly, hence some
 Windows-isms are to be expected here.

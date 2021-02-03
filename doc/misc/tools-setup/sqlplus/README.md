@@ -16,6 +16,8 @@ I've added a shortcut to the Windows Start menu, with the following target:
 
 (Where `E:\...\sqlplus` is the directory where I place SQL*Plus-related startup files.)
 
+### The `env_instcli.cmd` file
+
 The `env_instcli.cmd` file sets the following environment variables:
 
 | Variable       | Description                            |
@@ -26,7 +28,7 @@ The `env_instcli.cmd` file sets the following environment variables:
 | SQLPATH        | Default directory for searching for SQL files; the `login.sql` is expected to be there. |
 | NLS_LANG       | E.g. `AMERICAN_AMERICA.WE0MSWIN1252` |
 
-I set `SQLPATH` to `E:\...\sqlplus`, so `env_instcli.cmd` and `login.sql` (+ related files) will be in the same location.
+I set `SQLPATH` to `E:\...\sqlplus`, so `env_instcli.cmd` and `login.sql` (+ related files) are in the same location.
 
 
 

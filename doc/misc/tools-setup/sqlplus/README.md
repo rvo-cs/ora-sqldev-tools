@@ -1,14 +1,14 @@
 ## Contents
 
 * **[env_instcli.cmd](env_instcli.cmd)**: command file for setting up env. variables, in order to
-  run SQL*Plus in a CMD.exe terminal\
+  run SQL\*Plus in a CMD.exe terminal\
   (Remark: using Oracle Instant Client)
   
 * **[login-scripts](login-scripts)/**  contains the `login.sql` file and related files.
 
 ## Setup
 
-### Shortcut to cmd.exe with env. variables for SQL*Plus
+### Shortcut to cmd.exe with env. variables for SQL\*Plus
 
 I've added a shortcut to the Windows Start menu, with the following target:
 

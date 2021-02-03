@@ -14,7 +14,10 @@ I've added a shortcut to the Windows Start menu, with the following target:
 
 `C:\Windows\System32\cmd.exe /k "E:\...\sqlplus\env_instcli.cmd"`
 
-(Where `E:\...\sqlplus` is the directory where I place SQL*Plus-related startup files.)
+(where `E:\...\sqlplus` is the directory where I place SQL*Plus-related startup files.)
+
+When that shortcut is used, a new cmd.exe process is started with the `env_instcli.cmd` file
+run as an initialization script. 
 
 ### The `env_instcli.cmd` file
 

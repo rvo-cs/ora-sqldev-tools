@@ -21,7 +21,7 @@ I've added a shortcut to the Windows Start menu, with the following target:
 The `env_instcli.cmd` file sets the following environment variables:
 
 | Variable       | Description                            |
-|----------------|----------------------------------------|
+|:---------------|:---------------------------------------|
 | ORACLE_HOME    | Directory where Oracle Instant Client is installed (not actually required but convenient). |
 | PATH           | Added `%ORACLE_HOME%` in front of the PATH |
 | TNS_ADMIN      | Directory which contains `tnsnames.ora`, `sqlnet.ora` |

@@ -2,7 +2,7 @@
 
 ### Reminder about getting started using tools
 
-This acts as a personal reminder about how to configure and get started using 
+This is a _personal_ reminder about how to configure and get started using 
 the following tools:
 * [SQL*Plus](sqlplus)
 * SQLcl

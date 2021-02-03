@@ -11,6 +11,6 @@ the following tools:
 Remark: I use the above clients on Windows workstations mostly, hence some
 Windows-isms are to be expected here.
 
-All the above 3 are Oracle-supplied tools. SQL*Plus and SQLcl are remarkedly (and purposely)
+All the above are Oracle-supplied tools. SQL*Plus and SQLcl are remarkedly (and purposely)
 similar. SQL Developer differs in that, being a GUI tool, in principle many things
 are configured in Preferences dialogs, rather than in a login.sql script. 

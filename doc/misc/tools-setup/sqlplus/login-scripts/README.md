@@ -20,7 +20,7 @@ The `login.sql`file reads as follows:
 ```
 That file is called:
 * When SQL\*Plus in started in `/nolog` mode; in that case, the `_USER` substitution variable is void (`""`)
-* For each database logon; the `_USER` substitution variable set to the database username.
+* For each database logon; the `_USER` substitution variable is set to the database username.
 
 So the trick is to:
 1. Put all common SQL\*Plus init. commands (e.g. `SET ARRAYSIZE 200`) which do not actually require being 

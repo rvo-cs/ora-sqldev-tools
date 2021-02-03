@@ -43,6 +43,8 @@ logon to the database. There's no equivalent for SQL\*Plus `/nolog` mode.
 
 This is distinct from (and not to be confused with) the "Select default path to look for scripts" field on the "Database" -> "Worksheet" node.
 
+My startup script is named [sqldev-login.sql](login-scripts/sqldev-login.sql); more details in the [login-scripts](login-scripts) directory.
+
 ### Preferences
 
 \[To be continued...\]

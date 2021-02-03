@@ -1,10 +1,10 @@
 ## Contents
 
-* **env_instcli.cmd**: command file for setting up env. variables, in order to
+* **[env_instcli.cmd](env_instcli.cmd)**: command file for setting up env. variables, in order to
   run SQL*Plus in a CMD.exe terminal\
   (Remark: using Oracle Instant Client)
   
-* **login-scripts/**  contains the `login.sql` file and related files.
+* **[login-scripts](login-scripts)/**  contains the `login.sql` file and related files.
 
 ## Setup
 

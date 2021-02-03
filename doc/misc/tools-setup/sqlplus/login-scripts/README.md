@@ -29,4 +29,4 @@ So the trick is to:
    into the `login-&_USER.sql` file (downside: 1 file per username). Common session-initializing statements
    (e.g. `alter session set NLS_DATE_FORMAT...` go into the
    [`login-common-sessioninit.sql`](login-common-sessioninit.sql) file, which is meant to be called
-   from the `login-&_USER.sql` file.
+   from each `login-&_USER.sql` file.

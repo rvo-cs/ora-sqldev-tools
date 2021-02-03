@@ -36,6 +36,14 @@ Should that be necessary, the properties for sizing the JVM heap space are in th
 
 ### Startup script
 
+The SQL startup script is configured in the Preferences dialog (\*); that script is always executed after 
+logon to the database. There's no equivalent for SQL\*Plus `/nolog` mode. 
+
+(\*) Path: Preferences dialog, "Database" root node, "Filename for connection startup script" input field.
+
+This is distinct from the "Select default path to look for script" field on the "Database" -> "Worksheet" node,
+and not to be confused with it.
+
 ### Preferences
 
 \[To be continued...\]

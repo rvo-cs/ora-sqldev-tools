@@ -54,7 +54,7 @@ for `alter session` statements mostly, as needed. At of now this is useful for P
 compilation settings (which seem to be treated oddly in SQL Developer's preferences).
 
 The last sub-file, `login-&_USER..sql`, is the user-specific part: the `_USER` substitution
-variable is set automatically to the username (downside: 1 file per username—regardless
+variable is set automatically to the username (downside: 1 file per username, regardless
 of target DB). An error message appears in the "Messages - Log" panel if that file is not
 found, e.g.:
 ```

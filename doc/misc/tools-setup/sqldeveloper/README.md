@@ -36,15 +36,26 @@ Should that be necessary, the properties for sizing the JVM heap space are in th
 
 ### Startup script
 
-The SQL startup script is configured in the Preferences dialog (\*); that script is always executed after 
-logon to the database. There's no equivalent for SQL\*Plus `/nolog` mode. 
+The SQL startup script is configured in the Preferences dialog (\*); that script is always
+executed after logon to the database. There's no equivalent for SQL\*Plus `/nolog` mode. 
 
-(\*) Path: Preferences dialog, "Database" root node, "Filename for connection startup script" input field.
+(\*) Path: Preferences dialog, "Database" root node, "Filename for connection startup script"
+input field.
 
-This is distinct from (and not to be confused with) the "Select default path to look for scripts" field on the "Database" -> "Worksheet" node.
+This is distinct from (and not to be confused with) the "Select default path to look for
+scripts" field on the "Database" -> "Worksheet" node.
 
-My startup script is named [sqldev-login.sql](login-scripts/sqldev-login.sql); more details in the [login-scripts](login-scripts) directory.
+My startup script is named [sqldev-login.sql](login-scripts/sqldev-login.sql); more details
+in the [login-scripts](login-scripts) directory.
+
+### Features
+
+Disabling unused features saves some RAM, and makes starting SQL Developer a little bit faster.
+SQL Developer will warn if an attempt is made to disable a feature which is depended upon by
+an as-yet enabled feature, and offer to either keep or disable both features together.
 
 ### Preferences
 
-\[To be continued...\]
+SQL Developer has plenty of Prefernces settings! Which makes it hard to write a comprehensive
+checklist in the first place. Following is an attempt to list the most important settings 
+(in my opinion).

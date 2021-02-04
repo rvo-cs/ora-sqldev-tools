@@ -51,8 +51,7 @@ of command aliases should go.
 
 The second sub-file, [`login-common-sessioninit.sql`](login-common-sessioninit.sql), is
 for `alter session` statements mostly, as needed. At of now this is useful for PL/SQL
-compilation settings (which seem to be treated a little bit oddly in SQL Developer's 
-preferences).
+compilation settings (which seem to be treated oddly in SQL Developer's preferences).
 
 The last sub-file, `login-&_USER..sql`, is the user-specific part: the `_USER` substitution
 variable is set automatically to the username (downside: 1 file per username—regardless

@@ -27,14 +27,12 @@ dialog, and second in the configured startup script itself.
 
 ## The `_sqldev-login.sql` file ("main" startup script)
 
-The `_sqldev-login.sql` script calls sub-files, just as the `login.sql` files for 
-[SQL\*Plus](../../sqlplus/login-scripts#the-loginsqlfile)
-and [SQLcl](../../sqlplus/login-scripts#the-loginsqlfile).
-This is more to keeps things analoguous than by necessity: SQL Developer does not have
-a `/nolog` mode, so the startup script is always executed after logon to the database,
-and furthermore, only after other initializations performed by SQL Developer
-according to Preferences have taken place.
+The `_sqldev-login.sql` script calls sub-files, by analogy to the `login.sql` files of 
+SQL\*Plus and SQLcl. This is more to keep things similar than by necessity: SQL Developer
+does not have a `/nolog` mode, so the startup script is always executed after logon to
+the database; and additionally, only after other initializations performed by SQL Developer
+to honor Preferences have taken place.
 
-(Remark: this makes it possible to override some Preferences' settings, which should
-be avoided, if possible.) 
+(Remark: this makes it possible to override Preferences' settings from the startup
+script, which should be avoided, if possible.) 
 

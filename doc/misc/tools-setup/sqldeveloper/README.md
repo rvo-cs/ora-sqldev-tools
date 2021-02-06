@@ -4,7 +4,7 @@
 
 Path: `sqldeveloper\bin\sqldeveloper.conf` (from the top product directory) 
 
-There's little to add, except maybe the following:
+Add the following if necessary:
 
 ```
 # Force English language in UI

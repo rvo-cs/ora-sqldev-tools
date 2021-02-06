@@ -42,10 +42,11 @@ This script:
 The following environment variables are by the `sql.cmd` script. In principle, these
 variables are used by SQLcl in exactly the same way as they would in SQL\*Plus.
 
-* `TNS_ADMIN=E:\Home\...\SQL_Developer\tns_admin`: location of the `tnsnames.ora`
-   and `sqlnet.ora` files (for convenience, same files as SQL Developer)
-* `SQLPATH=E:\Home\...\oracle\sqlcl`: search path for scripts started using the
-   `@file` syntax—also the directory where the [`login.sql`](login-scripts/login.sql)
-   file is expected to be.
+| Variable | Value | Description |
+|:---------|:------|:------------|
+| TNS_ADMIN | `E:\Home\...\SQL_Developer\tns_admin` | Location of the `tnsnames.ora`, `sqlnet.ora` files |
+| SQLPATH  | `E:\Home\...\oracle\sqlcl` | Search path for scripts started using the `@file` syntax—also the directory where the [`login.sql`](login-scripts/login.sql) file will be put |
+
+For convenience, I use the same TNS_ADMIN directory for SQLcl and SQL Developer.
 
 

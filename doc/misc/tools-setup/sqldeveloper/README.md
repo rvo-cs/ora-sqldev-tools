@@ -217,7 +217,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |Max Rows to print in a script | 100000 | 100 k | 
 |Max lines in Script output | 10000000 | 10 M |
 |SQL History limit | 500 | |
-|Select default path to look for scripts | `E:\Home\...\SQL_Developer\scripts` | Default path for scripts called using the `@file` syntax |
+|Select default path to look for scripts | `E:\Home\...\SQL_Developer\scripts` | Search path for scripts called using the `@file` syntax |
 |Save Bind variables to disk on exit | Checked | |
 |Show query results in new tab | Unchecked | |
 |Re-initialize on script exit command | Checked | |

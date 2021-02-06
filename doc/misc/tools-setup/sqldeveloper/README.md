@@ -74,7 +74,7 @@ checklist! Following is an attempt to list the most important settings (in my op
 | Parameter | Value | Remarks |
 |:-------|:-------|:------|
 | Look and Feel | Windows | |
-| Line Terminator | Line Feed (Unix/Mac) | Unsure about how new files are created |
+| Line Terminator | Line Feed (Unix/Mac) | This seems to work for existing files; unsure about newly created files |
 | Encoding | ISO-8859-1 | |
 
 #### Code Editor

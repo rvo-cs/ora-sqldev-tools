@@ -60,6 +60,16 @@ SQL Developer has plenty of Preferences settings! Which makes it hard to write a
 checklist in the first place. Following is an attempt to list the most important settings 
 (in my opinion).
 
+* [Environment](environment)
+* [Code Editor](code-editor)
+* [Code Editor: Format](code-editor-format)
+* [Code Editor: Advanced Format](code-editor-advanced-format)
+* [Database](database)
+* [Database: Advanced](database-advanced)
+* [Database: NLS](database-nls)
+* [Database: Worksheet](database-worksheet)
+* [Shortcut keys](shortcut-keys)
+
 #### Environment
 
 | Parameter | Value | Remarks |

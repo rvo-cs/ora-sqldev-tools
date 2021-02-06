@@ -183,10 +183,36 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |Timestamp Format | YYYY-MM-DD HH24:MI:SSXFF | |
 |Timestamp TZ Format | YYYY-MM-DD HH24:MI:SSXFF TZR| or TZH:TZM |
 |Decimal Separator | , | |
-|Group Separator | '' | Void |
+|Group Separator | '' | Void (no group separator) |
 |Currency | € | |
 |ISO Currency | FRANCE | |
 |Length | BYTE | This sets NLS_LENGTH_SEMANTICS |
 |Skip NLS Settings | Unchecked | |
+
+#### Database: Reports
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|Charts Row Limit | 50000 | |
+
+#### Database: Worksheet
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|Open a worksheet on connect | Unchecked | |
+|New worksheet to use unshared connection | Unchecked | |
+|Close all worksheets on disconnect | Unchecked | |
+|Prompt for Save file on close | Checked | |
+|Grid in checker board or Zebra pattern | Unchecked | |
+|Max Rows to print in a script | 100000 | 100 k | 
+|Max lines in Script output | 10000000 | 10 M |
+|SQL History limit | 500 | |
+|Select default path to look for scripts | `E:\Home\...\SQL_Developer\scripts` | Default path for scripts called using the `@file` syntax |
+|Save Bind variables to disk on exit | Checked | |
+|Show query results in new tab | Unchecked | |
+|Re-initialize on script exit command | Checked | |
+|Skip loading meta data detail for Query Builder | |
+|
+
 
 

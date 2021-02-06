@@ -106,7 +106,7 @@ checklist! Following is an attempt to list the most important settings (in my op
 |:-------|:-------|:------|
 | Autoformat Dictionary Objects SQL | Unchecked | |
 | Indent spaces | 4 | |
-| Identifiers case | Lower | |
+| Identifiers case | lower | |
 | Keywords case | lower | |
 | Convert Case Only | Unchecked | |
 

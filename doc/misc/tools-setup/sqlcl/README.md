@@ -39,7 +39,7 @@ This script:
 
 #### Environment variables
 
-The following environment variables are by the `sql.cmd` script. In principle, these
+The following environment variables are set by the `sql.cmd` script. In principle, these
 variables are used by SQLcl in exactly the same way as they would in SQL\*Plus.
 
 | Variable | Value | Description |

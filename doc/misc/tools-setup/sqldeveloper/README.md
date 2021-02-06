@@ -43,9 +43,9 @@ executed after logon to the database. There's no equivalent for SQL\*Plus `/nolo
 input field.
 
 This is distinct from (and not to be confused with) the "Select default path to look for
-scripts" field on the "Database" -> "Worksheet" node.
+scripts" field on the "Database" -> ["Worksheet" node](#database-worksheet).
 
-My startup script is named [sqldev-login.sql](login-scripts/sqldev-login.sql); more details
+My startup script is named [sqldev-login.sql](login-scripts#the-sqldev-loginsql-file); more details
 in the [login-scripts](login-scripts) directory.
 
 ### Features

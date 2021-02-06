@@ -56,6 +56,37 @@ an as-yet enabled feature, and offer to either keep or disable both features tog
 
 ### Preferences
 
-SQL Developer has plenty of Prefernces settings! Which makes it hard to write a comprehensive
+SQL Developer has plenty of Preferences settings! Which makes it hard to write a comprehensive
 checklist in the first place. Following is an attempt to list the most important settings 
 (in my opinion).
+
+#### Environment
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+| Look and Feel | Windows | |
+| Line Terminator | Line Feed (Unix/Mac) | Unsure about how new files are created |
+| Encoding | ISO-8859-1 | |
+
+#### Code Editor
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|**Start in Read Only mode** | **Checked** | Prevents from unintentionally changing code directly in the database! |
+|Link Stored Procedures to Files | Unchecked | |
+
+#### Code Editor: Display
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+| Enable Text Anti-Aliasing | Checked | |
+| Show Breadcrumbs | Checked | |
+| Show Code Folding Margin | Checked | |
+| Show Visible Right Margin | Checked, after col. 90 | | 
+
+#### Code Editor: Font
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+| Font Name | Consolas | |
+| Font Size | 13 | |

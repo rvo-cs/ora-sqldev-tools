@@ -154,7 +154,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 
 | Parameter | Value | Remarks |
 |:-------|:-------|:------|
-| Filename for connection startup script | `E:\home\...\SQL_Developer\startup\sqldev-login.sql` | Details [here](login-scripts) |
+| Filename for connection startup script | `E:\home\...\SQL_Developer\startup\sqldev-login.sql` | Details [here](login-scripts#the-sqldev-loginsql-file) |
 
 
 

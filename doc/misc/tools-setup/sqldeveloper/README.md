@@ -50,9 +50,9 @@ in the [login-scripts](login-scripts#contents) directory.
 
 ### Features
 
-Disabling unused features saves some RAM, and makes starting SQL Developer a little bit faster.
-SQL Developer will warn if an attempt is made to disable a feature which is depended upon by
-an as-yet enabled feature, and offer to either keep or disable both features together.
+Disabling unused features saves some RAM, and makes startup a little faster.
+SQL Developer will warn if an attempt is made to disable a feature depended upon by
+another one, and offer to either keep or disable both features together.
 
 ### Preferences
 

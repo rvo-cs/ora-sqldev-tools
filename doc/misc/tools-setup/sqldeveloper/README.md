@@ -156,5 +156,18 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:-------|:-------|:------|
 | Filename for connection startup script | `E:\home\...\SQL_Developer\startup\sqldev-login.sql` | Details [here](login-scripts#the-sqldev-loginsql-file) |
 
+#### Database: Advanced
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|Sql Array Fetch Size (between 50 and 200)| 200 | |
+|Display Null Value As | `(null)` | |
+|Display Null Using Background Color | LIGHT_GRAY | |
+|Display Struct Value In Grid | Checked | |
+|Display XML Value In Grid | Checked | |
+|**Autocommit** | **Unchecked** | |
+|Use Oracle Client | Unchecked | |
+|Use OCI/Thick driver | Unchecked | |
+|Tnsnames Directory | `E:\Home\...\SQL_Developer\tns_admin` | Location of my `tnsnames.ora` file |
 
 

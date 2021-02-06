@@ -19,8 +19,8 @@ AddVMOption -Duser.language=en
 
 As of now (using SQL Developer 20.4) I only use the 1st of the above 3 properties.
 
-Disabling out-of-band breaks in JDBC Thin could turn out to be useful in 20.3; not sure if
-that's still needed in 20.4.
+Disabling out-of-band breaks in JDBC Thin could help in 20.2; not sure if
+that's still necessary in 20.4.
 
 Similarly, switching from AppData\Roaming to AppData\Local was useful on sites using roaming
 profiles together with limited quotas. This seems out of fashion these days.

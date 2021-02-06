@@ -185,8 +185,8 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:-------|:-------|:------|
 |Language | AMERICAN | |
 |Territory | AMERICA | |
-|Sort | BINARY | Better keeps things simple here! | 
-|Comparison | BINARY | Better keeps things simple here! |
+|Sort | BINARY | Let's keeps things simple here! | 
+|Comparison | BINARY | Let's keeps things simple here! |
 |Date Language | AMERICAN | |
 |Date Format | YYYY-MM-DD HH24:MI:SS | |
 |Timestamp Format | YYYY-MM-DD HH24:MI:SSXFF | |

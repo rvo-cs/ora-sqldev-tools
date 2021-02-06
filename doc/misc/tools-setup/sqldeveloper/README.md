@@ -111,13 +111,13 @@ checklist in the first place. Following is an attempt to list the most important
 |**Alignment** | | |
 |Columns and Table aliases | Checked | |
 |Type Declarations | Checked | |
-|Named Argument Separator | Checked | |
-|Right-Align Query Keyword | Unchecked | |
+|Named Argument Separator `=>` | Checked | Seems broken in 20.4 |
+|Right-Align Query Keywords | Unchecked | Goes along with line breaks after SELECT/FROM/WHERE |
 |**Indentation** | | |
 |Indent spaces | 4 | |
 |Indent with | Spaces | |
 |**Line Breaks** | | |
-|On comma | After | |
+|On comma | After | Before looks good, too |
 |Commas per line in procedure | 1 | |
 |On concatenation | No breaks | |
 |On Boolean connectors | Before | |
@@ -127,13 +127,22 @@ checklist in the first place. Following is an attempt to list the most important
 |Max char line width | 110 | |
 |Before line comments | Unchecked | |
 |After statements | Double break | |
-|SELECT/FROM/WHERE | Checked | |
-|IF/CASE/WHILE | Indented Actions; Inlined Conditions | |
+|SELECT/FROM/WHERE | Checked | Goes along with disabling right alignment of query keywords |
+|IF/CASE/WHILE | Indented Actions, Inlined Conditions | |
 |**White Space** | | |
 |Around operators | Checked | |
 |After commas | Checked | |
-|Around parenthesis | no space | |
+|Around parenthesis | Outside | |
 
+#### Code Editor: Advanced Format: Custom Format
+
+For experts only—I wouldn't touch that! :slightly_smiling_face:
+
+#### Code Editor: Line Gutter
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|Show Line Numbers | Checked | |
 
 
 

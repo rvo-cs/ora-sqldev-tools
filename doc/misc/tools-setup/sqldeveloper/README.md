@@ -150,6 +150,11 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:-------|:-------|:------|
 | PL/SQL Comment | Foreground: Red: 0, Green: 99, Blue:0 | + Default background |
 
+#### Database
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+| Filename for connection startup script | `E:\home\...\SQL_Developer\startup\sqldev-login.sql` | Details [here](login-scripts) |
 
 
 

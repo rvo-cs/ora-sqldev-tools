@@ -202,6 +202,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 
 | Parameter | Value | Remarks |
 |:-------|:-------|:------|
+|Close all reports on disconnect | Unchecked | | 
 |Charts Row Limit | 50000 | |
 
 #### Database: Worksheet

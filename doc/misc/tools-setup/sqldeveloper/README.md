@@ -90,3 +90,51 @@ checklist in the first place. Following is an attempt to list the most important
 |:-------|:-------|:------|
 | Font Name | Consolas | |
 | Font Size | 13 | |
+
+#### Code Editor: Format
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+| Autoformat Dictionary Objects SQL | Unchecked | |
+| Indent spaces | 4 | |
+| Identifiers case | Lower | |
+| Keywords case | lower | |
+| Convert Case Only | Unchecked | |
+
+#### Code Editor: Advanced Format
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|**General** | | |
+|Keywords case | lower | |
+|Identifiers case | lower | |
+|**Alignment** | | |
+|Columns and Table aliases | Checked | |
+|Type Declarations | Checked | |
+|Named Argument Separator | Checked | |
+|Right-Align Query Keyword | Unchecked | |
+|**Indentation** | | |
+|Indent spaces | 4 | |
+|Indent with | Spaces | |
+|**Line Breaks** | | |
+|On comma | After | |
+|Commas per line in procedure | 1 | |
+|On concatenation | No breaks | |
+|On Boolean connectors | Before | |
+|On ANSI joins | Checked | |
+|For compound_condition parenthesis | Unchecked | |
+|On subqueries | Checked | |
+|Max char line width | 110 | |
+|Before line comments | Unchecked | |
+|After statements | Double break | |
+|SELECT/FROM/WHERE | Checked | |
+|IF/CASE/WHILE | Indented Actions; Inlined Conditions | |
+|**White Space** | | |
+|Around operators | Checked | |
+|After commas | Checked | |
+|Around parenthesis | no space | |
+
+
+
+
+

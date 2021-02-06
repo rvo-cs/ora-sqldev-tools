@@ -14,7 +14,7 @@ AddVMOption -Duser.language=en
 #AddVMOption -Doracle.net.disableOob=true
 
 # Store the profile under AppData\Local instead of AppData\Roaming
-#AddVMOption -Dide.user.dir=C:\Users\romain\AppData\Local\SQL_Developer
+#AddVMOption -Dide.user.dir=C:\Users\xxxx\AppData\Local\SQL_Developer
 ```
 
 As of now (using SQL Developer 20.4) I only use the first of the above properties.

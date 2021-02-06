@@ -17,7 +17,7 @@ AddVMOption -Duser.language=en
 #AddVMOption -Dide.user.dir=C:\Users\xxxx\AppData\Local\SQL_Developer
 ```
 
-As of now (using SQL Developer 20.4) I only use the first of the above properties.
+As of now (using SQL Developer 20.4) I only use the 1st of the above 3 properties.
 
 Disabling out-of-band breaks in JDBC Thin could turn out to be useful in 20.3; not sure if
 that's still needed in 20.4.

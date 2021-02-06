@@ -23,7 +23,7 @@ Disabling out-of-band breaks in JDBC Thin could help in 20.2; not sure if
 that's still necessary in 20.4.
 
 Similarly, switching from AppData\Roaming to AppData\Local was useful on sites using roaming
-profiles together with limited quotas. This seems out of fashion these days.
+profiles and small quotas. This seems out of fashion these days.
 
 ### Heap space settings
 

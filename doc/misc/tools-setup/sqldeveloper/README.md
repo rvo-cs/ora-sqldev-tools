@@ -170,4 +170,23 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |Use OCI/Thick driver | Unchecked | |
 |Tnsnames Directory | `E:\Home\...\SQL_Developer\tns_admin` | Location of my `tnsnames.ora` file |
 
+#### Database: NLS
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|Language | AMERICAN | |
+|Territory | AMERICA | |
+|Sort | BINARY | Better keeps things simple here! | 
+|Comparison | BINARY | Better keeps things simple here! |
+|Date Language | AMERICAN | |
+|Date Format | YYYY-MM-DD HH24:MI:SS | |
+|Timestamp Format | YYYY-MM-DD HH24:MI:SSXFF | |
+|Timestamp TZ Format | YYYY-MM-DD HH24:MI:SSXFF TZR| or TZH:TZM |
+|Decimal Separator | , | |
+|Group Separator | '' | Void |
+|Currency | € | |
+|ISO Currency | FRANCE | |
+|Length | BYTE | This sets NLS_LENGTH_SEMANTICS |
+|Skip NLS Settings | Unchecked | |
+
 

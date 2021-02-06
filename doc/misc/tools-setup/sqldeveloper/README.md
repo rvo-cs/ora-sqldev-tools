@@ -56,9 +56,8 @@ another one, and offer to either keep or disable both features together.
 
 ### Preferences
 
-SQL Developer has plenty of Preferences settings! Which makes it hard to write a comprehensive
-checklist in the first place. Following is an attempt to list the most important settings 
-(in my opinion).
+SQL Developer has plenty of Preferences settings—too many to make a comprehensive
+checklist! Following is an attempt to list the most important settings (in my opinion).
 
 * [Environment](#environment)
 * [Code Editor](#code-editor)

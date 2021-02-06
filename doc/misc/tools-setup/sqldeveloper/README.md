@@ -211,8 +211,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |Save Bind variables to disk on exit | Checked | |
 |Show query results in new tab | Unchecked | |
 |Re-initialize on script exit command | Checked | |
-|Skip loading meta data detail for Query Builder | |
-|
+|Skip loading meta data detail for Query Builder | Unchecked | |
 
 
 

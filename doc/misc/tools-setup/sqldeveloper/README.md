@@ -39,7 +39,7 @@ Should that be necessary, the properties for sizing the JVM heap space are in th
 The SQL startup script is configured in the Preferences dialog (\*); that script is always
 executed after logon to the database. There's no equivalent for SQL\*Plus `/nolog` mode. 
 
-(\*) Path: Preferences dialog, "Database" root node, "Filename for connection startup script"
+(\*) Path: Preferences dialog, ["Database" node](#database), "Filename for connection startup script"
 input field.
 
 This is distinct from (and not to be confused with) the "Select default path to look for
@@ -60,15 +60,15 @@ SQL Developer has plenty of Preferences settings! Which makes it hard to write a
 checklist in the first place. Following is an attempt to list the most important settings 
 (in my opinion).
 
-* [Environment](environment)
-* [Code Editor](code-editor)
-* [Code Editor: Format](code-editor-format)
-* [Code Editor: Advanced Format](code-editor-advanced-format)
-* [Database](database)
-* [Database: Advanced](database-advanced)
-* [Database: NLS](database-nls)
-* [Database: Worksheet](database-worksheet)
-* [Shortcut keys](shortcut-keys)
+* [Environment](#environment)
+* [Code Editor](#code-editor)
+* [Code Editor: Format](#code-editor-format)
+* [Code Editor: Advanced Format](#code-editor-advanced-format)
+* [Database](#database)
+* [Database: Advanced](#database-advanced)
+* [Database: NLS](#database-nls)
+* [Database: Worksheet](#database-worksheet)
+* [Shortcut keys](#shortcut-keys)
 
 #### Environment
 

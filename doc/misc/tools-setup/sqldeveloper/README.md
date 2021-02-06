@@ -157,7 +157,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 
 | Parameter | Value | Remarks |
 |:-------|:-------|:------|
-| PL/SQL Comment | Foreground: Red: 0, Green: 99, Blue:0 | + Default background |
+| PL/SQL Comment | Foreground: Red: 0, Green: 99, Blue:0 | With default background |
 
 #### Database
 

@@ -46,7 +46,7 @@ This is distinct from (and not to be confused with) the "Select default path to 
 scripts" field on the "Database" -> ["Worksheet" node](#database-worksheet).
 
 My startup script is named [sqldev-login.sql](login-scripts#the-sqldev-loginsql-file); more details
-in the [login-scripts](login-scripts) directory.
+in the [login-scripts](login-scripts#contents) directory.
 
 ### Features
 

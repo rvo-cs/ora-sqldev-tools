@@ -213,5 +213,18 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |Re-initialize on script exit command | Checked | |
 |Skip loading meta data detail for Query Builder | Checked | |
 
+#### Shortcut Keys
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|To Upper/Lower/InitCap | Ctrl+Shift+U | The default (Alt+Quote) does not work on a French keyboard |
+
+#### Usage Reporting
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+|Allow automated usage reporting to Oracle | Unchecked | |
+
+
 
 

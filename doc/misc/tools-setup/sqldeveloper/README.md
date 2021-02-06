@@ -144,6 +144,12 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:-------|:-------|:------|
 |Show Line Numbers | Checked | |
 
+#### Code Editor: PL/SQL Syntax Colors
+
+| Parameter | Value | Remarks |
+|:-------|:-------|:------|
+| PL/SQL Comment | Foreground: Red: 0, Green: 99, Blue:0 | + Default background |
+
 
 
 

@@ -131,7 +131,7 @@ checklist! Following is an attempt to list the most important settings (in my op
 |On concatenation | No breaks | |
 |On Boolean connectors | Before | |
 |On ANSI joins | Checked | |
-|For compound_condition parenthesis | Unchecked | |
+|For compound\_condition parenthesis | Unchecked | |
 |On subqueries | Checked | |
 |Max char line width | 110 | |
 |Before line comments | Unchecked | |
@@ -171,7 +171,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:-------|:-------|:------|
 |Sql Array Fetch Size (between 50 and 200)| 200 | |
 |Display Null Value As | `(null)` | |
-|Display Null Using Background Color | LIGHT_GRAY | |
+|Display Null Using Background Color | LIGHT\_GRAY | |
 |Display Struct Value In Grid | Checked | |
 |Display XML Value In Grid | Checked | |
 |**Autocommit** | **Unchecked** | |
@@ -195,7 +195,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |Group Separator | '' | Void (no group separator) |
 |Currency | € | |
 |ISO Currency | FRANCE | |
-|Length | BYTE | This sets NLS_LENGTH_SEMANTICS |
+|Length | BYTE | This sets NLS\_LENGTH\_SEMANTICS |
 |Skip NLS Settings | Unchecked | |
 
 #### Database: Reports

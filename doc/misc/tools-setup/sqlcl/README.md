@@ -45,8 +45,8 @@ variables work in SQLcl just as they do in SQL\*Plus.
 | Variable | Value | Description |
 |:---------|:------|:------------|
 | SQLPATH  | `E:\Home\...\oracle\sqlcl` | Search path for scripts started using the `@file` syntax—also the directory where the [`login.sql`](login-scripts/login.sql) file will be put |
-| TNS_ADMIN | `E:\Home\...\SQL_Developer\tns_admin` | Location of the `tnsnames.ora`, `sqlnet.ora` files |
+| TNS\_ADMIN | `E:\Home\...\SQL_Developer\tns_admin` | Location of the `tnsnames.ora`, `sqlnet.ora` files |
 
-For convenience, I use the same TNS_ADMIN directory for SQLcl and SQL Developer.
+For convenience, I use the same TNS\_ADMIN directory for SQLcl and SQL Developer.
 
 

@@ -19,7 +19,7 @@ The `login.sql`file reads as follows:
 @@login-&_USER
 ```
 That file is called:
-* When SQL\*Plus in started in `/nolog` mode; in that case, the `_USER` substitution variable is void (`""`)
+* When SQL\*Plus is started in `/nolog` mode; in that case, the `_USER` substitution variable is void (`""`)
 * For each database logon; the `_USER` substitution variable is set to the database username.
 
 So the trick is to:

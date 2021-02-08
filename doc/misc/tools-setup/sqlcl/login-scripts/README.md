@@ -1,3 +1,7 @@
+Login SQL scripts in SQLcl work almost exactly as they do in SQL\*Plus, so they'll be
+vastly similar. Possibly with additional _command aliases_, an enhancement over
+SQL\*Plus substitution variables. 
+
 ## Contents
 
 | File | Description |

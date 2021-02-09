@@ -49,4 +49,19 @@ variables work in SQLcl just as they do in SQL\*Plus.
 
 For convenience, I use the same TNS\_ADMIN directory for SQLcl and SQL Developer.
 
+### Windows console, with native JDBC OCI driver
 
+As an alternative to ConEmu, the standard Windows console may be used, along with the 65001 codepage
+(aka utf-8) and a unicode-ready font. A shortcut in the Windows Start Menu with the following target:
+
+`C:\Windows\System32\cmd.exe /k "E:\...\sqlplus\env_sqlcl.cmd"`
+
+can be used. The [`env_sqlcl.cmd`](env_sqlcl.cmd) file initializes the console environment, 
+and creates the following aliases (using doskey):
+* `sqlcl`: starts SQLcl (same as if using ConEmu)
+* `sqlcl-oci`: starts SQLcl in OCI mode, using the native JDBC OCI driver
+* `sqldev`: starts SQL Developer
+
+Additionally, this scripts sets ORACLE_HOME for Oracle Instant Client and puts %ORACLE_HOME%
+at the beginning of the PATH. This is a requirement for using the native JDBC OCI driver
+in SQL Developer.

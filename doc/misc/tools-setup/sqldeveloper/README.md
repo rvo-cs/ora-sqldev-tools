@@ -252,5 +252,5 @@ From there on:
 * In order to use the native OCI mode, there are 2 possibilities:
      * Use it in _all connections_: the preference **Database: Advanced**: **Use OCI/Thick driver**
        must be checked
-     * Or: enable it on a _per-connection_ basis. In the **Database Connection** properties dialog,
+     * Or: enable it on a _per-connection_ basis. In the **Connection** properties dialog,
        check the **Use OCI** checkbox.

@@ -23,13 +23,13 @@ run as an initialization script.
 
 The `env_instcli.cmd` file sets the following environment variables:
 
-| Variable       | Description                            |
-|:---------------|:---------------------------------------|
-| ORACLE\_HOME    | Directory where Oracle Instant Client is installed (not actually required but convenient). |
-| PATH           | Added `%ORACLE_HOME%` in front of the PATH |
-| TNS\_ADMIN      | Directory which contains `tnsnames.ora`, `sqlnet.ora` |
-| SQLPATH        | Default directory for searching for SQL files; the `login.sql` is expected to be there. |
-| NLS\_LANG       | E.g. `AMERICAN_AMERICA.WE8MSWIN1252` |
+| Variable      | Description                                                                                |
+|:--------------|:-------------------------------------------------------------------------------------------|
+| ORACLE\_HOME  | Directory where Oracle Instant Client is installed (not actually required but convenient). |
+| PATH          | Added `%ORACLE_HOME%` in front of the PATH                                                 |
+| TNS\_ADMIN    | Directory which contains `tnsnames.ora`, `sqlnet.ora`                                      |
+| SQLPATH       | Default directory for searching for SQL files; the `login.sql` is expected to be there.    |
+| NLS\_LANG     | E.g. `AMERICAN_AMERICA.WE8MSWIN1252`                                                       |
 
 I set `SQLPATH` to `E:\...\sqlplus`, so `env_instcli.cmd` and `login.sql` (+ related files) are in the same location.
 

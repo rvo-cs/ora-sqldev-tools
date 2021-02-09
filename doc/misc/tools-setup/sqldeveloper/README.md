@@ -235,4 +235,22 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:-------------------------------------------|:-----------|:---------|
 | Allow automated usage reporting to Oracle  | Unchecked  |          |
 
+### Using the JDBC OCI/Thick driver
 
+In order to use the native JDBC OCI driver–aka OCI/Thick driver—the following must be done:
+
+1. The directory containing the native OCI libraries must be in the PATH, before other Oracle Client
+   installations.
+2. The following preference must be set:
+     * **Database: Advanced**: **Use Oracle Client** must be checked
+     * The **Location** and **Type** of the Oracle Client must be configured—and preferably, tested with success.
+3. SQL Developer must be restarted.
+
+From there on:
+* The JDBC driver from the Oracle Client installation will be used (either in JDBC Thin
+  or in OCI mode) in replacement of the driver supplied with SQL Developer.
+* In order to use the native OCI mode, there are 2 possibilities:
+     * Use it _in all connections_: the preference **Database: Advanced**: **Use OCI/Thick driver**
+       must be checked
+     * Or: enable it on a _per-connection_ basis. In the **Database Connection** properties dialog,
+       check the **Use OCI** checkbox.

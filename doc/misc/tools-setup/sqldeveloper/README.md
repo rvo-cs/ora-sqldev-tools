@@ -253,4 +253,4 @@ From there on:
      * Use it in _all connections_: the preference **Database: Advanced**: **Use OCI/Thick driver**
        must be checked
      * Or: enable it on a _per-connection_ basis. In the **Connection** properties dialog,
-       check the **Use OCI** checkbox.
+       on the **Advanced** tab, check the **Use OCI** checkbox.

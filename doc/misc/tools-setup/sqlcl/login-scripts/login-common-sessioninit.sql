@@ -8,6 +8,13 @@ alter session set
     nls_numeric_characters='. '
 ;
 
+/*
+   Auto-register SQL scripts through DBMS_APPLICATION_INFO
+   (This makes sessions easier to tell apart from each other)
+ */
+set appinfo on
+
+
 /*-----------------*/
 /* PL/SQL settings */
 /*-----------------*/

@@ -60,6 +60,7 @@ can be used. The [`env_sqlcl.cmd`](env_sqlcl.cmd) file initializes the console e
 and creates the following aliases (using doskey):
 * `sqlcl`: starts SQLcl (same as if using ConEmu)
 * `sqlcl-oci`: starts SQLcl in OCI mode, using the native JDBC OCI driver
+   (see [`sql+oci.cmd`](sql+oci.cmd))
 * `sqldev`: starts SQL Developer
 
 Additionally, this scripts sets ORACLE_HOME for Oracle Instant Client and puts %ORACLE_HOME%

@@ -176,7 +176,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 | Display XML Value In Grid                  | Checked                                |                                     |
 | **Autocommit**                             | **Unchecked**                          |                                     |
 | Use Oracle Client                          | Unchecked                              | Specifying an Oracle Client makes it possible to check the "Use OCI" option in Connection properties  |
-| Use OCI/Thick driver                       | Unchecked                              |                                     |
+| Use OCI/Thick driver                       | Unchecked                              | If Checked, enables the native JDBC OCI driver in _all_ connections (prerequisite: Use Oracle Client) |
 | Tnsnames Directory                         | `E:\Home\...\SQL_Developer\tns_admin`  | Location of my `tnsnames.ora` file  |
 
 #### Database: NLS
@@ -193,7 +193,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 | Timestamp TZ Format  | YYYY-MM-DD HH24:MI:SSXFF TZR  | or TZH:TZM                        |
 | Decimal Separator    | ,                             |                                   |
 | Group Separator      | ''                            | Void (no group separator)         |
-| Currency             | €                           |                                   |
+| Currency             | €                             |                                   |
 | ISO Currency         | FRANCE                        |                                   |
 | Length               | BYTE                          | This sets NLS\_LENGTH\_SEMANTICS  |
 | Skip NLS Settings    | Unchecked                     |                                   |

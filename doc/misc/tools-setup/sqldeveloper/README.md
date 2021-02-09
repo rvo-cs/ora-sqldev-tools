@@ -175,8 +175,8 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 | Display Struct Value In Grid               | Checked                                |                                     |
 | Display XML Value In Grid                  | Checked                                |                                     |
 | **Autocommit**                             | **Unchecked**                          |                                     |
-| Use Oracle Client                          | Unchecked                              | Specifying an Oracle Client makes it possible to check the "Use OCI" option in Connection properties  |
-| Use OCI/Thick driver                       | Unchecked                              | If Checked, enables the native JDBC OCI driver in _all_ connections (prerequisite: Use Oracle Client) |
+| Use Oracle Client                          | Unchecked                              | Specifying an Oracle Client makes it possible to check the "Use OCI" option in Connection properties (see [below](#using-the-jdbc-ocithick-driver))  |
+| Use OCI/Thick driver                       | Unchecked                              | If Checked, enables the native JDBC OCI driver in _all_ connections (prerequisite: Use Oracle Client; see [below](#using-the-jdbc-ocithick-driver)) |
 | Tnsnames Directory                         | `E:\Home\...\SQL_Developer\tns_admin`  | Location of my `tnsnames.ora` file  |
 
 #### Database: NLS
@@ -250,7 +250,7 @@ From there on:
 * The JDBC driver from the Oracle Client installation will be used (either in JDBC Thin
   or in OCI mode) in replacement of the driver supplied with SQL Developer.
 * In order to use the native OCI mode, there are 2 possibilities:
-     * Use it _in all connections_: the preference **Database: Advanced**: **Use OCI/Thick driver**
+     * Use it in _all connections_: the preference **Database: Advanced**: **Use OCI/Thick driver**
        must be checked
      * Or: enable it on a _per-connection_ basis. In the **Database Connection** properties dialog,
        check the **Use OCI** checkbox.

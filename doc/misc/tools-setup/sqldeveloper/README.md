@@ -66,6 +66,7 @@ checklist! Following is an attempt to list the most important settings (in my op
 * [Database](#database)
 * [Database: Advanced](#database-advanced)
 * [Database: NLS](#database-nls)
+* [Database: Utilities: Export](#database-utilities-export)
 * [Database: Worksheet](#database-worksheet)
 * [Shortcut keys](#shortcut-keys)
 
@@ -204,6 +205,13 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 |:---------------------------------|:-----------|:---------|
 | Close all reports on disconnect  | Unchecked  |          | 
 | Charts Row Limit                 | 50000      |          |
+
+#### Database: Utilities: Export
+
+| Parameter            | Value                | Remarks                                                       |
+|:---------------------|:---------------------|:--------------------------------------------------------------|
+| Format               | excel 2003+ (xlsx)   | This defines the _default_ format of data export files        |
+| Directory            | `E:\Home\...\Temp`   | This defines the _default_ directory for saving export files  |
 
 #### Database: Worksheet
 

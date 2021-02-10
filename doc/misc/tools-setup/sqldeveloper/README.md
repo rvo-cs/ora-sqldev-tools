@@ -141,7 +141,7 @@ checklist! Following is an attempt to list the most important settings (in my op
 |**White Space**                       |               |                           |
 | Around operators                     | Checked       |                           |
 | After commas                         | Checked       |                           |
-| Around parenthesis                   | Outside       |                           |
+| Around parenthesis                   | Default       |                           |
 
 #### Code Editor: Advanced Format: Custom Format
 

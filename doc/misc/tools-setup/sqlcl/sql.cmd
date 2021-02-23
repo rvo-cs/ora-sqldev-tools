@@ -38,7 +38,10 @@ REM If the SQLPATH environment variable is set, and the SQLPATH
 REM folder contains a login.sql, SQLcl will run it.
 REM -------------------------------------------------------------
 
-SET SQLPATH=E:\Home\romain\oracle\sqlcl
+IF DEFINED SQLPATH (
+    SET SQLPATH=;%SQLPATH%
+)
+SET SQLPATH=E:\Home\romain\oracle\sqlcl%SQLPATH%
 
 REM =============================================================
 REM Set TNS_ADMIN folder

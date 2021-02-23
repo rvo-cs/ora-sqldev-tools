@@ -48,11 +48,13 @@ scripts" field on the "Database" -> ["Worksheet" node](#database-worksheet).
 My startup script is named [sqldev-login.sql](login-scripts#the-sqldev-loginsql-file); more details
 in the [login-scripts](login-scripts#contents) directory.
 
+
 ### Features
 
 Disabling unused features saves some RAM, and makes startup a little faster.
 SQL Developer will warn if an attempt is made to disable a feature depended upon by
 another one, and offer to either keep or disable both features together.
+
 
 ### Preferences
 
@@ -156,9 +158,10 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 
 #### Code Editor: PL/SQL Syntax Colors
 
-| Parameter       | Value                                  | Remarks                  |
-|:----------------|:---------------------------------------|:-------------------------|
-| PL/SQL Comment  | Foreground: Red: 0, Green: 99, Blue:0  | With default background  |
+| Parameter       | Value                                        | Remarks                  |
+|:----------------|:---------------------------------------------|:-------------------------|
+| PL/SQL Comment  | Foreground: Red: 0,   Green: 82,  Blue: 0    | With default background  |
+| PlSqlLogger     | Foreground: Red: 115, Green: 0,   Blue: 115  | With default background  |
 
 #### Database
 
@@ -182,22 +185,22 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 
 #### Database: NLS
 
-| Parameter            | Value                         | Remarks                           |
-|:---------------------|:------------------------------|:----------------------------------|
-| Language             | AMERICAN                      |                                   |
-| Territory            | AMERICA                       |                                   |
-| Sort                 | BINARY                        | Let's keeps things simple here!   | 
-| Comparison           | BINARY                        | Let's keeps things simple here!   |
-| Date Language        | AMERICAN                      |                                   |
-| Date Format          | YYYY-MM-DD HH24:MI:SS         |                                   |
-| Timestamp Format     | YYYY-MM-DD HH24:MI:SSXFF      |                                   |
-| Timestamp TZ Format  | YYYY-MM-DD HH24:MI:SSXFF TZR  | or TZH:TZM                        |
-| Decimal Separator    | ,                             |                                   |
-| Group Separator      | ''                            | Void (no group separator)         |
+| Parameter            | Value                          | Remarks                           |
+|:---------------------|:-------------------------------|:----------------------------------|
+| Language             | AMERICAN                       |                                   |
+| Territory            | AMERICA                        |                                   |
+| Sort                 | BINARY                         | Let's keeps things simple here!   | 
+| Comparison           | BINARY                         | Let's keeps things simple here!   |
+| Date Language        | AMERICAN                       |                                   |
+| Date Format          | YYYY-MM-DD HH24:MI:SS          |                                   |
+| Timestamp Format     | YYYY-MM-DD HH24:MI:SSXFF4      |                                   |
+| Timestamp TZ Format  | YYYY-MM-DD HH24:MI:SSXFF4 TZR  | or TZH:TZM                        |
+| Decimal Separator    | ,                              |                                   |
+| Group Separator      | ''                             | Void (no group separator)         |
 | Currency             | €                             |                                   |
-| ISO Currency         | FRANCE                        |                                   |
-| Length               | BYTE                          | This sets NLS\_LENGTH\_SEMANTICS  |
-| Skip NLS Settings    | Unchecked                     |                                   |
+| ISO Currency         | FRANCE                         |                                   |
+| Length               | BYTE                           | This sets NLS\_LENGTH\_SEMANTICS  |
+| Skip NLS Settings    | Unchecked                      |                                   |
 
 #### Database: Reports
 
@@ -225,7 +228,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 | Max Rows to print in a script                    | 100000                               | 100 k     | 
 | Max lines in Script output                       | 10000000                             | 10 M      |
 | SQL History Limit                                | 500                                  |           |
-| Select default path to look for scripts          | `E:\Home\...\SQL_Developer\scripts`  | Search path for scripts called using the `@file` syntax |
+| Select default path to look for scripts          | `E:\Home\...\SQL_Developer\scripts`  | Search path for scripts called using the `@file` syntax (see [SQLPATH](#sqlpath) below) |
 | Save Bind variables to disk on exit              | Checked                              |           |
 | Show query results in new tab                    | Unchecked                            |           |
 | Re-initialize on script exit command             | Checked                              |           |
@@ -242,6 +245,26 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 | Parameter                                  | Value      | Remarks  |
 |:-------------------------------------------|:-----------|:---------|
 | Allow automated usage reporting to Oracle  | Unchecked  |          |
+
+
+### SQLPATH
+
+A defaut search path for scripts called using the `@file` syntax may be specified in the
+[Database: Worksheet](#database-worksheet) Preferences tab. Multiple directories may be
+specified, separated by a semicolon (`;`) on Windows.
+
+Actually, the _complete_ search path is built by concatenating several directories:
+
+1. The "current" directory, as specified by the `CD` command (if used)
+2. The `%TEMP%` directory (on Windows) which acts as the _default_ directory
+3. Directories specified in Preferences
+4. Directories from `%SQLPATH%`, if that environment variable was set. 
+
+SQLcl behaves similarly; both also mysteriously add a `.` entry to the path,
+though not at the same position, and it doesn't seem to matter in searches.
+
+Use `show sqlpath` to display the current search path.
+
 
 ### Using the JDBC OCI/Thick driver
 

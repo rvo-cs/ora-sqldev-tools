@@ -249,7 +249,7 @@ For experts only—I wouldn't touch that! :slightly_smiling_face:
 
 ### SQLPATH
 
-A defaut search path for scripts called using the `@file` syntax may be specified in the
+A default search path for scripts called using the `@file` syntax may be specified in the
 [Database: Worksheet](#database-worksheet) Preferences tab. Multiple directories may be
 specified, separated by a semicolon (`;`) on Windows.
 
@@ -258,10 +258,10 @@ Actually, the _complete_ search path is built by concatenating several directori
 1. The "current" directory, as specified by the `CD` command (if used)
 2. The `%TEMP%` directory (on Windows) which acts as the _default_ directory
 3. Directories specified in Preferences
-4. Directories from `%SQLPATH%`, if that environment variable was set. 
+4. Directories from `%SQLPATH%`, if that environment variable is set. 
 
-SQLcl behaves similarly; both also mysteriously add a `.` entry to the path,
-though not at the same position, and it doesn't seem to matter in searches.
+SQLcl behaves similarly; both also mysteriously add a `.` entry to the search path,
+though not at the exact same position, and it doesn't seem to matter in searches.
 
 Use `show sqlpath` to display the current search path.
 

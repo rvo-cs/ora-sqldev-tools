@@ -35,8 +35,12 @@ declare
         return lower(p_wait_arg);
     end assert_wait;
 begin
-    :sqlcl_int_first := :sqlcl_int_first;
+    :sqlcl_int_first  := :sqlcl_int_first;
     :sqlcl_int_second := :sqlcl_int_second;
+    :sqlcl_int_third  := :sqlcl_int_third;
+    if :sqlcl_int_third is not null then
+        raise_application_error(-20000, 'Too many arguments');
+    end if;
     if :sqlcl_int_second is null then
         if upper(:sqlcl_int_first) = 'OFF' then
             l_is_off := true;

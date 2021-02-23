@@ -11,10 +11,12 @@
         
         DEFINE RVOCS_ORASQLDEVTOOLS_DIR = "path to working copy root dir."
 
-        E.g. &RVOCS_ORASQLDEVTOOLS_DIR\src\scripts\sqlcl_aliases.sql is the
+        E.g. &RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/sqlcl_aliases.sql is the
         full path to this script.
         
  */
 
-alias group=rvo-cs show_system_stats=@&RVOCS_ORASQLDEVTOOLS_DIR\src\scripts\config\system_stats_report;
+alias group=rvo-cs show_system_stats=@&RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/config/system_stats_report;
 alias desc show_system_stats : a report showing the state of system statistics + related optimizer parameters
+
+@@sqlcl/aliases/sql_trace

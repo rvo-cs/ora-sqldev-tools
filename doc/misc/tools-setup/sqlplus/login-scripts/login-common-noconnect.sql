@@ -11,6 +11,11 @@ set longchunksize 10000000
 
 define _EDITOR="C:\Program Files (x86)\Vim\vim74\gvim.exe"
 
+-- Root dir. of the local clone of Tanel Poder's tpt-oracle Git repository
+-- (git clone https://github.com/tanelpoder/tpt-oracle.git)
+define tpt_dir = "E:\Home\romain\oracle\tpt-oracle"
+
+-- Root dir. of my own local Git repository for SQL Developer-related tools
 define rvocs_orasqldevtools_dir = "E:\Home\romain\projets\git-src\ora-sqldev-tools"
 
 @&rvocs_orasqldevtools_dir\src\scripts\sqlplus_aliases

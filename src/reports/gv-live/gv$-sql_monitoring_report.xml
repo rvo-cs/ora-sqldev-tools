@@ -10,7 +10,7 @@
 	</CustomValues>
     <queries>
     <query minversion="12.1">
-		<sql><![CDATA[select 
+		<sql><![CDATA[select /*+ no_parallel */
     con_name, service_name, inst_id, 
     sid, session_serial#, 
     awr_id, status, 
@@ -54,18 +54,9 @@ from
         max(sql_text)                           as sql_text,
         max(last_refresh_time)                  as last_refresh_time,
         sum(refresh_count)                      as refresh_count,
-        case
-            when max(elapsed_time) = 0 then 0
-            else round(max(elapsed_time) / power(10,6), greatest(0, 2 + 6 - log(10, max(elapsed_time))) )
-        end                                     as elapsed_time_s,
-        case
-            when sum(cpu_time) = 0 then 0
-            else round(sum(cpu_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(cpu_time))) )
-        end                                     as cpu_time_s,
-        case
-            when max(queuing_time) = 0 then 0
-            else round(max(queuing_time) / power(10,6), greatest(0, 2 + 6 - log(10, max(queuing_time))) )
-        end                                     as queing_time_s,
+        c##pkg_pub_utility.prec_round( max(elapsed_time) / power(10,6) )                    as elapsed_time_s,
+        c##pkg_pub_utility.prec_round( sum(cpu_time)     / power(10,6) )                    as cpu_time_s,
+        c##pkg_pub_utility.prec_round( max(queuing_time) / power(10,6) )                    as queing_time_s,
         max(case when px_maxdop is null /* ignore QC */ then force_matching_signature end)  as force_matching_signature,
         max(case when px_maxdop is null /* ignore QC */ then sql_plan_hash_value end)       as sql_plan_hash_value,
         max(case when px_maxdop is null /* ignore QC */ then sql_full_plan_hash_value end)  as sql_full_plan_hash_value,
@@ -75,62 +66,20 @@ from
         sum(buffer_gets)                        as buffer_gets,
         sum(disk_reads)                         as disk_reads,
         sum(direct_writes)                      as direct_writes,
-        case 
-            when sum(io_interconnect_bytes) = 0 then 0
-            else round(sum(io_interconnect_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(io_interconnect_bytes) / power(2,20))))
-        end                                     as io_interconnect_mb,
+        c##pkg_pub_utility.prec_round( sum(io_interconnect_bytes) / power(2,20) )           as io_interconnect_mb,
         sum(physical_read_requests)             as phys_read_req,
-        case 
-            when sum(physical_read_bytes) = 0 then 0
-            else round(sum(physical_read_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(physical_read_bytes) / power(2,20))))
-        end                                     as phys_read_mb,
+        c##pkg_pub_utility.prec_round( sum(physical_read_bytes)   / power(2,20) )           as phys_read_mb,
         sum(physical_write_requests)            as phys_write_req,
-        case 
-            when sum(physical_write_bytes) = 0 then 0
-            else round(sum(physical_write_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(physical_write_bytes) / power(2,20))))
-        end                                     as phys_write_mb,
-        case 
-            when sum(io_cell_uncompressed_bytes) = 0 then 0
-            else round(sum(io_cell_uncompressed_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(io_cell_uncompressed_bytes) / power(2,20))))
-        end                                     as io_cell_uncompressed_mb,
-        case 
-            when sum(io_cell_offload_eligible_bytes) = 0 then 0
-            else round(sum(io_cell_offload_eligible_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(io_cell_offload_eligible_bytes) / power(2,20))))
-        end                                     as io_cell_offload_eli_mb,
-        case 
-            when sum(io_cell_offload_returned_bytes) = 0 then 0
-            else round(sum(io_cell_offload_returned_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(io_cell_offload_returned_bytes) / power(2,20))))
-        end                                     as io_cell_offload_ret_mb,
-        case
-            when sum(user_io_wait_time) = 0 then 0
-            else round(sum(user_io_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(user_io_wait_time))) )
-        end                                     as user_io_wait_time_s,
-        case
-            when sum(application_wait_time) = 0 then 0
-            else round(sum(application_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(application_wait_time))) )
-        end                                     as app_wait_time_s,
-        case
-            when sum(concurrency_wait_time) = 0 then 0
-            else round(sum(concurrency_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(concurrency_wait_time))) )
-        end                                     as conc_wait_time_s,
-        case
-            when sum(cluster_wait_time) = 0 then 0
-            else round(sum(cluster_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(cluster_wait_time))) )
-        end                                     as clus_wait_time_s,
-        case
-            when sum(plsql_exec_time) = 0 then 0
-            else round(sum(plsql_exec_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(plsql_exec_time))) )
-        end                                     as plsql_exec_time_s,
-        case
-            when sum(java_exec_time) = 0 then 0
-            else round(sum(java_exec_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(java_exec_time))) )
-        end                                     as java_exec_time_s,
+        c##pkg_pub_utility.prec_round( sum(physical_write_bytes)  / power(2,20) )           as phys_write_mb,
+        c##pkg_pub_utility.prec_round( sum(io_cell_uncompressed_bytes)     / power(2,20) )  as io_cell_uncompressed_mb,
+        c##pkg_pub_utility.prec_round( sum(io_cell_offload_eligible_bytes) / power(2,20) )  as io_cell_offload_eli_mb,
+        c##pkg_pub_utility.prec_round( sum(io_cell_offload_returned_bytes) / power(2,20) )  as io_cell_offload_ret_mb,
+        c##pkg_pub_utility.prec_round( sum(user_io_wait_time)     / power(10,6) )           as user_io_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(application_wait_time) / power(10,6) )           as app_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(concurrency_wait_time) / power(10,6) )           as conc_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(cluster_wait_time)     / power(10,6) )           as clus_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
+        c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
         case
             when count(distinct px_server_group) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
             when count(distinct px_server_group) * max(px_maxdop) = max(px_servers_allocated) then 'N'
@@ -376,65 +325,26 @@ from
         max(sql_text)                           as sql_text,
         max(last_refresh_time)                  as last_refresh_time,
         sum(refresh_count)                      as refresh_count,
-        case
-            when max(elapsed_time) = 0 then 0
-            else round(max(elapsed_time) / power(10,6), greatest(0, 2 + 6 - log(10, max(elapsed_time))) )
-        end                                     as elapsed_time_s,
-        case
-            when sum(cpu_time) = 0 then 0
-            else round(sum(cpu_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(cpu_time))) )
-        end                                     as cpu_time_s,
-        case
-            when max(queuing_time) = 0 then 0
-            else round(max(queuing_time) / power(10,6), greatest(0, 2 + 6 - log(10, max(queuing_time))) )
-        end                                     as queing_time_s,
+        c##pkg_pub_utility.prec_round( max(elapsed_time) / power(10,6) )                    as elapsed_time_s,
+        c##pkg_pub_utility.prec_round( sum(cpu_time)     / power(10,6) )                    as cpu_time_s,
+        c##pkg_pub_utility.prec_round( max(queuing_time) / power(10,6) )                    as queing_time_s,
         max(case when px_maxdop is null /* ignore QC */ then force_matching_signature end)  as force_matching_signature,
         max(case when px_maxdop is null /* ignore QC */ then sql_plan_hash_value end)       as sql_plan_hash_value,
         sum(fetches)                            as fetches,
         sum(buffer_gets)                        as buffer_gets,
         sum(disk_reads)                         as disk_reads,
         sum(direct_writes)                      as direct_writes,
-        case 
-            when sum(io_interconnect_bytes) = 0 then 0
-            else round(sum(io_interconnect_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(io_interconnect_bytes) / power(2,20))))
-        end                                     as io_interconnect_mb,
+        c##pkg_pub_utility.prec_round( sum(io_interconnect_bytes) / power(2,20) )           as io_interconnect_mb,
         sum(physical_read_requests)             as phys_read_req,
-        case 
-            when sum(physical_read_bytes) = 0 then 0
-            else round(sum(physical_read_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(physical_read_bytes) / power(2,20))))
-        end                                     as phys_read_mb,
+        c##pkg_pub_utility.prec_round( sum(physical_read_bytes)   / power(2,20) )           as phys_read_mb,
         sum(physical_write_requests)            as phys_write_req,
-        case 
-            when sum(physical_write_bytes) = 0 then 0
-            else round(sum(physical_write_bytes) / power(2,20), 
-                       greatest(0, 2 - log(10, sum(physical_write_bytes) / power(2,20))))
-        end                                     as phys_write_mb,
-        case
-            when sum(user_io_wait_time) = 0 then 0
-            else round(sum(user_io_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(user_io_wait_time))) )
-        end                                     as user_io_wait_time_s,
-        case
-            when sum(application_wait_time) = 0 then 0
-            else round(sum(application_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(application_wait_time))) )
-        end                                     as app_wait_time_s,
-        case
-            when sum(concurrency_wait_time) = 0 then 0
-            else round(sum(concurrency_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(concurrency_wait_time))) )
-        end                                     as conc_wait_time_s,
-        case
-            when sum(cluster_wait_time) = 0 then 0
-            else round(sum(cluster_wait_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(cluster_wait_time))) )
-        end                                     as clus_wait_time_s,
-        case
-            when sum(plsql_exec_time) = 0 then 0
-            else round(sum(plsql_exec_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(plsql_exec_time))) )
-        end                                     as plsql_exec_time_s,
-        case
-            when sum(java_exec_time) = 0 then 0
-            else round(sum(java_exec_time) / power(10,6), greatest(0, 2 + 6 - log(10, sum(java_exec_time))) )
-        end                                     as java_exec_time_s,
+        c##pkg_pub_utility.prec_round( sum(physical_write_bytes)  / power(2,20) )           as phys_write_mb,
+        c##pkg_pub_utility.prec_round( sum(user_io_wait_time)     / power(10,6) )           as user_io_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(application_wait_time) / power(10,6) )           as app_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(concurrency_wait_time) / power(10,6) )           as conc_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(cluster_wait_time)     / power(10,6) )           as clus_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
+        c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
         case
             when count(distinct px_server_group) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
             when count(distinct px_server_group) * max(px_maxdop) = max(px_servers_allocated) then 'N'

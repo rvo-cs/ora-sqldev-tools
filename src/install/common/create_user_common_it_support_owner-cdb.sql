@@ -87,11 +87,12 @@ grant execute on pkg_pub_sesstat_helper to public;
 
 /*----------------------------------------------------------------------------*/
 
-@@cr_function_clob_as_varchar2list.sql
+@@pkg_pub_utility.pks
+@@pkg_pub_utility.pkb
 
-grant execute on clob_as_varchar2list to public;
+grant execute on pkg_pub_utility to public;
 
-create or replace public synonym c##clob_as_varchar2list for clob_as_varchar2list;
+create or replace public synonym c##pkg_pub_utility for pkg_pub_utility;
 
 
 /* -- End -- */

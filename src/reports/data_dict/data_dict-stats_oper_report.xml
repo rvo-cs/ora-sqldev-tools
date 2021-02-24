@@ -49,7 +49,7 @@ spool "&spool_filename"
 
 
 select * 
-from table(c##clob_as_varchar2list(
+from table(c##pkg_pub_utility.clob_as_varchar2list(
         dbms_stats.report_stats_operations (
             detail_level => nvl(upper(trim(:DETAIL_LEVEL)), 'ALL'),
             format => 'HTML',

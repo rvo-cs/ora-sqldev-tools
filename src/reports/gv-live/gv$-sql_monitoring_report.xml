@@ -588,7 +588,9 @@ from
     table(dbms_xplan.display_cursor(
             sql_id => a.sql_id,
             cursor_child_no => a.child_number,
-            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced -projection +allstats last')
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced -projection'
+                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end
+                    || ' +allstats last')
     )) b]]></sql>
 			<binds>
 				<bind id="SQL_ID">
@@ -703,11 +705,8 @@ from
     table(dbms_xplan.display_awr(
             sql_id => a.sql_id,
             plan_hash_value => a.plan_hash_value,
-            format => 'Advanced'
-                || case 
-                    when regexp_like(:PLAN_DISPLAY_FMT, '-projection', 'i')
-                    then ' -projection' 
-                   end
+            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced'
+                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end )
     )) b]]></sql>
 			<binds>
 				<bind id="SQL_ID">

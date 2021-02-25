@@ -16,6 +16,30 @@ create or replace package pkg_pub_utility authid current_user as
  *      EXECUTE on this package is expected to be granted to PUBLIC.
  *
  */
+
+    /*
+        Returns the Oracle Database major version number, e.g. 11, 12, 19...
+        The returned value is the DBMS_DB_VERSION.version constant.
+     */
+    function db_version
+    return number 
+    deterministic;
+    
+    /*
+        Returns the Oracle Database release number, e.g. 2 for 11.2, 1 for 12.1,
+        and so forth.
+        
+        There's a catch for recent releases, as a distinction has been introduced
+        between the Database "full version" string, e.g. 19.5.0.0, which includes
+        the Database RU number, and the simple "version" string, e.g. 19.0.0.0,
+        which does not. Unless the p_use_version_full argument is 'Y', the returned
+        value is simply the DBMS_DB_VERSION.release constant, corresponding to the
+        simple version string. Otherwise, the returned value is extracted from the
+        FULL_VERSION column of the PRODUCT_COMPONENT_VERSION view.
+     */
+    function db_release (p_use_version_full in varchar2 default null)
+    return number
+    deterministic;
  
     /*
         Returns the contents of the CLOB argument, line by line. The line

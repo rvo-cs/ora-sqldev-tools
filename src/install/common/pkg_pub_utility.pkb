@@ -1,5 +1,39 @@
 create or replace package body pkg_pub_utility as
 
+    function db_version
+    return number 
+    deterministic
+    is begin
+        return dbms_db_version.version;
+    end db_version;
+
+    
+    function db_release (p_use_version_full in varchar2 default null)
+    return number
+    deterministic
+    is begin
+       $IF dbms_db_version.ver_le_11 $THEN
+        return dbms_db_version.release;
+       $ELSIF dbms_db_version.ver_le_12 $THEN
+        return dbms_db_version.release;
+       $ELSE
+        if p_use_version_full is null or upper(p_use_version_full) <> 'Y' then
+            return dbms_db_version.release;
+        else
+            declare
+                l_release_str varchar2(10);
+            begin
+                select regexp_substr(a.version_full, '\d+\.(\d+)\.\d+\.\d+', 1, 1, null, 1)
+                into l_release_str
+                from product_component_version a
+                where a.product like 'Oracle Database%' and rownum = 1;
+                return to_number(l_release_str);
+            end;
+        end if;
+       $END
+    end db_release;
+    
+
     function clob_as_varchar2list (p_clob in clob)
     return sys.odcivarchar2list
     pipelined

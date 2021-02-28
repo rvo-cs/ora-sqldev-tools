@@ -300,7 +300,9 @@ order by
         sql_id = :SQL_ID
         and lnnvl(plan_hash_value <> :PLAN_HASH)
         and lnnvl(plan_hash_value = 0)
-        and rownum <= 1
+    order by
+        last_active_time desc
+    fetch first 1 row only
 )
 select b.* 
 from 
@@ -308,7 +310,7 @@ from
     table(dbms_xplan.display_cursor(
             sql_id => a.sql_id,
             cursor_child_no => a.child_number,
-            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced -projection'
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection'
                     || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end
                     || ' +allstats last')
     )) b]]></sql>
@@ -377,7 +379,7 @@ from
     table(dbms_xplan.display_awr(
             sql_id => a.sql_id,
             plan_hash_value => a.plan_hash_value,
-            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced'
+            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced +adaptive'
                     || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end )
     )) b]]></sql>
 			<binds>

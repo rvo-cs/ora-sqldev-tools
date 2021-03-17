@@ -75,7 +75,7 @@ column #EXEC_ID format 9999999
 
 column plan_hash_value format a18 word_wrapped
 
-break on full_plan_hash skip 1 noduplicates on plan_hash_value skip 1 noduplicates on sql_id skip 1 noduplicates
+break on sql_id noduplicates on full_plan_hash skip 1 noduplicates on plan_hash_value skip 1 noduplicates on line_id noduplicates on plan_operation noduplicates on plan_option noduplicates
 
 with
 ash_samples as (
@@ -271,6 +271,7 @@ ash_synth2 as (
         cnt_samp_line,
         round(cnt_samp_line / cnt_exec_id,
                 case 
+                    when cnt_exec_id = 1 then 0
                     when total_samples <= 2 * cnt_exec_id  then 2
                     when total_samples <= 20 * cnt_exec_id then 1
                     else 0 
@@ -285,7 +286,7 @@ ash_synth2 as (
                         plan_hash_value
                     order by
                         sql_plan_line_id asc,
-                        evt_rank desc)
+                        evt_rank asc)
                 / total_samples
                 * 100
              )        as tot_pct_line
@@ -303,9 +304,18 @@ select
     pct_line                as "%LINE",
     samp_px,
     cnt_samp_line           as samples,
-    cnt_exec_id             as "#EXEC_ID",
-    running_total_samp      as total_samp,
-    tot_pct_line            as "SUM(%LINE)"
+    case
+        when evt_rank = 1
+        then cnt_exec_id
+    end                     as "#EXEC_ID",
+    case
+        when evt_rank = 1
+        then running_total_samp
+    end                     as total_samp,
+    case
+        when evt_rank = 1
+        then tot_pct_line
+    end                     as "SUM(%LINE)"
 from
     ash_synth2
 order by
@@ -509,7 +519,7 @@ column event    format a45   word_wrapped
 column samp_px  format 999999.9
 column #EXEC_ID format 9999999
 
-break on plan_hash_value skip 1 noduplicates on sql_id skip 1 noduplicates
+break on sql_id noduplicates on plan_hash_value skip 1 noduplicates on line_id noduplicates on plan_operation noduplicates on plan_option noduplicates
 
 with
 ash_samples as (
@@ -650,6 +660,7 @@ ash_synth2 as (
         cnt_samp_line,
         round(cnt_samp_line / cnt_exec_id,
                 case 
+                    when cnt_exec_id = 1 then 0
                     when total_samples <= 2 * cnt_exec_id  then 2
                     when total_samples <= 20 * cnt_exec_id then 1
                     else 0
@@ -663,7 +674,7 @@ ash_synth2 as (
                         plan_hash_value
                     order by 
                         sql_plan_line_id asc, 
-                        evt_rank desc)                    
+                        evt_rank asc)
                 / total_samples
                 * 100
              )        as tot_pct_line
@@ -680,9 +691,18 @@ select
     pct_line                as "%LINE",
     samp_px,
     cnt_samp_line           as samples,
-    cnt_exec_id             as "#EXEC_ID",
-    running_total_samp      as total_samp,
-    tot_pct_line            as "SUM(%LINE)"
+    case
+        when evt_rank = 1
+        then cnt_exec_id
+    end                     as "#EXEC_ID",
+    case
+        when evt_rank = 1
+        then running_total_samp
+    end                     as total_samp,
+    case
+        when evt_rank = 1
+        then tot_pct_line
+    end                     as "SUM(%LINE)"
 from
     ash_synth2
 order by

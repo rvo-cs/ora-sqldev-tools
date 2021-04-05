@@ -6595,11 +6595,16 @@ select
     a.force_matching_signature as force_matching_sig,
     nvl(e.command_name, 
             (select e2.command_name from v$sqlcommand e2, dba_hist_sqltext h 
-            where h.sql_id = a.sql_id and e2.command_type = h.command_type)) as sql_command,
+              where h.sql_id = a.sql_id and e2.command_type = h.command_type
+                and rownum = 1)
+       ) as sql_command,
     a.cnt_exec_id as "# EXEC ID",
     b.top3_wait_classes as "TOP-3 WAIT CLASS",
     c.top3_events as "TOP-3 WAIT EVENT",
-    nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h where h.sql_id = a.sql_id)) as sql_text,
+    nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h
+                          where h.sql_id = a.sql_id
+                            and rownum = 1)
+       ) as sql_text,
     u.top3_username as "TOP-3 USER",
     case when f.top3_module <> '(null) [100%]' then f.top3_module end as "TOP-3 MODULE",
     case when g.top3_action <> '(null) [100%]' then g.top3_action end as "TOP-3 ACTION",
@@ -7331,11 +7336,16 @@ select
     a.force_matching_signature as force_matching_sig,
     nvl(e.command_name, 
             (select e2.command_name from v$sqlcommand e2, dba_hist_sqltext h 
-            where h.sql_id = a.sql_id and e2.command_type = h.command_type)) as sql_command,
+              where h.sql_id = a.sql_id and e2.command_type = h.command_type
+                and rownum = 1)
+       ) as sql_command,
     a.cnt_exec_id as "# EXEC ID",
     b.top3_wait_classes as "TOP-3 WAIT CLASS",
     c.top3_events as "TOP-3 WAIT EVENT",
-    nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h where h.sql_id = a.sql_id)) as sql_text,
+    nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h
+                          where h.sql_id = a.sql_id
+                            and rownum = 1)
+       ) as sql_text,
     u.top3_username as "TOP-3 USER",
     case when f.top3_module <> '(null) [100%]' then f.top3_module end as "TOP-3 MODULE",
     case when g.top3_action <> '(null) [100%]' then g.top3_action end as "TOP-3 ACTION",

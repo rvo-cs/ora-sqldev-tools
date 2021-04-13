@@ -1,0 +1,3859 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="cc5c867d-0178-1000-8001-c0a8010c27da" type="" style="Chart" enable="true">
+	<name><![CDATA[Live ASH - AAS chart (v3) [11.2]]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+		<Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+		<Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+		<Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+		<Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+		<LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+		<PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-16724941,-16763905,-16724737,-65536,-39424]]></PLOT_SERIES_OPTIONS_COLOR>
+		<LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+		<GRADIENT><![CDATA[false]]></GRADIENT>
+		<XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+		<DATA_MAP_COLUMNS><![CDATA[\,"SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME","SAMPLE_TIME",]]></DATA_MAP_COLUMNS>
+		<Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+		<XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+		<Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+		<TYPE><![CDATA[AREA_VERT_STACK]]></TYPE>
+		<GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+		<PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+		<FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+		<DATA_MAP_COLNAMES><![CDATA[\,"AAS_ALL_OTH","AAS_APPLI","AAS_CLUSTER","AAS_COMMIT","AAS_CONCURRENCY","AAS_CONFIG","AAS_NETWORK","AAS_ON_CPU","AAS_SCHEDULER","AAS_SYSTEM_IO","AAS_USER_IO","SAMPLE_TIME"]]></DATA_MAP_COLNAMES>
+		<DATA_MAP_SERIES><![CDATA[\,On CPU,User I/O,System I/O,Commit,Concurrency,Configuration,Scheduler,Network,Application,Cluster,Other wait classes,]]></DATA_MAP_SERIES>
+		<Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+		<DATA_MAP_COUNT><![CDATA[12]]></DATA_MAP_COUNT>
+		<STYLE><![CDATA[Default]]></STYLE>
+		<TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+		<Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+		<THREED><![CDATA[false]]></THREED>
+		<Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+		<DATA_MAP_VALUES><![CDATA[\,"AAS_ON_CPU","AAS_USER_IO","AAS_SYSTEM_IO","AAS_COMMIT","AAS_CONCURRENCY","AAS_CONFIG","AAS_SCHEDULER","AAS_NETWORK","AAS_APPLI","AAS_CLUSTER","AAS_ALL_OTH",]]></DATA_MAP_VALUES>
+		<Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+		<PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+		<Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+		<SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with
+bind_me as (
+    select 1 from dual
+    where :TOP_SESSION_MAX_ROWS <> 0
+),
+time_upper_bound as (
+    select nvl(cast(to_timestamp(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)), 
+               cast(sysdate as timestamp(3))) as end_time
+    from dual
+),
+time_span as (
+    select
+        case when :TIME_SPAN_HR is null 
+            then nvl(cast(to_timestamp(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                     cast((select oldest_sample_time from v$ash_info) as timestamp(3)))
+            else end_time - numtodsinterval(:TIME_SPAN_HR, 'HOUR') 
+            end as start_time,
+        end_time + numtodsinterval(greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1) - 1, 'SECOND')
+            as end_time
+    from
+        time_upper_bound
+),
+ash_data as (
+    select
+        min(sample_time - numtodsinterval(mod(sample_id, 
+                greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1)), 'SECOND')) as sample_time,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end as wait_class,
+        sum(1) as aas
+    from 
+        v$active_session_history
+    where
+        sample_time >= /* time_span.start_time */ 
+            case 
+                when :TIME_SPAN_HR is null 
+                then nvl(cast(to_timestamp(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                         cast((select oldest_sample_time from v$ash_info) as timestamp(3)))
+                else nvl(cast(to_timestamp(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                         cast(systimestamp as timestamp(3))) 
+                        - numtodsinterval(:TIME_SPAN_HR, 'HOUR') 
+            end
+        and sample_time <= /* time_stamp.end_time */
+            nvl(cast(to_timestamp(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                cast(systimestamp as timestamp(3)))
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+    group by
+        floor(sample_id / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1)),
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end
+),
+gen_50 as (
+    select /*+ materialize no_eliminate_oby */
+        level - 1 as n 
+    from dual 
+    connect by level <= 50
+    order by 1
+),
+gen_125k as (
+    select /*+ leading(a b c) use_nl(b) use_nl(c) */
+        2500 * a.n + 50 * b.n + c.n as n
+    from 
+        gen_50 a, gen_50 b, gen_50 c
+),
+time_slots as (
+    select
+        a.end_time - numtodsinterval((b.n + 1) * greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1), 'SECOND')
+            as start_time,
+        a.end_time - numtodsinterval(b.n * greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1), 'SECOND')
+            as end_time
+    from
+        time_span a,
+        gen_125k b
+    where
+        a.start_time <= a.end_time 
+                - numtodsinterval((b.n + 1) * greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1), 'SECOND')
+),
+time_slot_wt_aas as (
+    select
+        /*+ no_merge(b) leading(a b) use_merge(b) */
+        a.start_time as sample_time,
+        b.wait_class,
+        b.aas
+    from 
+        time_slots a
+        left outer join
+        ash_data b on
+            b.sample_time >= a.start_time and b.sample_time < a.end_time
+),
+pivoted_time_slots_wt_aas as (
+    select
+        sample_time,
+        nvl(round(aas_on_cpu    / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_on_cpu,
+        nvl(round(aas_admin     / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_admin,
+        nvl(round(aas_appli     / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_appli,
+        nvl(round(aas_cluster   / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_cluster,
+        nvl(round(aas_concurrency / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1), 2), 0) as aas_concurrency,
+        nvl(round(aas_config    / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_config,
+        nvl(round(aas_commit    / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_commit,
+        nvl(round(aas_network   / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_network,
+        nvl(round(aas_other     / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_other,
+        nvl(round(aas_queueing  / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_queueing,
+        nvl(round(aas_scheduler / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_scheduler,
+        nvl(round(aas_system_io / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_system_io,
+        nvl(round(aas_user_io   / greatest(nvl(to_number(:SAMPLE_TIME_S), 10), 1),  2), 0)  as aas_user_io
+    from
+        time_slot_wt_aas
+        pivot 
+        (sum(aas) for wait_class in (
+            'ON CPU'            as aas_on_cpu,
+            'Administrative'    as aas_admin,
+            'Application'       as aas_appli,
+            'Cluster'           as aas_cluster,
+            'Concurrency'       as aas_concurrency,
+            'Configuration'     as aas_config,
+            'Commit'            as aas_commit,
+            'Network'           as aas_network,
+            'Other'             as aas_other,
+            'Queueing'          as aas_queueing,
+            'Scheduler'         as aas_scheduler,
+            'System I/O'        as aas_system_io,
+            'User I/O'          as aas_user_io
+        ))
+)
+select
+    sample_time,
+    aas_on_cpu,
+    aas_user_io,
+    aas_system_io,
+    aas_concurrency,
+    aas_config,
+    aas_commit,
+    aas_scheduler,
+    aas_cluster,
+    aas_network,
+    aas_appli,
+    (aas_admin + aas_queueing + aas_other) as aas_all_oth
+from
+    pivoted_time_slots_wt_aas
+order by 
+    1]]></sql>
+		<binds>
+			<bind id="TOP_SESSION_MAX_ROWS">
+				<prompt><![CDATA[Max sessions shown?]]></prompt>
+				<tooltip><![CDATA[Max # of sessions shown in "Top sessions" tabs (default: 20)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="TO_TIME">
+				<prompt><![CDATA[End time?]]></prompt>
+				<tooltip><![CDATA[End time (default: sysdate; format: YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="TIME_SPAN_HR">
+				<prompt><![CDATA[Time span?]]></prompt>
+				<tooltip><![CDATA[Time span (hours)]]></tooltip>
+				<value><![CDATA[.5]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="FROM_TIME">
+				<prompt><![CDATA[Start time?]]></prompt>
+				<tooltip><![CDATA[Start time -- ignored if time span is specified (default: time of earliest ASH sample; format: YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SAMPLE_TIME_S">
+				<prompt><![CDATA[Sampling interval?]]></prompt>
+				<tooltip><![CDATA[Sampling interval, in seconds (default: 10 s; minimum: 2 s)]]></tooltip>
+				<value><![CDATA[6]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="EXCLUDE_BACKGROUND">
+				<prompt><![CDATA[Exclude background sessions?]]></prompt>
+				<tooltip><![CDATA[If 'Y', only foreground sessions are considered]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				
+				
+					
+					
+					
+				
+					
+					
+				
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[ASH Info]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select * from v$ash_info]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					
+						
+						
+					
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						null																																																																																																																																												</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top-10 waits over 5 mins]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with 
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(150, 'SECOND'),
+            oldest_sample_time
+        )
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(150, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_timespan as (
+    select
+        extract(second from ts_upper_bound - ts_lower_bound)
+                + 60 * extract(minute from ts_upper_bound - ts_lower_bound)
+            as timespan_s
+    from
+        ash_info
+),
+ash_data as (
+    select
+        session_type,
+        user_id,
+        module,
+        action,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end as wait_class,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end as event,
+        case when is_sqlid_current = 'Y' then sql_id end as sql_id,
+        case when is_sqlid_current = 'Y' then force_matching_signature end as force_matching_signature,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#,
+        count(*) as cnt_samp
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+    group by
+        session_type,
+        user_id,
+        module,
+        action,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end,
+        case when is_sqlid_current = 'Y' then sql_id end,
+        case when is_sqlid_current = 'Y' then force_matching_signature end,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#
+),
+top3_user as (
+    select
+        a.session_type,
+        a.wait_class,
+        a.event,
+        listagg(case 
+                    when a.previous_total_pct <= 99.5 
+                    then nvl(b.username, to_char(a.user_id)) || ' [' || round(a.pct_user_id) || '%]'
+                end, ', ') 
+            within group (order by a.rn_user_id) as top3_username
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            user_id,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_user_id,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_user_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            user_id
+        ) a,
+        all_users b        
+    where
+        a.rn_user_id <= 3
+        and a.user_id = b.user_id (+)
+    group by
+        a.session_type,
+        a.wait_class,
+        a.event
+),
+top3_module as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            module,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_action as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            action,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_sqlid as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(sql_id, '(null)') || ' [' || round(pct_sqlid) || '%]'
+                end, ', ') 
+            within group (order by rn_sqlid) as top3_sqlid
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            sql_id,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_sqlid,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_sqlid,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            sql_id
+        )
+    where
+        rn_sqlid <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_matching_signature as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(to_char(force_matching_signature), '(null)') || ' [' || round(pct_matching_sig) || '%]'
+                end, ', ') 
+            within group (order by rn_matching_sig) as top3_force_matching_signature
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            force_matching_signature,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_matching_sig,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_matching_sig,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            force_matching_signature
+        )
+    where
+        rn_matching_sig <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_blksess_status as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(blocking_session_status, '(null)') || ' [' || round(pct_status) || '%]'
+                end, ', ') 
+            within group (order by rn_status) as top3_blocking_session_status
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            blocking_session_status,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_status,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_status,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            blocking_session_status
+        )
+    where
+        rn_status <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_blocking_session as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl2(blocking_session
+                                , nvl2(blocking_inst_id, '(' || blocking_inst_id || ')', null)
+                                        || blocking_session || ',' || blocking_session_serial# 
+                                , '(null)')
+                            || ' [' || round(pct_blocking_session) || '%]'
+                end, ', ') 
+            within group (order by rn_blocking_session) as top3_blocking_session
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_blocking_session,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_blocking_session,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#
+        )
+    where
+        rn_blocking_session <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top_waits as (
+    select
+        session_type,
+        wait_class,
+        event,
+        sum(cnt_samp) as cnt_samp,
+        round(100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type), 1) as pct_event,
+        row_number() over (partition by session_type order by sum(cnt_samp) desc) as evt_rank
+    from
+        ash_data
+    group by
+        session_type,
+        wait_class,
+        event
+)
+select
+    a.evt_rank as "#",
+    a.cnt_samp as "# SAMP",
+    a.session_type,
+    a.pct_event as "% EVENT",
+    a.wait_class,
+    case when a.event = 'ON CPU' then null else a.event end as event,
+    round(a.cnt_samp / (select timespan_s from ash_timespan), 1) as aas,
+    round(sum(a.cnt_samp) over (order by a.session_type desc, a.evt_rank asc) 
+            / (select timespan_s from ash_timespan), 1) as "AAS SUM",
+    b.top3_username as "TOP-3 USER",
+    case when c.top3_module <> '(null) [100%]' then c.top3_module end       as "TOP-3 MODULE",
+    case when d.top3_action <> '(null) [100%]' then d.top3_action end       as "TOP-3 ACTION",
+    case when g.top3_sqlid <> '(null) [100%]' then g.top3_sqlid end         as "TOP-3 SQL_ID",
+    case when g.top3_sqlid <> '(null) [100%]' then h.top3_force_matching_signature end
+                                                                            as "TOP-3 FORCE MATCHING SIGNATURE",
+    case when a.event <> 'ON CPU' then e.top3_blocking_session_status end   as "TOP-3 BLOCKING SESS. STATUS",
+    case when a.event <> 'ON CPU' and f.top3_blocking_session <> '(null) [100%]' 
+            then f.top3_blocking_session end                                as "TOP-3 BLOCKING SESSIONS",
+    cast((select ts_lower_bound from ash_info) as date)                     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)                         as "TO TIME"
+from
+    top_waits a,
+    top3_user b,
+    top3_module c,
+    top3_action d,
+    top3_blksess_status e,
+    top3_blocking_session f,
+    top3_sqlid g,
+    top3_matching_signature h
+where
+    a.evt_rank <= 10
+    and a.session_type  = b.session_type (+) 
+    and a.wait_class    = b.wait_class (+) 
+    and a.event         = b.event (+)
+    and a.session_type  = c.session_type (+) 
+    and a.wait_class    = c.wait_class (+) 
+    and a.event         = c.event (+)
+    and a.session_type  = d.session_type (+) 
+    and a.wait_class    = d.wait_class (+) 
+    and a.event         = d.event (+)
+    and a.session_type  = e.session_type (+) 
+    and a.wait_class    = e.wait_class (+) 
+    and a.event         = e.event (+)
+    and a.session_type  = f.session_type (+) 
+    and a.wait_class    = f.wait_class (+) 
+    and a.event         = f.event (+)
+    and a.session_type  = g.session_type (+) 
+    and a.wait_class    = g.wait_class (+) 
+    and a.event         = g.event (+)
+    and a.session_type  = h.session_type (+) 
+    and a.wait_class    = h.wait_class (+) 
+    and a.event         = h.event (+)
+order by
+    a.session_type desc, a.evt_rank]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					
+						
+						
+					
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						null																																																																																																																																												</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top-10 waits over 2 mins]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with 
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(60, 'SECOND'),
+            oldest_sample_time
+        ) 
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(60, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_timespan as (
+    select
+        extract(second from ts_upper_bound - ts_lower_bound)
+                + 60 * extract(minute from ts_upper_bound - ts_lower_bound)
+            as timespan_s
+    from
+        ash_info
+),
+ash_data as (
+    select
+        session_type,
+        user_id,
+        module,
+        action,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end as wait_class,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end as event,
+        case when is_sqlid_current = 'Y' then sql_id end as sql_id,
+        case when is_sqlid_current = 'Y' then force_matching_signature end as force_matching_signature,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#,
+        count(*) as cnt_samp
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+    group by
+        session_type,
+        user_id,
+        module,
+        action,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end,
+        case when is_sqlid_current = 'Y' then sql_id end,
+        case when is_sqlid_current = 'Y' then force_matching_signature end,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#
+),
+top3_user as (
+    select
+        a.session_type,
+        a.wait_class,
+        a.event,
+        listagg(case 
+                    when a.previous_total_pct <= 99.5 
+                    then nvl(b.username, to_char(a.user_id)) || ' [' || round(a.pct_user_id) || '%]'
+                end, ', ') 
+            within group (order by a.rn_user_id) as top3_username
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            user_id,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_user_id,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_user_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            user_id
+        ) a,
+        all_users b        
+    where
+        a.rn_user_id <= 3
+        and a.user_id = b.user_id (+)
+    group by
+        a.session_type,
+        a.wait_class,
+        a.event
+),
+top3_module as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            module,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_action as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            action,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_sqlid as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(sql_id, '(null)') || ' [' || round(pct_sqlid) || '%]'
+                end, ', ') 
+            within group (order by rn_sqlid) as top3_sqlid
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            sql_id,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_sqlid,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_sqlid,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            sql_id
+        )
+    where
+        rn_sqlid <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_matching_signature as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(to_char(force_matching_signature), '(null)') || ' [' || round(pct_matching_sig) || '%]'
+                end, ', ') 
+            within group (order by rn_matching_sig) as top3_force_matching_signature
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            force_matching_signature,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_matching_sig,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_matching_sig,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            force_matching_signature
+        )
+    where
+        rn_matching_sig <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_blksess_status as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(blocking_session_status, '(null)') || ' [' || round(pct_status) || '%]'
+                end, ', ') 
+            within group (order by rn_status) as top3_blocking_session_status
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            blocking_session_status,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_status,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_status,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            blocking_session_status
+        )
+    where
+        rn_status <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_blocking_session as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl2(blocking_session
+                                , nvl2(blocking_inst_id, '(' || blocking_inst_id || ')', null)
+                                        || blocking_session || ',' || blocking_session_serial# 
+                                , '(null)')
+                            || ' [' || round(pct_blocking_session) || '%]'
+                end, ', ') 
+            within group (order by rn_blocking_session) as top3_blocking_session
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_blocking_session,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_blocking_session,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#
+        )
+    where
+        rn_blocking_session <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top_waits as (
+    select
+        session_type,
+        wait_class,
+        event,
+        sum(cnt_samp) as cnt_samp,
+        round(100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type), 1) as pct_event,
+        row_number() over (partition by session_type order by sum(cnt_samp) desc) as evt_rank
+    from
+        ash_data
+    group by
+        session_type,
+        wait_class,
+        event
+)
+select
+    a.evt_rank as "#",
+    a.cnt_samp as "# SAMP",
+    a.session_type,
+    a.pct_event as "% EVENT",
+    a.wait_class,
+    case when a.event = 'ON CPU' then null else a.event end as event,
+    round(a.cnt_samp / (select timespan_s from ash_timespan), 1) as aas,
+    round(sum(a.cnt_samp) over (order by a.session_type desc, a.evt_rank asc) 
+            / (select timespan_s from ash_timespan), 1) as "AAS SUM",
+    b.top3_username as "TOP-3 USER",
+    case when c.top3_module <> '(null) [100%]' then c.top3_module end       as "TOP-3 MODULE",
+    case when d.top3_action <> '(null) [100%]' then d.top3_action end       as "TOP-3 ACTION",
+    case when g.top3_sqlid <> '(null) [100%]' then g.top3_sqlid end         as "TOP-3 SQL_ID",
+    case when g.top3_sqlid <> '(null) [100%]' then h.top3_force_matching_signature end
+                                                                            as "TOP-3 FORCE MATCHING SIGNATURE",
+    case when a.event <> 'ON CPU' then e.top3_blocking_session_status end   as "TOP-3 BLOCKING SESS. STATUS",
+    case when a.event <> 'ON CPU' and f.top3_blocking_session <> '(null) [100%]' 
+            then f.top3_blocking_session end                                as "TOP-3 BLOCKING SESSIONS",
+    cast((select ts_lower_bound from ash_info) as date)                     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)                         as "TO TIME"
+from
+    top_waits a,
+    top3_user b,
+    top3_module c,
+    top3_action d,
+    top3_blksess_status e,
+    top3_blocking_session f,
+    top3_sqlid g,
+    top3_matching_signature h
+where
+    a.evt_rank <= 10
+    and a.session_type  = b.session_type (+) 
+    and a.wait_class    = b.wait_class (+) 
+    and a.event         = b.event (+)
+    and a.session_type  = c.session_type (+) 
+    and a.wait_class    = c.wait_class (+) 
+    and a.event         = c.event (+)
+    and a.session_type  = d.session_type (+) 
+    and a.wait_class    = d.wait_class (+) 
+    and a.event         = d.event (+)
+    and a.session_type  = e.session_type (+) 
+    and a.wait_class    = e.wait_class (+) 
+    and a.event         = e.event (+)
+    and a.session_type  = f.session_type (+) 
+    and a.wait_class    = f.wait_class (+) 
+    and a.event         = f.event (+)
+    and a.session_type  = g.session_type (+) 
+    and a.wait_class    = g.wait_class (+) 
+    and a.event         = g.event (+)
+    and a.session_type  = h.session_type (+) 
+    and a.wait_class    = h.wait_class (+) 
+    and a.event         = h.event (+)
+order by
+    a.session_type desc, a.evt_rank]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					
+						
+						
+					
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						null																																																																																																																																												</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top-10 waits over 10s]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with 
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(5, 'SECOND'),
+            oldest_sample_time
+        ) 
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(5, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_timespan as (
+    select
+        extract(second from ts_upper_bound - ts_lower_bound)
+                + 60 * extract(minute from ts_upper_bound - ts_lower_bound)
+            as timespan_s
+    from
+        ash_info
+),
+ash_data as (
+    select
+        session_type,
+        user_id,
+        module,
+        action,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end as wait_class,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end as event,
+        case when is_sqlid_current = 'Y' then sql_id end as sql_id,
+        case when is_sqlid_current = 'Y' then force_matching_signature end as force_matching_signature,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#,
+        count(*) as cnt_samp
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+    group by
+        session_type,
+        user_id,
+        module,
+        action,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end,
+        case when is_sqlid_current = 'Y' then sql_id end,
+        case when is_sqlid_current = 'Y' then force_matching_signature end,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#
+),
+top3_user as (
+    select
+        a.session_type,
+        a.wait_class,
+        a.event,
+        listagg(case 
+                    when a.previous_total_pct <= 99.5 
+                    then nvl(b.username, to_char(a.user_id)) || ' [' || round(a.pct_user_id) || '%]'
+                end, ', ') 
+            within group (order by a.rn_user_id) as top3_username
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            user_id,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_user_id,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_user_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            user_id
+        ) a,
+        all_users b        
+    where
+        a.rn_user_id <= 3
+        and a.user_id = b.user_id (+)
+    group by
+        a.session_type,
+        a.wait_class,
+        a.event
+),
+top3_module as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            module,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_action as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            action,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_sqlid as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(sql_id, '(null)') || ' [' || round(pct_sqlid) || '%]'
+                end, ', ') 
+            within group (order by rn_sqlid) as top3_sqlid
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            sql_id,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_sqlid,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_sqlid,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            sql_id
+        )
+    where
+        rn_sqlid <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_matching_signature as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(to_char(force_matching_signature), '(null)') || ' [' || round(pct_matching_sig) || '%]'
+                end, ', ') 
+            within group (order by rn_matching_sig) as top3_force_matching_signature
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            force_matching_signature,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_matching_sig,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_matching_sig,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            force_matching_signature
+        )
+    where
+        rn_matching_sig <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_blksess_status as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(blocking_session_status, '(null)') || ' [' || round(pct_status) || '%]'
+                end, ', ') 
+            within group (order by rn_status) as top3_blocking_session_status
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            blocking_session_status,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_status,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_status,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            blocking_session_status
+        )
+    where
+        rn_status <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top3_blocking_session as (
+    select
+        session_type,
+        wait_class,
+        event,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl2(blocking_session
+                                , nvl2(blocking_inst_id, '(' || blocking_inst_id || ')', null)
+                                        || blocking_session || ',' || blocking_session_serial# 
+                                , '(null)')
+                            || ' [' || round(pct_blocking_session) || '%]'
+                end, ', ') 
+            within group (order by rn_blocking_session) as top3_blocking_session
+    from
+        (select
+            session_type,
+            wait_class,
+            event,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#,
+            row_number() over (partition by session_type, wait_class, event order by sum(cnt_samp) desc)
+                as rn_blocking_session,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type, wait_class, event)
+                as pct_blocking_session,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, wait_class, event 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, wait_class, event))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            wait_class,
+            event,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#
+        )
+    where
+        rn_blocking_session <= 3
+    group by
+        session_type,
+        wait_class,
+        event
+),
+top_waits as (
+    select
+        session_type,
+        wait_class,
+        event,
+        sum(cnt_samp) as cnt_samp,
+        round(100 * ratio_to_report(sum(cnt_samp)) over (partition by session_type), 1) as pct_event,
+        row_number() over (partition by session_type order by sum(cnt_samp) desc) as evt_rank
+    from
+        ash_data
+    group by
+        session_type,
+        wait_class,
+        event
+)
+select
+    a.evt_rank as "#",
+    a.cnt_samp as "# SAMP",
+    a.session_type,
+    a.pct_event as "% EVENT",
+    a.wait_class,
+    case when a.event = 'ON CPU' then null else a.event end as event,
+    round(a.cnt_samp / (select timespan_s from ash_timespan), 1) as aas,
+    round(sum(a.cnt_samp) over (order by a.session_type desc, a.evt_rank asc) 
+            / (select timespan_s from ash_timespan), 1) as "AAS SUM",
+    b.top3_username as "TOP-3 USER",
+    case when c.top3_module <> '(null) [100%]' then c.top3_module end       as "TOP-3 MODULE",
+    case when d.top3_action <> '(null) [100%]' then d.top3_action end       as "TOP-3 ACTION",
+    case when g.top3_sqlid <> '(null) [100%]' then g.top3_sqlid end         as "TOP-3 SQL_ID",
+    case when g.top3_sqlid <> '(null) [100%]' then h.top3_force_matching_signature end
+                                                                            as "TOP-3 FORCE MATCHING SIGNATURE",
+    case when a.event <> 'ON CPU' then e.top3_blocking_session_status end   as "TOP-3 BLOCKING SESS. STATUS",
+    case when a.event <> 'ON CPU' and f.top3_blocking_session <> '(null) [100%]' 
+            then f.top3_blocking_session end                                as "TOP-3 BLOCKING SESSIONS",
+    cast((select ts_lower_bound from ash_info) as date)                     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)                         as "TO TIME"
+from
+    top_waits a,
+    top3_user b,
+    top3_module c,
+    top3_action d,
+    top3_blksess_status e,
+    top3_blocking_session f,
+    top3_sqlid g,
+    top3_matching_signature h
+where
+    a.evt_rank <= 10
+    and a.session_type  = b.session_type (+) 
+    and a.wait_class    = b.wait_class (+) 
+    and a.event         = b.event (+)
+    and a.session_type  = c.session_type (+) 
+    and a.wait_class    = c.wait_class (+) 
+    and a.event         = c.event (+)
+    and a.session_type  = d.session_type (+) 
+    and a.wait_class    = d.wait_class (+) 
+    and a.event         = d.event (+)
+    and a.session_type  = e.session_type (+) 
+    and a.wait_class    = e.wait_class (+) 
+    and a.event         = e.event (+)
+    and a.session_type  = f.session_type (+) 
+    and a.wait_class    = f.wait_class (+) 
+    and a.event         = f.event (+)
+    and a.session_type  = g.session_type (+) 
+    and a.wait_class    = g.wait_class (+) 
+    and a.event         = g.event (+)
+    and a.session_type  = h.session_type (+) 
+    and a.wait_class    = h.wait_class (+) 
+    and a.event         = h.event (+)
+order by
+    a.session_type desc, a.evt_rank]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					
+						
+						null																																													</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top sessions over 2 mins]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with 
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(60, 'SECOND'),
+            oldest_sample_time
+        ) 
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(60, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_timespan as (
+    select
+        extract(second from ts_upper_bound - ts_lower_bound)
+                + 60 * extract(minute from ts_upper_bound - ts_lower_bound)
+            as timespan_s
+    from
+        ash_info
+),
+ash_data as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        user_id,
+        machine,
+        program,
+        module,
+        action,
+        client_id,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end as wait_class,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end as event,
+        case when is_sqlid_current = 'Y' then sql_id end                    as sql_id,
+        case when is_sqlid_current = 'Y' then force_matching_signature end  as force_matching_signature,
+        case when is_sqlid_current = 'Y' then sql_exec_id end               as sql_exec_id,
+        case when is_sqlid_current = 'Y' then sql_exec_start end            as sql_exec_start,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#,
+        count(*) as cnt_samp,
+        min(sample_time) as min_sample_time,
+        max(sample_time) as max_sample_time
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+    group by
+        session_type,
+        session_id,
+        session_serial#,
+        user_id,
+        machine,
+        program,
+        module,
+        action,
+        client_id,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end,
+        case when is_sqlid_current = 'Y' then sql_id end,
+        case when is_sqlid_current = 'Y' then force_matching_signature end,
+        case when is_sqlid_current = 'Y' then sql_exec_id end,
+        case when is_sqlid_current = 'Y' then sql_exec_start end,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#
+),
+top3_module as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            module,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_action as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            action,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_module_action as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module_action, '(null)') || ' [' || round(pct_module_action) || '%]'
+                end, ', ') 
+            within group (order by rn_module_action) as top3_module_action
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            nvl2(module, module, '(null)') || ' / ' || nvl2(action, action, '(null)') 
+                as module_action,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_module_action,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_module_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            nvl2(module, module, '(null)') || ' / ' || nvl2(action, action, '(null)') 
+        )
+    where
+        rn_module_action <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_client_id as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(client_id, '(null)') || ' [' || round(pct_client_id) || '%]'
+                end, ', ') 
+            within group (order by rn_client_id) as top3_client_id
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            client_id,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_client_id,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_client_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            client_id
+        )
+    where
+        rn_client_id <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_wait_class as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(wait_class, '(null)') || ' [' || round(pct_wait_class) || '%]'
+                end, ', ') 
+            within group (order by rn_wait_class) as top3_wait_class
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            wait_class,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_wait_class,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_wait_class,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            wait_class
+        )
+    where
+        rn_wait_class <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_event as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(event, '(null)') || ' [' || round(pct_event) || '%]'
+                end, ', ') 
+            within group (order by rn_event) as top3_event
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            event,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_event,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_event,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            event
+        )
+    where
+        rn_event <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_sqlid as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(sql_id, '(null)') 
+                            || ' [' || nvl2(sql_id, to_char(cnt_exec_id) || 'x, ', null) 
+                            || round(pct_sqlid) || '%' || ']'
+                end, ', ')
+            within group (order by rn_sqlid) as top3_sqlid
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            sql_id,
+            case when sql_id is not null
+                 then count(distinct 
+                            case when sql_exec_id is not null
+                                 then sql_exec_id
+                                        || '-' || to_char(sql_exec_start, 'YYYYMMDDHH24MISS')
+                            end)
+            end as cnt_exec_id,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_sqlid,
+            100 * ratio_to_report(sum(cnt_samp))
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_sqlid,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            sql_id
+        )
+    where
+        rn_sqlid <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_matching_signature as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(to_char(force_matching_signature), '(null)') 
+                            || ' [' || nvl2(force_matching_signature, to_char(cnt_exec_id) || 'x, ', null) 
+                            || round(pct_matching_sig) || '%' || ']'
+                end, ', ') 
+            within group (order by rn_matching_sig) as top3_force_matching_signature
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            force_matching_signature,
+            case when force_matching_signature is not null
+                 then count(distinct
+                            case when sql_id is not null and sql_exec_id is not null
+                                 then sql_id
+                                        || '-' || sql_exec_id
+                                        || '-' || to_char(sql_exec_start, 'YYYYMMDDHH24MISS')
+                            end)
+            end as cnt_exec_id,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_matching_sig,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_matching_sig,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            force_matching_signature
+        )
+    where
+        rn_matching_sig <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_blksess_status as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(blocking_session_status, '(null)') || ' [' || round(pct_status) || '%]'
+                end, ', ') 
+            within group (order by rn_status) as top3_blocking_session_status
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_session_status,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_status,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_status,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_session_status
+        )
+    where
+        rn_status <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_blocking_session as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl2(blocking_session
+                                , nvl2(blocking_inst_id, '(' || blocking_inst_id || ')', null)
+                                        || blocking_session || ',' || blocking_session_serial# 
+                                , '(null)')
+                            || ' [' || round(pct_blocking_session) || '%]'
+                end, ', ') 
+            within group (order by rn_blocking_session) as top3_blocking_session
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_blocking_session,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_blocking_session,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#
+        )
+    where
+        rn_blocking_session <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+ash_sessions as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        max(user_id) as user_id,
+        max(machine) as machine,
+        max(program) as program,
+        sum(cnt_samp) as cnt_samp,
+        row_number() over (partition by session_type order by sum(cnt_samp) desc) as rn,
+        round(100 * sum(cnt_samp) / (select timespan_s from ash_timespan), 1) as pct_active,
+        min(min_sample_time) as min_sample_time,
+        max(max_sample_time) as max_sample_time
+    from
+        ash_data
+    group by
+        session_type,
+        session_id,
+        session_serial#
+)
+select
+    a.rn                    as "#",
+    a.session_type,
+    a.pct_active            as "% ACTIVE",
+    a.cnt_samp              as "# SAMP",
+    a.session_id,
+    a.session_serial#,
+    nvl(u.username, to_char(a.user_id))                                             as "USER",
+    a.machine,
+    a.program,
+    case when b.top3_module <> '(null) [100%]' then b.top3_module end               as "TOP-3 MODULE",
+    case when c.top3_action <> '(null) [100%]' then c.top3_action end               as "TOP-3 ACTION",
+    case when d.top3_module_action <> '(null) / (null) [100%]' 
+            then d.top3_module_action end                                           as "TOP-3 MODULE / ACTION",
+    case when e.top3_client_id  <> '(null) [100%]' then e.top3_client_id end        as "TOP-3 CLIENT_ID",
+    f.top3_wait_class       as "TOP-3 WAIT CLASS",
+    g.top3_event            as "TOP-3 WAIT EVENT",
+    case when h.top3_sqlid <> '(null) [100%]' then h.top3_sqlid end                 as "TOP-3 SQL_ID",
+    case when j.top3_force_matching_signature not in ('(null) [100%]', '0 [0x, 100%]')
+            then j.top3_force_matching_signature end                                as "TOP-3 FORCE MATCHING SIGNATURE",
+    k.top3_blocking_session_status                                                  as "TOP-3 BLOCKING SESS. STATUS",
+    case when n.top3_blocking_session <> '(null) [100%]' 
+            then n.top3_blocking_session end                                        as "TOP-3 BLOCKING SESSIONS",
+    cast(a.min_sample_time
+            - numtodsinterval(extract(second from a.min_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.min_sample_time)), 'SECOND') as date) 
+        as min_sample_time,
+    cast(a.max_sample_time
+            - numtodsinterval(extract(second from a.max_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.max_sample_time)), 'SECOND') as date) 
+        as max_sample_time,
+    cast((select ts_lower_bound from ash_info) as date)     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)         as "TO TIME"
+from
+    ash_sessions a,
+    top3_module b,
+    top3_action c,
+    top3_module_action d,
+    top3_client_id e,
+    top3_wait_class f,
+    top3_event g,
+    top3_sqlid h,
+    top3_matching_signature j,
+    top3_blksess_status k,
+    top3_blocking_session n,
+    all_users u
+where
+    a.rn <= greatest(nvl(:TOP_SESSION_MAX_ROWS, 20), 10)
+    --
+    and a.session_type      = b.session_type (+)
+    and a.session_id        = b.session_id (+)
+    and a.session_serial#   = b.session_serial# (+)
+    --
+    and a.session_type      = c.session_type (+)
+    and a.session_id        = c.session_id (+)
+    and a.session_serial#   = c.session_serial# (+)
+    --
+    and a.session_type      = d.session_type (+)
+    and a.session_id        = d.session_id (+)
+    and a.session_serial#   = d.session_serial# (+)
+    --
+    and a.session_type      = e.session_type (+)
+    and a.session_id        = e.session_id (+)
+    and a.session_serial#   = e.session_serial# (+)
+    --
+    and a.session_type      = f.session_type (+)
+    and a.session_id        = f.session_id (+)
+    and a.session_serial#   = f.session_serial# (+)
+    --
+    and a.session_type      = g.session_type (+)
+    and a.session_id        = g.session_id (+)
+    and a.session_serial#   = g.session_serial# (+)
+    --
+    and a.session_type      = h.session_type (+)
+    and a.session_id        = h.session_id (+)
+    and a.session_serial#   = h.session_serial# (+)
+    --
+    and a.session_type      = j.session_type (+)
+    and a.session_id        = j.session_id (+)
+    and a.session_serial#   = j.session_serial# (+)
+    --
+    and a.session_type      = k.session_type (+)
+    and a.session_id        = k.session_id (+)
+    and a.session_serial#   = k.session_serial# (+)
+    --
+    and a.session_type      = n.session_type (+)
+    and a.session_id        = n.session_id (+)
+    and a.session_serial#   = n.session_serial# (+)
+    --
+    and a.user_id = u.user_id (+)
+order by
+    session_type desc,
+    rn asc]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					null																																	</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top sessions over 10s]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with 
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(5, 'SECOND'),
+            oldest_sample_time
+        ) 
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(5, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_timespan as (
+    select
+        extract(second from ts_upper_bound - ts_lower_bound)
+                + 60 * extract(minute from ts_upper_bound - ts_lower_bound)
+            as timespan_s
+    from
+        ash_info
+),
+ash_data as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        user_id,
+        machine,
+        program,
+        module,
+        action,
+        client_id,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end as wait_class,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end as event,
+        case when is_sqlid_current = 'Y' then sql_id end                    as sql_id,
+        case when is_sqlid_current = 'Y' then force_matching_signature end  as force_matching_signature,
+        case when is_sqlid_current = 'Y' then sql_exec_id end               as sql_exec_id,
+        case when is_sqlid_current = 'Y' then sql_exec_start end            as sql_exec_start,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#,
+        count(*) as cnt_samp,
+        min(sample_time) as min_sample_time,
+        max(sample_time) as max_sample_time
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+    group by
+        session_type,
+        session_id,
+        session_serial#,
+        user_id,
+        machine,
+        program,
+        module,
+        action,
+        client_id,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class end,
+        case when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event end,
+        case when is_sqlid_current = 'Y' then sql_id end,
+        case when is_sqlid_current = 'Y' then force_matching_signature end,
+        case when is_sqlid_current = 'Y' then sql_exec_id end,
+        case when is_sqlid_current = 'Y' then sql_exec_start end,
+        blocking_session_status,
+        blocking_inst_id,
+        blocking_session,
+        blocking_session_serial#
+),
+top3_module as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            module,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_action as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            action,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_module_action as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module_action, '(null)') || ' [' || round(pct_module_action) || '%]'
+                end, ', ') 
+            within group (order by rn_module_action) as top3_module_action
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            nvl2(module, module, '(null)') || ' / ' || nvl2(action, action, '(null)') 
+                as module_action,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_module_action,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_module_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            nvl2(module, module, '(null)') || ' / ' || nvl2(action, action, '(null)') 
+        )
+    where
+        rn_module_action <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_client_id as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(client_id, '(null)') || ' [' || round(pct_client_id) || '%]'
+                end, ', ') 
+            within group (order by rn_client_id) as top3_client_id
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            client_id,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_client_id,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_client_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            client_id
+        )
+    where
+        rn_client_id <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_wait_class as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(wait_class, '(null)') || ' [' || round(pct_wait_class) || '%]'
+                end, ', ') 
+            within group (order by rn_wait_class) as top3_wait_class
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            wait_class,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_wait_class,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_wait_class,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            wait_class
+        )
+    where
+        rn_wait_class <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_event as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(event, '(null)') || ' [' || round(pct_event) || '%]'
+                end, ', ') 
+            within group (order by rn_event) as top3_event
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            event,
+            row_number() over (partition by session_type, session_id, session_serial# 
+                    order by sum(cnt_samp) desc)
+                as rn_event,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_event,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            event
+        )
+    where
+        rn_event <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_sqlid as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(sql_id, '(null)') 
+                            || ' [' || nvl2(sql_id, to_char(cnt_exec_id) || 'x, ', null) 
+                            || round(pct_sqlid) || '%' || ']'
+                end, ', ')
+            within group (order by rn_sqlid) as top3_sqlid
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            sql_id,
+            case when sql_id is not null
+                 then count(distinct 
+                            case when sql_exec_id is not null
+                                 then sql_exec_id
+                                        || '-' || to_char(sql_exec_start, 'YYYYMMDDHH24MISS')
+                            end)
+            end as cnt_exec_id,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_sqlid,
+            100 * ratio_to_report(sum(cnt_samp))
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_sqlid,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            sql_id
+        )
+    where
+        rn_sqlid <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_matching_signature as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(to_char(force_matching_signature), '(null)') 
+                            || ' [' || nvl2(force_matching_signature, to_char(cnt_exec_id) || 'x, ', null) 
+                            || round(pct_matching_sig) || '%' || ']'
+                end, ', ') 
+            within group (order by rn_matching_sig) as top3_force_matching_signature
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            force_matching_signature,
+            case when force_matching_signature is not null
+                 then count(distinct
+                            case when sql_id is not null and sql_exec_id is not null
+                                 then sql_id
+                                        || '-' || sql_exec_id
+                                        || '-' || to_char(sql_exec_start, 'YYYYMMDDHH24MISS')
+                            end)
+            end as cnt_exec_id,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_matching_sig,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_matching_sig,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            force_matching_signature
+        )
+    where
+        rn_matching_sig <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_blksess_status as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(blocking_session_status, '(null)') || ' [' || round(pct_status) || '%]'
+                end, ', ') 
+            within group (order by rn_status) as top3_blocking_session_status
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_session_status,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_status,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_status,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_session_status
+        )
+    where
+        rn_status <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+top3_blocking_session as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl2(blocking_session
+                                , nvl2(blocking_inst_id, '(' || blocking_inst_id || ')', null)
+                                        || blocking_session || ',' || blocking_session_serial# 
+                                , '(null)')
+                            || ' [' || round(pct_blocking_session) || '%]'
+                end, ', ') 
+            within group (order by rn_blocking_session) as top3_blocking_session
+    from
+        (select
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#,
+            row_number() over (partition by session_type, session_id, session_serial#
+                    order by sum(cnt_samp) desc)
+                as rn_blocking_session,
+            100 * ratio_to_report(sum(cnt_samp)) 
+                    over (partition by session_type, session_id, session_serial#)
+                as pct_blocking_session,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial# 
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by session_type, session_id, session_serial#))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            session_type,
+            session_id,
+            session_serial#,
+            blocking_inst_id,
+            blocking_session,
+            blocking_session_serial#
+        )
+    where
+        rn_blocking_session <= 3
+    group by
+        session_type,
+        session_id,
+        session_serial#
+),
+ash_sessions as (
+    select
+        session_type,
+        session_id,
+        session_serial#,
+        max(user_id) as user_id,
+        max(machine) as machine,
+        max(program) as program,
+        sum(cnt_samp) as cnt_samp,
+        row_number() over (partition by session_type order by sum(cnt_samp) desc) as rn,
+        round(100 * sum(cnt_samp) / (select timespan_s from ash_timespan), 1) as pct_active,
+        min(min_sample_time) as min_sample_time,
+        max(max_sample_time) as max_sample_time
+    from
+        ash_data
+    group by
+        session_type,
+        session_id,
+        session_serial#
+)
+select
+    a.rn                    as "#",
+    a.session_type,
+    a.pct_active            as "% ACTIVE",
+    a.cnt_samp              as "# SAMP",
+    a.session_id,
+    a.session_serial#,
+    nvl(u.username, to_char(a.user_id))                                             as "USER",
+    a.machine,
+    a.program,
+    case when b.top3_module <> '(null) [100%]' then b.top3_module end               as "TOP-3 MODULE",
+    case when c.top3_action <> '(null) [100%]' then c.top3_action end               as "TOP-3 ACTION",
+    case when d.top3_module_action <> '(null) / (null) [100%]' 
+            then d.top3_module_action end                                           as "TOP-3 MODULE / ACTION",
+    case when e.top3_client_id  <> '(null) [100%]' then e.top3_client_id end        as "TOP-3 CLIENT_ID",
+    f.top3_wait_class       as "TOP-3 WAIT CLASS",
+    g.top3_event            as "TOP-3 WAIT EVENT",
+    case when h.top3_sqlid <> '(null) [100%]' then h.top3_sqlid end                 as "TOP-3 SQL_ID",
+    case when j.top3_force_matching_signature not in ('(null) [100%]', '0 [0x, 100%]')
+            then j.top3_force_matching_signature end                                as "TOP-3 FORCE MATCHING SIGNATURE",
+    k.top3_blocking_session_status                                                  as "TOP-3 BLOCKING SESS. STATUS",
+    case when n.top3_blocking_session <> '(null) [100%]' 
+            then n.top3_blocking_session end                                        as "TOP-3 BLOCKING SESSIONS",
+    cast(a.min_sample_time
+            - numtodsinterval(extract(second from a.min_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.min_sample_time)), 'SECOND') as date) 
+        as min_sample_time,
+    cast(a.max_sample_time
+            - numtodsinterval(extract(second from a.max_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.max_sample_time)), 'SECOND') as date) 
+        as max_sample_time,
+    cast((select ts_lower_bound from ash_info) as date)     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)         as "TO TIME"
+from
+    ash_sessions a,
+    top3_module b,
+    top3_action c,
+    top3_module_action d,
+    top3_client_id e,
+    top3_wait_class f,
+    top3_event g,
+    top3_sqlid h,
+    top3_matching_signature j,
+    top3_blksess_status k,
+    top3_blocking_session n,
+    all_users u
+where
+    a.rn <= greatest(nvl(:TOP_SESSION_MAX_ROWS, 20), 10)
+    --
+    and a.session_type      = b.session_type (+)
+    and a.session_id        = b.session_id (+)
+    and a.session_serial#   = b.session_serial# (+)
+    --
+    and a.session_type      = c.session_type (+)
+    and a.session_id        = c.session_id (+)
+    and a.session_serial#   = c.session_serial# (+)
+    --
+    and a.session_type      = d.session_type (+)
+    and a.session_id        = d.session_id (+)
+    and a.session_serial#   = d.session_serial# (+)
+    --
+    and a.session_type      = e.session_type (+)
+    and a.session_id        = e.session_id (+)
+    and a.session_serial#   = e.session_serial# (+)
+    --
+    and a.session_type      = f.session_type (+)
+    and a.session_id        = f.session_id (+)
+    and a.session_serial#   = f.session_serial# (+)
+    --
+    and a.session_type      = g.session_type (+)
+    and a.session_id        = g.session_id (+)
+    and a.session_serial#   = g.session_serial# (+)
+    --
+    and a.session_type      = h.session_type (+)
+    and a.session_id        = h.session_id (+)
+    and a.session_serial#   = h.session_serial# (+)
+    --
+    and a.session_type      = j.session_type (+)
+    and a.session_id        = j.session_id (+)
+    and a.session_serial#   = j.session_serial# (+)
+    --
+    and a.session_type      = k.session_type (+)
+    and a.session_id        = k.session_id (+)
+    and a.session_serial#   = k.session_serial# (+)
+    --
+    and a.session_type      = n.session_type (+)
+    and a.session_id        = n.session_id (+)
+    and a.session_serial#   = n.session_serial# (+)
+    --
+    and a.user_id = u.user_id (+)
+order by
+    session_type desc,
+    rn asc]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					null																																	</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top-20 SQL over 2 mins]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(60, 'SECOND'),
+            oldest_sample_time
+        ) 
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(60, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_data as (
+    select
+        sql_id,
+        max(force_matching_signature) as force_matching_signature,
+        sql_exec_id,
+        sql_exec_start,
+        max((cast(sample_time 
+                - numtodsinterval(extract(second from sample_time), 'SECOND')
+                + numtodsinterval(round(extract(second from sample_time)), 'SECOND') as date)
+            - sql_exec_start) * 86400) as sql_exec_duration,
+        user_id,
+        module,
+        action,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class 
+        end as wait_class,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event 
+        end as event,
+        count(*) as cnt_samp,
+        min(sample_time) as min_sample_time,
+        max(sample_time) as max_sample_time
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+        and sql_id is not null
+        and is_sqlid_current = 'Y'
+    group by
+        sql_id,
+        sql_exec_id,
+        sql_exec_start,
+        user_id,
+        module,
+        action,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class 
+        end,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event 
+        end
+    --order by 1, 2, 3, 4
+),
+top3_wait_class as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then wait_class || ' [' || round(pct_wait_class) || '%]'
+                end, ', ') 
+            within group (order by rn_wait_class) as top3_wait_classes
+    from
+        (select
+            sql_id,
+            wait_class,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_wait_class,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_wait_class,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            wait_class
+        )
+    where
+        rn_wait_class <= 3
+    group by
+        sql_id
+),
+top3_event as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then event || ' [' || round(pct_event) || '%]'
+                end, ', ') 
+            within group (order by rn_event) as top3_events
+    from
+        (select
+            sql_id,
+            event,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_event,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_event,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            event
+        )
+    where
+        rn_event <= 3
+    group by
+        sql_id
+),
+top3_user as (
+    select
+        a.sql_id,
+        listagg(case 
+                    when a.previous_total_pct <= 99.5
+                    then nvl(b.username, to_char(a.user_id)) || ' [' || round(pct_user_id) || '%]'
+                end, ', ') 
+            within group (order by rn_user_id) as top3_username
+    from
+        (select
+            sql_id,
+            user_id,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_user_id,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_user_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            user_id
+        ) a,
+        all_users b
+    where
+        a.rn_user_id <= 3
+        and a.user_id = b.user_id (+)
+    group by
+        a.sql_id
+),
+top3_module as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            sql_id,
+            module,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        sql_id
+),
+top3_action as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            sql_id,
+            action,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        sql_id
+),
+top_sqlid as (
+    select
+        sql_id,
+        max(force_matching_signature) as force_matching_signature,
+        count(distinct
+              case when sql_exec_id is not null
+                   then sql_exec_id 
+                        || '-' || to_char(sql_exec_start, 'YYYYMMDDHH24MISS')
+              end) as cnt_exec_id,
+        round(max(sql_exec_duration)) as max_duration_s,
+        round(percentile_cont(0.5) within group (order by sql_exec_duration), 2) as mean_duration_s,
+        sum(cnt_samp) as total_samp,
+        row_number() over (order by sum(cnt_samp) desc) as rn,
+        100 * ratio_to_report(sum(cnt_samp)) over () as pct_samp,
+        min(min_sample_time) as min_sample_time,
+        max(max_sample_time) as max_sample_time
+    from
+        (select
+            sql_id,
+            sql_exec_id,
+            sql_exec_start,
+            max(force_matching_signature) as force_matching_signature,
+            max(sql_exec_duration) as sql_exec_duration,
+            sum(cnt_samp) as cnt_samp,
+            min(min_sample_time) as min_sample_time,
+            max(max_sample_time) as max_sample_time
+        from
+            ash_data
+        group by
+            sql_id,
+            sql_exec_id,
+            sql_exec_start
+        )
+    group by
+        sql_id
+)
+select 
+    a.total_samp as "# SAMP",
+    round(a.pct_samp, 1) as "% SAMP",
+    a.sql_id,
+    a.force_matching_signature as force_matching_sig,
+    nvl(e.command_name, 
+            (select e2.command_name from v$sqlcommand e2, dba_hist_sqltext h 
+              where h.sql_id = a.sql_id and e2.command_type = h.command_type
+                and rownum = 1)
+       ) as sql_command,
+    a.cnt_exec_id as "# EXEC ID",
+    b.top3_wait_classes as "TOP-3 WAIT CLASS",
+    c.top3_events as "TOP-3 WAIT EVENT",
+    nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h
+                          where h.sql_id = a.sql_id
+                            and rownum = 1)
+       ) as sql_text,
+    u.top3_username as "TOP-3 USER",
+    case when f.top3_module <> '(null) [100%]' then f.top3_module end as "TOP-3 MODULE",
+    case when g.top3_action <> '(null) [100%]' then g.top3_action end as "TOP-3 ACTION",
+    cast(a.min_sample_time
+            - numtodsinterval(extract(second from a.min_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.min_sample_time)), 'SECOND') as date) 
+        as min_sample_time,
+    cast(a.max_sample_time
+            - numtodsinterval(extract(second from a.max_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.max_sample_time)), 'SECOND') as date) 
+        as max_sample_time,
+    case when mean_duration_s <= 1 then null else mean_duration_s end as mean_duration_s,
+    case when max_duration_s <= 1 then null else max_duration_s end as max_duration_s,
+    cast((select ts_lower_bound from ash_info) as date)     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)         as "TO TIME"
+from 
+    top_sqlid a,
+    top3_wait_class b,
+    top3_event c,
+    v$sqlarea d,
+    v$sqlcommand e,
+    top3_module f,
+    top3_action g,
+    top3_user u
+where
+    a.rn <= 20
+    and a.sql_id = b.sql_id (+)
+    and a.sql_id = c.sql_id (+)
+    and a.sql_id = d.sql_id (+)
+    and e.command_type (+) = d.command_type
+    and a.sql_id = f.sql_id (+)
+    and a.sql_id = g.sql_id (+)
+    and a.sql_id = u.sql_id (+)
+order by
+    a.total_samp desc]]></sql>
+			<binds>
+				<bind id="SAMPLE_TIME">
+					<prompt><![CDATA[SAMPLE_TIME]]></prompt>
+					<tooltip><![CDATA[SAMPLE_TIME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="EXCLUDE_BACKGROUND">
+					<prompt><![CDATA[EXCLUDE_BACKGROUND]]></prompt>
+					<tooltip><![CDATA[EXCLUDE_BACKGROUND]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					
+						
+						null																																													</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Top-20 SQL over 10s]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with
+ash_info as (
+    select
+        greatest(
+            cast(:SAMPLE_TIME as timestamp(3)) - numtodsinterval(5, 'SECOND'),
+            oldest_sample_time
+        ) 
+            as ts_lower_bound,
+        least(
+            cast(:SAMPLE_TIME as timestamp(3)) + numtodsinterval(5, 'SECOND'),
+            latest_sample_time + numtodsinterval(1, 'SECOND')
+        )
+            as ts_upper_bound
+    from
+        v$ash_info
+    where
+        :SAMPLE_TIME is not null
+),
+ash_data as (
+    select
+        sql_id,
+        max(force_matching_signature) as force_matching_signature,
+        sql_exec_id,
+        sql_exec_start,
+        max((cast(sample_time 
+                - numtodsinterval(extract(second from sample_time), 'SECOND')
+                + numtodsinterval(round(extract(second from sample_time)), 'SECOND') as date)
+            - sql_exec_start) * 86400) as sql_exec_duration,
+        user_id,
+        module,
+        action,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class 
+        end as wait_class,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event 
+        end as event,
+        count(*) as cnt_samp,
+        min(sample_time) as min_sample_time,
+        max(sample_time) as max_sample_time
+    from 
+        v$active_session_history
+    where
+        sample_time >= (select ts_lower_bound from ash_info)
+        and sample_time < (select ts_upper_bound from ash_info)
+        and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
+        and sql_id is not null
+        and is_sqlid_current = 'Y'
+    group by
+        sql_id,
+        sql_exec_id,
+        sql_exec_start,
+        user_id,
+        module,
+        action,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else wait_class 
+        end,
+        case 
+            when session_state is null then null
+            when session_state = 'ON CPU' then session_state
+            else event 
+        end
+    --order by 1, 2, 3, 4
+),
+top3_wait_class as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then wait_class || ' [' || round(pct_wait_class) || '%]'
+                end, ', ') 
+            within group (order by rn_wait_class) as top3_wait_classes
+    from
+        (select
+            sql_id,
+            wait_class,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_wait_class,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_wait_class,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            wait_class
+        )
+    where
+        rn_wait_class <= 3
+    group by
+        sql_id
+),
+top3_event as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then event || ' [' || round(pct_event) || '%]'
+                end, ', ') 
+            within group (order by rn_event) as top3_events
+    from
+        (select
+            sql_id,
+            event,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_event,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_event,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            event
+        )
+    where
+        rn_event <= 3
+    group by
+        sql_id
+),
+top3_user as (
+    select
+        a.sql_id,
+        listagg(case 
+                    when a.previous_total_pct <= 99.5
+                    then nvl(b.username, to_char(a.user_id)) || ' [' || round(pct_user_id) || '%]'
+                end, ', ') 
+            within group (order by rn_user_id) as top3_username
+    from
+        (select
+            sql_id,
+            user_id,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_user_id,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_user_id,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            user_id
+        ) a,
+        all_users b
+    where
+        a.rn_user_id <= 3
+        and a.user_id = b.user_id (+)
+    group by
+        a.sql_id
+),
+top3_module as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(module, '(null)') || ' [' || round(pct_module) || '%]'
+                end, ', ') 
+            within group (order by rn_module) as top3_module
+    from
+        (select
+            sql_id,
+            module,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_module,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_module,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            module
+        )
+    where
+        rn_module <= 3
+    group by
+        sql_id
+),
+top3_action as (
+    select
+        sql_id,
+        listagg(case 
+                    when previous_total_pct <= 99.5
+                    then nvl(action, '(null)') || ' [' || round(pct_action) || '%]'
+                end, ', ') 
+            within group (order by rn_action) as top3_action
+    from
+        (select
+            sql_id,
+            action,
+            row_number() over (partition by sql_id order by sum(cnt_samp) desc)
+                as rn_action,
+            100 * ratio_to_report(sum(cnt_samp)) over (partition by sql_id)
+                as pct_action,
+            100 * (nvl(sum(sum(cnt_samp)) over (partition by sql_id
+                        order by sum(cnt_samp) desc 
+                        rows between unbounded preceding and 1 preceding), 0)
+                    / sum(sum(cnt_samp)) over (partition by sql_id))
+                as previous_total_pct
+        from
+            ash_data
+        group by
+            sql_id,
+            action
+        )
+    where
+        rn_action <= 3
+    group by
+        sql_id
+),
+top_sqlid as (
+    select
+        sql_id,
+        max(force_matching_signature) as force_matching_signature,
+        count(distinct
+              case when sql_exec_id is not null
+                   then sql_exec_id 
+                        || '-' || to_char(sql_exec_start, 'YYYYMMDDHH24MISS')
+              end) as cnt_exec_id,
+        round(max(sql_exec_duration)) as max_duration_s,
+        round(percentile_cont(0.5) within group (order by sql_exec_duration), 2) as mean_duration_s,
+        sum(cnt_samp) as total_samp,
+        row_number() over (order by sum(cnt_samp) desc) as rn,
+        100 * ratio_to_report(sum(cnt_samp)) over () as pct_samp,
+        min(min_sample_time) as min_sample_time,
+        max(max_sample_time) as max_sample_time
+    from
+        (select
+            sql_id,
+            sql_exec_id,
+            sql_exec_start,
+            max(force_matching_signature) as force_matching_signature,
+            max(sql_exec_duration) as sql_exec_duration,
+            sum(cnt_samp) as cnt_samp,
+            min(min_sample_time) as min_sample_time,
+            max(max_sample_time) as max_sample_time
+        from
+            ash_data
+        group by
+            sql_id,
+            sql_exec_id,
+            sql_exec_start
+        )
+    group by
+        sql_id
+)
+select 
+    a.total_samp as "# SAMP",
+    round(a.pct_samp, 1) as "% SAMP",
+    a.sql_id,
+    a.force_matching_signature as force_matching_sig,
+    nvl(e.command_name, 
+            (select e2.command_name from v$sqlcommand e2, dba_hist_sqltext h 
+              where h.sql_id = a.sql_id and e2.command_type = h.command_type
+                and rownum = 1)
+       ) as sql_command,
+    a.cnt_exec_id as "# EXEC ID",
+    b.top3_wait_classes as "TOP-3 WAIT CLASS",
+    c.top3_events as "TOP-3 WAIT EVENT",
+    nvl(d.sql_fulltext, (select h.sql_text from dba_hist_sqltext h
+                          where h.sql_id = a.sql_id
+                            and rownum = 1)
+       ) as sql_text,
+    u.top3_username as "TOP-3 USER",
+    case when f.top3_module <> '(null) [100%]' then f.top3_module end as "TOP-3 MODULE",
+    case when g.top3_action <> '(null) [100%]' then g.top3_action end as "TOP-3 ACTION",
+    cast(a.min_sample_time
+            - numtodsinterval(extract(second from a.min_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.min_sample_time)), 'SECOND') as date) 
+        as min_sample_time,
+    cast(a.max_sample_time
+            - numtodsinterval(extract(second from a.max_sample_time), 'SECOND')
+            + numtodsinterval(round(extract(second from a.max_sample_time)), 'SECOND') as date) 
+        as max_sample_time,
+    case when mean_duration_s <= 1 then null else mean_duration_s end as mean_duration_s,
+    case when max_duration_s <= 1 then null else max_duration_s end as max_duration_s,
+    cast((select ts_lower_bound from ash_info) as date)     as "FROM TIME",
+    cast((select ts_upper_bound from ash_info) 
+            - numtodsinterval(1, 'SECOND') as date)         as "TO TIME"
+from 
+    top_sqlid a,
+    top3_wait_class b,
+    top3_event c,
+    v$sqlarea d,
+    v$sqlcommand e,
+    top3_module f,
+    top3_action g,
+    top3_user u
+where
+    a.rn <= 20
+    and a.sql_id = b.sql_id (+)
+    and a.sql_id = c.sql_id (+)
+    and a.sql_id = d.sql_id (+)
+    and e.command_type (+) = d.command_type
+    and a.sql_id = f.sql_id (+)
+    and a.sql_id = g.sql_id (+)
+    and a.sql_id = u.sql_id (+)
+order by
+    a.total_samp desc]]></sql>
+			<binds>
+				<bind id="SAMPLE_TIME">
+					<prompt><![CDATA[SAMPLE_TIME]]></prompt>
+					<tooltip><![CDATA[SAMPLE_TIME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="EXCLUDE_BACKGROUND">
+					<prompt><![CDATA[EXCLUDE_BACKGROUND]]></prompt>
+					<tooltip><![CDATA[EXCLUDE_BACKGROUND]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+						
+						
+						
+					
+						
+						null																																													</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+</display>
+</displays>

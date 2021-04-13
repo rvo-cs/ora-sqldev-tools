@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="cc7c8c1f-0178-1000-800a-c0a8010c27da" type="" style="Chart" enable="true">
+	<name><![CDATA[AWR - SGA stats graph [11.2]]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+		<Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+		<Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+		<Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+		<Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+		<LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+		<PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-65536,-13421569,-16738048,-39424,-16737793]]></PLOT_SERIES_OPTIONS_COLOR>
+		<LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+		<XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+		<DATA_MAP_COLUMNS><![CDATA[\,"SNAP_TIME","SNAP_TIME","SNAP_TIME","SNAP_TIME",,]]></DATA_MAP_COLUMNS>
+		<Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+		<XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+		<Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+		<TYPE><![CDATA[LINE_VERT_ABS_2Y]]></TYPE>
+		<GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+		<PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+		<FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+		<DATA_MAP_COLNAMES><![CDATA[\,"BUFFER_CACHE_MB","FREE_MEM_MB","PRTMV_MB","SQLA_MB","SNAP_TIME"]]></DATA_MAP_COLNAMES>
+		<DATA_MAP_SERIES><![CDATA[\,Buffer cache,Free memory,SQLA,PRTMV,,]]></DATA_MAP_SERIES>
+		<Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+		<DATA_MAP_COUNT><![CDATA[6]]></DATA_MAP_COUNT>
+		<STYLE><![CDATA[Default]]></STYLE>
+		<TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+		<Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+		<PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THINNER,THINNER,THINNER,THINNER,THINNER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+		<Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+		<DATA_MAP_VALUES><![CDATA[\,"BUFFER_CACHE_MB","FREE_MEM_MB","SQLA_MB","PRTMV_MB",,]]></DATA_MAP_VALUES>
+		<Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+		<PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+		<Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+		<SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with 
+sga_component (pool, name) as (
+    select /*+ materialize */ 
+                       'shared pool', 'PRTMV'           from dual
+    union all   select 'shared pool', 'SQLA'            from dual
+    union all   select 'shared pool', 'free memory'     from dual
+    union all   select '[NULL]'     , 'buffer_cache'    from dual
+),
+latest_snap_time as (
+    select 
+        cast(max(end_interval_time) as date) as end_interval_time
+    from
+        dba_hist_snapshot
+    where 
+        dbid = nvl(:DBID, (select dbid from v$database))
+        and instance_number = nvl(:INSTANCE_NUMBER, sys_context('USERENV', 'INSTANCE'))
+),
+time_upper_bound as (
+    select 
+        date '1970-01-01' 
+                + round( ( nvl(to_date(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS'),
+                                (select l.end_interval_time from latest_snap_time l))
+                            - date '1970-01-01' ) * 24 / :SNAP_INTERVAL_HR
+                       ) / 24 * :SNAP_INTERVAL_HR
+            as end_time
+    from dual
+),
+time_span as (
+    select
+        date '1970-01-01' 
+                + round((nvl(to_date(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), end_time - 14)
+                                - date '1970-01-01') * 24 / :SNAP_INTERVAL_HR) 
+                        / 24 * :SNAP_INTERVAL_HR
+            as start_time,
+        end_time
+    from
+        time_upper_bound
+),
+gen_50 as (
+    select
+        level - 1 as n 
+    from dual 
+    connect by level <= 50
+    order by 1
+),
+gen_125k as (
+    select /*+ materialize leading(a b c) use_nl(b) use_nl(c) */
+        2500 * a.n + 50 * b.n + c.n as n
+    from 
+        gen_50 a, gen_50 b, gen_50 c
+),
+time_slots as (
+    select
+        a.end_time - (b.n + 1) * :SNAP_INTERVAL_HR / 24 as start_time,
+        a.end_time - b.n * :SNAP_INTERVAL_HR / 24 as end_time
+    from
+        time_span a,
+        gen_125k b
+    where
+        a.end_time - (b.n + 1) * :SNAP_INTERVAL_HR / 24 >= a.start_time
+),
+instance_startup as (
+    select distinct 
+        dbid, startup_time
+    from
+        dba_hist_snapshot
+    where 
+        dbid = nvl(:DBID, (select dbid from v$database))
+        and instance_number = nvl(:INSTANCE_NUMBER, sys_context('USERENV', 'INSTANCE'))
+        and end_interval_time 
+                between (select c.start_time - 2 * :SNAP_INTERVAL_HR / 24 from time_span c)
+                    and (select c.end_time   + 2 * :SNAP_INTERVAL_HR / 24 from time_span c)
+    union
+    select 
+        a.dbid, b.startup_time
+    from
+        v$database a, gv$instance b
+    where
+        (:DBID is null or a.dbid = :DBID)
+        and b.inst_id = nvl(:INSTANCE_NUMBER, sys_context('USERENV', 'INSTANCE'))
+),
+hist_sgastat as (
+    select
+        b.startup_time, b.end_interval_time,
+        a.name, nvl(a.pool, '[NULL]') as pool,
+        sum(a.bytes) as bytes
+    from 
+        dba_hist_sgastat a,
+        dba_hist_snapshot b
+    where
+        (nvl(a.pool, '[NULL]'), a.name) in (select c.pool, c.name from sga_component c)
+        and a.dbid = b.dbid 
+        and a.instance_number = b.instance_number 
+        and a.snap_id = b.snap_id
+        and b.dbid = nvl(:DBID, (select dbid from v$database))
+        and b.instance_number = nvl(:INSTANCE_NUMBER, sys_context('USERENV', 'INSTANCE'))
+        and b.end_interval_time 
+                between (select c.start_time - 2 * :SNAP_INTERVAL_HR / 24 from time_span c)
+                    and (select c.end_time   + 2 * :SNAP_INTERVAL_HR / 24 from time_span c)
+    group by
+        b.startup_time, b.end_interval_time,
+        a.name, a.pool
+),
+hist_sgastat_union as (
+    select         
+        end_interval_time,
+        name, pool, bytes,
+        startup_time,
+        0 as src    /* 0 = data from AWR */ 
+    from
+        hist_sgastat
+    union all
+    select
+        a.end_time as end_interval_time,
+        b.name, b.pool, null as bytes,
+        null as startup_time,
+        1 as src    /* 1 = our points in time */ 
+    from
+        time_slots a, 
+        sga_component b
+    union all
+    select
+        a.startup_time - 1/86400 as end_interval_time,
+        b.name, b.pool, 0 as bytes,
+        a.startup_time as startup_time,
+        2 as src    /* 2 = instance restarts */
+    from
+        instance_startup a,
+        sga_component b
+),
+hist_sgastat_plus as (
+    select
+        end_interval_time,
+        name, pool, bytes,
+        startup_time, src,
+        last_value(case when bytes is not null then end_interval_time end) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between unbounded preceding and current row)
+            as last_end_interval_time,
+        first_value(case when bytes is not null then end_interval_time end) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between current row and unbounded following)
+            as next_end_interval_time,
+        last_value(case when bytes is not null then startup_time end) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between unbounded preceding and current row)
+            as last_startup_time,
+        first_value(case when bytes is not null then startup_time end) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between current row and unbounded following)
+            as next_startup_time,
+        last_value(case when bytes is not null then src end) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between unbounded preceding and current row)
+            as last_src,
+        first_value(case when bytes is not null then src end) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between current row and unbounded following)
+            as next_src,
+        last_value(bytes) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between unbounded preceding and current row)
+            as last_bytes,
+        first_value(bytes) ignore nulls 
+                over (partition by name, pool order by end_interval_time
+                      rows between current row and unbounded following)
+            as next_bytes
+    from
+        hist_sgastat_union
+),
+hist_sgastat_plus2 as (
+    select
+        a.end_interval_time,
+        a.name, a.pool, a.bytes,
+        a.startup_time, a.src, 
+        --a.last_end_interval_time, a.next_end_interval_time, 
+        a.last_startup_time, a.next_startup_time, 
+        a.last_src, a.next_src,
+        a.last_bytes, a.next_bytes, 
+        ( extract(day from end_interval_time - last_end_interval_time)
+                + extract(hour   from end_interval_time - last_end_interval_time) / 24
+                + extract(minute from end_interval_time - last_end_interval_time) / 1440
+                + extract(minute from end_interval_time - last_end_interval_time) / 86400 )
+            as end_interval_time_delta,
+        ( extract(day from next_end_interval_time - last_end_interval_time)
+                + extract(hour   from next_end_interval_time - last_end_interval_time) / 24
+                + extract(minute from next_end_interval_time - last_end_interval_time) / 1440
+                + extract(minute from next_end_interval_time - last_end_interval_time) / 86400 )
+            as end_interval_time_step
+    from
+        hist_sgastat_plus a
+),
+hist_sgastat_linear_interp as (
+    select
+        a.*,
+        case 
+            when bytes is not null
+            then
+                bytes
+            when bytes is null
+                and last_src = next_src
+                and last_startup_time = next_startup_time
+            then
+                round(last_bytes 
+                        + (next_bytes - last_bytes) 
+                            * (end_interval_time_delta / end_interval_time_step))
+            when bytes is null
+                and last_src = 2
+                and next_src = 0
+                and last_startup_time = next_startup_time
+            then
+                next_bytes
+        end
+            as new_bytes
+    from
+        hist_sgastat_plus2 a
+)
+select
+    end_interval_time as snap_time,
+    prtmv_mb,
+    sqla_mb,
+    free_mem_mb,
+    buffer_cache_mb
+from
+    (select
+        end_interval_time,
+        name, pool,
+        round(nvl(new_bytes, 0) / power(2, 20), 2) as mbytes
+    from
+        hist_sgastat_linear_interp
+    where 1 = 1
+        and src = 1
+        and end_interval_time 
+                between (select c.start_time from time_span c)
+                    and (select c.end_time   from time_span c)
+        and end_interval_time <= systimestamp
+    )
+pivot
+    (sum(mbytes) for (pool, name) in (
+        ('shared pool', 'PRTMV')        as prtmv_mb,
+        ('shared pool', 'SQLA')         as sqla_mb,
+        ('shared pool', 'free memory')  as free_mem_mb,
+        ('[NULL]', 'buffer_cache')      as buffer_cache_mb
+    ))
+order by 
+    snap_time]]></sql>
+		<binds>
+			<bind id="SNAP_INTERVAL_HR">
+				<prompt><![CDATA[Snap interval?]]></prompt>
+				<tooltip><![CDATA[Snap interval; unit: hr]]></tooltip>
+				<value><![CDATA[1]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="FROM_TIME">
+				<prompt><![CDATA[From time?]]></prompt>
+				<tooltip><![CDATA[From time (YYYY-MM-DD HH24:MI:SS); default: to time - 14 days]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="TO_TIME">
+				<prompt><![CDATA[To time?]]></prompt>
+				<tooltip><![CDATA[To time (YYYY-MM-DD HH24:MI:SS); default: time of last snapshot]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DBID">
+				<prompt><![CDATA[DB Id?]]></prompt>
+				<tooltip><![CDATA[DB identifier; default: current dbid]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="INSTANCE_NUMBER">
+				<prompt><![CDATA[Instance number?]]></prompt>
+				<tooltip><![CDATA[Instance number; default: current instance]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				null				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+</display>
+</displays>

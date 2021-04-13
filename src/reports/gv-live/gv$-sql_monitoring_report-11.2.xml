@@ -1,0 +1,736 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="cc9367ff-0178-1000-800e-c0a8010c27da" type="" style="Table" enable="true">
+	<name><![CDATA[GV$ - SQL Monitoring report [11.2]]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+    <query>
+		<sql><![CDATA[select 
+    service_name, inst_id, 
+    sid, session_serial#, 
+    status, 
+    sql_id, sql_exec_id, 
+    to_char(sql_exec_start, 'YYYY-MM-DD HH24:MI:SS') as sql_exec_start,  /* <-- Note: TO_CHAR needed here because SQL Dev seems to
+                                                                                have trouble passing DATE binds to child reports */
+    username, 
+    is_full_sqltext, sql_text, 
+    last_refresh_time, refresh_count, 
+    elapsed_time_s, cpu_time_s, queing_time_s, 
+    force_matching_signature, sql_plan_hash_value,
+    fetches, buffer_gets, 
+    disk_reads, direct_writes, io_interconnect_mb, 
+    phys_read_req, phys_read_mb, 
+    phys_write_req, phys_write_mb, 
+    user_io_wait_time_s, app_wait_time_s, conc_wait_time_s, 
+    clus_wait_time_s, plsql_exec_time_s, java_exec_time_s, 
+    dop_downgrade, px_maxdop, px_servers_requested, 
+    px_servers_allocated, px_is_cross_instance, px_maxdop_instances, 
+    error_code, error_message, 
+    program, module, action, 
+    client_identifier, client_info,
+    :B_PLAN_DISPLAY_FORMAT as plan_display_fmt,
+    coalesce(:B_SPOOL_DIRECTORY, :B_DEFAULT_SPOOL_DIRECTORY) as spool_directory
+from 
+    (select
+        max(case when px_server# is null /* ignore PX workers */ then service_name end)    as service_name,
+        nvl2(px_server#, px_qcinst_id, inst_id)         as inst_id,
+        nvl2(px_server#, px_qcsid, sid)                 as sid,
+        max(case when px_server# is null /* ignore PX workers */ then session_serial# end) as session_serial#,
+        max(case when px_server# is null /* ignore PX workers */ then status end)          as status,
+        sql_id,
+        sql_exec_id,
+        sql_exec_start,
+        max(username)                           as username,
+        max(is_full_sqltext)                    as is_full_sqltext,
+        max(sql_text)                           as sql_text,
+        max(last_refresh_time)                  as last_refresh_time,
+        sum(refresh_count)                      as refresh_count,
+        c##pkg_pub_utility.prec_round( max(elapsed_time) / power(10,6) )                    as elapsed_time_s,
+        c##pkg_pub_utility.prec_round( sum(cpu_time)     / power(10,6) )                    as cpu_time_s,
+        c##pkg_pub_utility.prec_round( max(queuing_time) / power(10,6) )                    as queing_time_s,
+        max(case when px_maxdop is null /* ignore QC */ then force_matching_signature end)  as force_matching_signature,
+        max(case when px_maxdop is null /* ignore QC */ then sql_plan_hash_value end)       as sql_plan_hash_value,
+        sum(fetches)                            as fetches,
+        sum(buffer_gets)                        as buffer_gets,
+        sum(disk_reads)                         as disk_reads,
+        sum(direct_writes)                      as direct_writes,
+        c##pkg_pub_utility.prec_round( sum(io_interconnect_bytes) / power(2,20) )           as io_interconnect_mb,
+        sum(physical_read_requests)             as phys_read_req,
+        c##pkg_pub_utility.prec_round( sum(physical_read_bytes)   / power(2,20) )           as phys_read_mb,
+        sum(physical_write_requests)            as phys_write_req,
+        c##pkg_pub_utility.prec_round( sum(physical_write_bytes)  / power(2,20) )           as phys_write_mb,
+        c##pkg_pub_utility.prec_round( sum(user_io_wait_time)     / power(10,6) )           as user_io_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(application_wait_time) / power(10,6) )           as app_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(concurrency_wait_time) / power(10,6) )           as conc_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(cluster_wait_time)     / power(10,6) )           as clus_wait_time_s,
+        c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
+        c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
+        case
+            when count(distinct px_server_group) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
+            when count(distinct px_server_group) * max(px_maxdop) = max(px_servers_allocated) then 'N'
+            when count(distinct px_server_group) * max(px_maxdop) < max(px_servers_allocated) then '??'
+        end                                     as dop_downgrade,
+        max(px_maxdop)                          as px_maxdop,
+        max(px_servers_requested)               as px_servers_requested,
+        max(px_servers_allocated)               as px_servers_allocated,
+        max(px_is_cross_instance)               as px_is_cross_instance,
+        max(px_maxdop_instances)                as px_maxdop_instances,
+        min(error_facility) 
+            keep (dense_rank first 
+                  order by nvl2(error_facility, last_refresh_time, null) nulls last,
+                           nvl2(error_facility, sid, null) nulls last)
+            || min(nvl2(error_facility, '-', null))
+            || min(error_number) 
+                    keep (dense_rank first 
+                          order by nvl2(error_facility, last_refresh_time, null) nulls last,
+                                   nvl2(error_facility, sid, null) nulls last)              as error_code,
+        min(error_message)
+            keep (dense_rank first 
+                  order by nvl2(error_facility, last_refresh_time, null) nulls last,
+                           nvl2(error_facility, sid, null) nulls last)                      as error_message,
+        max(program)                            as program,
+        max(module)                             as module,
+        max(action)                             as action,
+        max(client_identifier)                  as client_identifier,
+        max(client_info)                        as client_info
+    from
+        gv$sql_monitor
+    where 1 = 1
+        and lnnvl(sql_id <> :B_SQL_ID)
+        and lnnvl(sql_exec_start < sysdate - :B_STARTED_IN_LAST_N_MINS / 1440)
+        and lnnvl(sql_exec_start < to_date(:B_STARTED_AFTER, 'YYYY-MM-DD HH24:MI:SS'))
+    group by
+        /* 
+            PX_SERVER# is always NULL, unless this is a PX server process,
+            PX_MAXDOP is always null, unless this the QC server process in a PX query 
+         */
+        nvl2(px_server#, px_qcinst_id, inst_id),
+        nvl2(px_server#, px_qcsid, sid),
+        sql_id,
+        sql_exec_id,
+        sql_exec_start
+)
+where 1 = 1
+    and lnnvl(elapsed_time_s < to_number(:B_ELAPSED_TIME_S_MIN))
+    and lnnvl(inst_id <> to_number(:B_INST_ID))
+    and (:B_USERNAME_LIKE is null or upper(username) like upper(:B_USERNAME_LIKE))
+    and (:B_USERNAME_RE is null or regexp_like(username, :B_USERNAME_RE, 'i'))
+    and (:B_USERNAME_NOT_LIKE is null or lnnvl(upper(username) like upper(:B_USERNAME_NOT_LIKE)))
+    and (:B_USERNAME_NOT_RE is null or lnnvl(regexp_like(username, :B_USERNAME_NOT_RE, 'i')))
+    and (:B_MODULE_LIKE is null or upper(module) like upper(:B_MODULE_LIKE))
+    and (:B_MODULE_RE is null or regexp_like(module, :B_MODULE_RE, 'i'))
+    and (:B_ACTION_LIKE is null or upper(action) like upper(:B_ACTION_LIKE))
+    and (:B_ACTION_RE is null or regexp_like(action, :B_ACTION_RE, 'i'))
+    and (:B_CLIENT_INFO_LIKE is null or upper(client_info) like upper(:B_CLIENT_INFO_LIKE))
+    and (:B_CLIENT_INFO_RE is null or regexp_like(client_info, :B_CLIENT_INFO_RE, 'i'))
+    and (:B_CLIENT_IDENTIFIER_LIKE is null or upper(client_identifier) like upper(:B_CLIENT_IDENTIFIER_LIKE))
+    and (:B_CLIENT_IDENTIFIER_RE is null or regexp_like(client_identifier, :B_CLIENT_IDENTIFIER_RE, 'i'))
+    and (lnnvl(upper(:B_EXCLUDE_BACKGROUND) = 'Y') or service_name <> 'SYS$BACKGROUND')
+order by
+    case when status like '%EXECUTING%' then 1 else 2 end,
+    sql_exec_start desc,
+    last_refresh_time desc,
+    sql_id,
+    sql_exec_id desc]]></sql>
+		<binds>
+			<bind id="B_INST_ID">
+				<prompt><![CDATA[Instance number?]]></prompt>
+				<tooltip><![CDATA[Show only queries from the specified instance]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SQL_ID">
+				<prompt><![CDATA[SQL id?]]></prompt>
+				<tooltip><![CDATA[Show reports for the specified SQL id only]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ELAPSED_TIME_S_MIN">
+				<prompt><![CDATA[Min. elapsed time?]]></prompt>
+				<tooltip><![CDATA[Show only queries with elapsed time >= N seconds]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_STARTED_IN_LAST_N_MINS">
+				<prompt><![CDATA[Last N minutes?]]></prompt>
+				<tooltip><![CDATA[Show only queries started in the last N minutes]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_STARTED_AFTER">
+				<prompt><![CDATA[After date/time?]]></prompt>
+				<tooltip><![CDATA[Show only queries started after date/time; format: YYYY-MM-DD HH24:MI:SS]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_USERNAME_LIKE">
+				<prompt><![CDATA[Username like?]]></prompt>
+				<tooltip><![CDATA[Show only queries of matching users (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_USERNAME_RE">
+				<prompt><![CDATA[Username regexp?]]></prompt>
+				<tooltip><![CDATA[Show only queries of matching users (regexp)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_USERNAME_NOT_LIKE">
+				<prompt><![CDATA[Username NOT like?]]></prompt>
+				<tooltip><![CDATA[Hide queries of matching users (LIKE pattern)]]></tooltip>
+				<value><![CDATA[SYS]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_USERNAME_NOT_RE">
+				<prompt><![CDATA[Username negative regexp?]]></prompt>
+				<tooltip><![CDATA[Hide queries of matching users (regexp)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_MODULE_LIKE">
+				<prompt><![CDATA[Module like?]]></prompt>
+				<tooltip><![CDATA[Show only queries of matching module (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_MODULE_RE">
+				<prompt><![CDATA[Module regexp?]]></prompt>
+				<tooltip><![CDATA[Show only queries of matching module (regexp)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ACTION_LIKE">
+				<prompt><![CDATA[Action like?]]></prompt>
+				<tooltip><![CDATA[Show only queries with matching action (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ACTION_RE">
+				<prompt><![CDATA[Action regexp?]]></prompt>
+				<tooltip><![CDATA[Show only queries with matching action (regexp)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_CLIENT_INFO_LIKE">
+				<prompt><![CDATA[Client info like?]]></prompt>
+				<tooltip><![CDATA[Show only queries with matching client info (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_CLIENT_INFO_RE">
+				<prompt><![CDATA[Client info regexp?]]></prompt>
+				<tooltip><![CDATA[Show only queries with matching client info (regexp)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_CLIENT_IDENTIFIER_LIKE">
+				<prompt><![CDATA[Client identifier like?]]></prompt>
+				<tooltip><![CDATA[Show only queries with matching client identifier (LIKE pattern)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_CLIENT_IDENTIFIER_RE">
+				<prompt><![CDATA[Client identifier regexp?]]></prompt>
+				<tooltip><![CDATA[Show only queries with matching client identifier (regexp)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_EXCLUDE_BACKGROUND">
+				<prompt><![CDATA[Exclude background?]]></prompt>
+				<tooltip><![CDATA[If 'Y', hide queries of background processes]]></tooltip>
+				<value><![CDATA[y]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_PLAN_DISPLAY_FORMAT">
+				<prompt><![CDATA[Plan display format?]]></prompt>
+				<tooltip><![CDATA[Plan display format; default: Advanced -projection +allstats last]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SPOOL_DIRECTORY">
+				<prompt><![CDATA[Spool directory?]]></prompt>
+				<tooltip><![CDATA[Directory where ACTIVE reports will be spooled]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_DEFAULT_SPOOL_DIRECTORY">
+				<prompt><![CDATA[Default spool directory?]]></prompt>
+				<tooltip><![CDATA[Default spool directory]]></tooltip>
+				<value><![CDATA[E:\Home\romain\SQL_Developer\output\sql_mon]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				null				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[SQL Plan (cursor cache)]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with child_cursor as (
+    select
+        sql_id, child_number
+    from
+        (select 
+            sql_id, child_number,
+            row_number() over (order by last_active_time desc) as rn
+        from 
+            v$sql
+        where
+            sql_id = :SQL_ID
+            and lnnvl(plan_hash_value <> :SQL_PLAN_HASH_VALUE)
+            and lnnvl(plan_hash_value = 0)
+        )
+    where
+        rn <= 1
+)
+select b.* 
+from 
+    child_cursor a,
+    table(dbms_xplan.display_cursor(
+            sql_id => a.sql_id,
+            cursor_child_no => a.child_number,
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced -projection +allstats last')
+    )) b]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_PLAN_HASH_VALUE">
+					<prompt><![CDATA[SQL_PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[SQL_PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_DISPLAY_FMT">
+					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[SQL Plan (AWR)]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with hist_plan as (
+    select 
+        dbid, sql_id, plan_hash_value
+    from 
+        dba_hist_sql_plan
+    where
+        sql_id = :SQL_ID
+        and plan_hash_value = :SQL_PLAN_HASH_VALUE
+        and rownum <= 1
+)
+select b.* 
+from 
+    hist_plan a,
+    table(dbms_xplan.display_awr(
+            sql_id => a.sql_id,
+            plan_hash_value => a.plan_hash_value,
+            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced'
+                    || case when c##pkg_pub_utility.db_version >= 12 then ' +adaptive' end
+                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end )
+    )) b]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_PLAN_HASH_VALUE">
+					<prompt><![CDATA[SQL_PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[SQL_PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_DISPLAY_FMT">
+					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[SQL Monitoring Report (text)]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[whenever sqlerror exit failure rollback
+whenever oserror exit failure rollback
+
+set long 5000000
+set linesize 600
+set heading off
+set feedback off
+set pagesize 0
+
+column sql_monitor_report format a600 word_wrapped
+
+select
+    dbms_sqltune.report_sql_monitor(
+        type => 'TEXT',
+        sql_id => :SQL_ID,
+        sql_exec_id => :SQL_EXEC_ID,
+        sql_exec_start => to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'),
+        report_level => 'ALL'
+    ) as sql_monitor_report
+from dual
+where
+    :SQL_ID is not null
+    and :SQL_EXEC_ID is not null
+    and :SQL_EXEC_START is not null]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_EXEC_ID">
+					<prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+					<tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_EXEC_START">
+					<prompt><![CDATA[SQL_EXEC_START]]></prompt>
+					<tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[SQL Monitoring Report (active)]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[whenever sqlerror exit failure rollback
+whenever oserror exit failure rollback
+
+set long 5000000
+set linesize 10000
+set trimspool on
+set heading off
+set feedback off
+set pagesize 0
+
+set termout off
+set verify off
+
+define spool_directory
+define spool_filename
+
+column spool_directory noprint new_value spool_directory
+column spool_filename noprint new_value spool_filename
+
+select :SPOOL_DIRECTORY as spool_directory from dual 
+where :SPOOL_DIRECTORY is not null;
+
+select 'sql_mon-'
+            || sys_context('USERENV', 'DB_NAME')
+            || '-' || :SQL_ID
+            || '-' || to_char(:SQL_EXEC_ID)
+            || '-' || to_char(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'), 'YYYYMMDD_HH24MISS')
+            || '.html'
+    as spool_filename 
+from dual
+where :SPOOL_DIRECTORY is not null;
+
+cd "&spool_directory"
+
+spool "&spool_filename"
+
+column sql_monitor_report format a600 word_wrapped
+
+select
+    dbms_sqltune.report_sql_monitor(
+        type => 'ACTIVE',
+        sql_id => :SQL_ID,
+        sql_exec_id => :SQL_EXEC_ID,
+        sql_exec_start => to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'),
+        report_level => 'ALL'
+    ) as sql_monitor_report
+from dual
+where
+    :SPOOL_DIRECTORY is not null
+    and :SQL_ID is not null
+    and :SQL_EXEC_ID is not null
+    and :SQL_EXEC_START is not null
+;
+
+spool off
+
+set termout on
+
+select 'SQL Monitoring report created: ' 
+    || '&spool_filename' || chr(10)
+    || '(directory: &spool_directory)'
+from dual
+where :SPOOL_DIRECTORY is not null;]]></sql>
+			<binds>
+				<bind id="SPOOL_DIRECTORY">
+					<prompt><![CDATA[SPOOL_DIRECTORY]]></prompt>
+					<tooltip><![CDATA[SPOOL_DIRECTORY]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_EXEC_ID">
+					<prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+					<tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_EXEC_START">
+					<prompt><![CDATA[SQL_EXEC_START]]></prompt>
+					<tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[SQL Monitoring Report (xml)]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[whenever sqlerror exit failure rollback
+whenever oserror exit failure rollback
+
+set long 5000000
+set linesize 10000
+set trimspool on
+set heading off
+set feedback off
+set pagesize 0
+
+set termout off
+set verify off
+
+define spool_directory
+define spool_filename
+
+column spool_directory noprint new_value spool_directory
+column spool_filename noprint new_value spool_filename
+
+select :SPOOL_DIRECTORY as spool_directory from dual 
+where :SPOOL_DIRECTORY is not null;
+
+select 'sql_mon-'
+            || sys_context('USERENV', 'DB_NAME')
+            || '-' || :SQL_ID
+            || '-' || to_char(:SQL_EXEC_ID)
+            || '-' || to_char(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'), 'YYYYMMDD_HH24MISS')
+            || '.xml'
+    as spool_filename 
+from dual
+where :SPOOL_DIRECTORY is not null;
+
+cd "&spool_directory"
+
+spool "&spool_filename"
+
+column sql_monitor_report format a600 word_wrapped
+
+select
+    dbms_sqltune.report_sql_monitor(
+        type => 'XML',
+        sql_id => :SQL_ID,
+        sql_exec_id => :SQL_EXEC_ID,
+        sql_exec_start => to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'),
+        report_level => 'ALL'
+    ) as sql_monitor_report
+from dual
+where
+    :SPOOL_DIRECTORY is not null
+    and :SQL_ID is not null
+    and :SQL_EXEC_ID is not null
+    and :SQL_EXEC_START is not null
+;
+
+spool off
+
+set termout on
+
+select 'SQL Monitoring report created: ' 
+    || '&spool_filename' || chr(10)
+    || '(directory: &spool_directory)'
+from dual
+where :SPOOL_DIRECTORY is not null;]]></sql>
+			<binds>
+				<bind id="SPOOL_DIRECTORY">
+					<prompt><![CDATA[SPOOL_DIRECTORY]]></prompt>
+					<tooltip><![CDATA[SPOOL_DIRECTORY]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_EXEC_ID">
+					<prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+					<tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_EXEC_START">
+					<prompt><![CDATA[SQL_EXEC_START]]></prompt>
+					<tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+</display>
+</displays>

@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="cc8fb34f-0178-1000-800d-c0a8010c27da" type="" style="Chart" enable="true">
+	<name><![CDATA[GV$ - Recent undo activity [11.2]]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+		<Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+		<Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+		<Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+		<Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+		<LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+		<PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-65536,-13421569,-16738048,-16751002,-26368]]></PLOT_SERIES_OPTIONS_COLOR>
+		<LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+		<XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+		<DATA_MAP_COLUMNS><![CDATA[\,"END_TIME","END_TIME","END_TIME",]]></DATA_MAP_COLUMNS>
+		<Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+		<XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+		<Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+		<TYPE><![CDATA[LINE_VERT_ABS_2Y]]></TYPE>
+		<GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+		<PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+		<FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+		<XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+		<DATA_MAP_COLNAMES><![CDATA[\,"ACTIVEBLKS","CON_ID","END_TIME","EXPBLKRELCNT","EXPBLKREUCNT","EXPIREDBLKS","EXPSTEALCNT","INST_ID","MAXCONCURRENCY","MAXQUERYID","MAXQUERYLEN","NOSPACEERRCNT","SSOLDERRCNT","TUNED_UNDORETENTION","TXNCOUNT","UNDOBLKS","UNDOTSN","UNEXPIREDBLKS","UNXPBLKRELCNT","UNXPBLKREUCNT","UNXPSTEALCNT"]]></DATA_MAP_COLNAMES>
+		<DATA_MAP_SERIES><![CDATA[\,Active blocks,Unexpired blocks,Undo blocks,]]></DATA_MAP_SERIES>
+		<Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+		<DATA_MAP_COUNT><![CDATA[4]]></DATA_MAP_COUNT>
+		<STYLE><![CDATA[Default]]></STYLE>
+		<TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+		<Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+		<PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THINNER,THINNER,THINNER,THICKER,THICKER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+		<Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+		<DATA_MAP_VALUES><![CDATA[\,"ACTIVEBLKS","UNEXPIREDBLKS","UNDOBLKS",]]></DATA_MAP_VALUES>
+		<Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+		<Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+		<PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+		<Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+		<SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[select
+    inst_id,
+    cast(end_time as timestamp(0)) as end_time,
+    undotsn,
+    undoblks,
+    txncount,
+    maxconcurrency,
+    unxpstealcnt,
+    unxpblkrelcnt,
+    unxpblkreucnt,
+    expstealcnt,
+    expblkrelcnt,
+    expblkreucnt,
+    ssolderrcnt,
+    nospaceerrcnt,
+    activeblks,
+    unexpiredblks,
+    expiredblks,
+    tuned_undoretention,
+    maxquerylen,
+    maxqueryid
+from
+    gv$undostat
+where
+    inst_id = nvl(:B_INST_ID, sys_context('USERENV', 'INSTANCE'))
+    and end_time >= nvl(to_date(:B_FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate - 1)
+    and (:B_TO_TIME is null or end_time <= to_date(:B_TO_TIME, 'YYYY-MM-DD HH24:MI:SS'))
+order by
+    end_time asc]]></sql>
+		<binds>
+			<bind id="B_INST_ID">
+				<prompt><![CDATA[Inst id?]]></prompt>
+				<tooltip><![CDATA[Instance number; default: current instance]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_FROM_TIME">
+				<prompt><![CDATA[From time?]]></prompt>
+				<tooltip><![CDATA[Lower time bound (YYYY-MM-DD HH24:MI:SS); default: sysdate - 1]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_TO_TIME">
+				<prompt><![CDATA[To time?]]></prompt>
+				<tooltip><![CDATA[Upper time bound (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				null				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[gv$undostat]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select
+    inst_id,
+    begin_time,
+    end_time,
+    case 
+        when nospaceerrcnt > 0 then 'SQLDEV:GAUGE:0:100:100:100:0'
+        when ssolderrcnt > 0 then 'SQLDEV:GAUGE:0:100:0:100:0'
+    end as "Undo evt",
+    undotsn,
+    undoblks,
+    txncount,
+    maxconcurrency,
+    unxpstealcnt,
+    unxpblkrelcnt,
+    unxpblkreucnt,
+    expstealcnt,
+    expblkrelcnt,
+    expblkreucnt,
+    ssolderrcnt,
+    nospaceerrcnt,
+    activeblks,
+    unexpiredblks,
+    expiredblks,
+    tuned_undoretention,
+    maxquerylen,
+    maxqueryid
+from
+    gv$undostat
+where
+    :END_TIME is not null
+    and inst_id = nvl(:B_INST_ID, sys_context('USERENV', 'INSTANCE'))
+    and end_time >= nvl(to_date(:B_FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate - 1)
+    and (:B_TO_TIME is null or end_time <= to_date(:B_TO_TIME, 'YYYY-MM-DD HH24:MI:SS'))
+order by
+    end_time desc]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+</display>
+</displays>

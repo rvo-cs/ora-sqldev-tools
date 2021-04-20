@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="f0ee279b-0178-1000-8001-c0a8010c3734" type="" style="Table" enable="true">
+	<name><![CDATA[Grants - Object privilege viewer]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with 
+role_chain (role, granted_role, 
+            grant_chain, grant_chain_len) as (
+    select 
+        role, role, role, 1
+    from 
+        dba_roles
+    union all
+    select
+        a.role, b.granted_role,
+        a.grant_chain 
+                || case when b.admin_option = 'YES' then ' >> ' else ' > ' end
+                || b.granted_role,
+        a.grant_chain_len + 1
+    from
+        role_chain a,
+        role_role_privs b
+    where
+        a.granted_role = b.role
+),        
+object_grant as (
+    select /*+ materialize */ 
+           distinct  /* Note: each priv may have been granted
+                        more than once by distinct grantors */
+        b.owner, b.object_type, b.object_name,
+        a.privilege, a.grantee, a.grantable, a.hierarchy
+    from
+        dba_tab_privs a,
+        dba_objects b
+    where
+        a.owner = b.owner
+        and a.table_name = b.object_name
+        --and a.type = b.object_type        /* /!\ Caution: not in 11.2 /!\ */
+        and b.object_type in (
+                /* Namespace: 1 */
+                'FUNCTION', 'INDEXTYPE', 'JOB CLASS', 'JOB'
+                , 'LIBRARY', 'OPERATOR', 'PACKAGE', 'PROCEDURE'
+                , 'PROGRAM', 'SCHEDULE', 'SCHEDULER GROUP'
+                , 'SEQUENCE', 'SYNONYM'
+                , 'TABLE', 'TYPE', 'VIEW', 'WINDOW'
+                /* Namespace: 9 */
+                , 'DIRECTORY'
+                /* Namespace: 10 */
+                , 'QUEUE'
+                /* Namespace: 19 */
+                , 'MATERIALIZED VIEW'
+                /* Namespace :64 */
+                , 'EDITION'
+            )
+        and (:B_OWNER is null or upper(b.owner) = upper(:B_OWNER))
+),
+object_grant_grouped_priv as (
+    select
+        owner, object_type, object_name,
+        grantee,
+        listagg(privilege, ', ') within group (order by 
+                /* Fancy ordering of privileges */
+                case 
+                    when object_type = 'TABLE' 
+                        then decode(privilege, 'ALTER', '1', 'READ', '2', 'SELECT', '3',
+                                    'INSERT', '4', 'UPDATE', '5', 'DELETE', '6', privilege)
+                    when object_type = 'VIEW'
+                        then decode(privilege, 'READ', '1', 'SELECT', '2', 'INSERT', '3',
+                                    'UPDATE', '4', 'DELETE', '5', privilege)
+                    when object_type = 'DIRECTORY'
+                        then decode(privilege, 'READ', '1', 'WRITE', '2', 'EXECUTE', '3')
+                    else
+                        privilege
+                end)        as object_privs,
+        grantable, hierarchy
+    from
+        object_grant
+    where 1 = 1
+        and (:B_PRIV_LIKE is null or upper(privilege) like upper(:B_PRIV_LIKE))
+        and (:B_PRIV_RE is null or regexp_like(privilege, :B_PRIV_RE, 'i'))
+        and (:B_OWNER_LIKE is null or upper(owner) like upper(:B_OWNER_LIKE))
+        and (:B_OWNER_NOT_LIKE is null or upper(owner) not like upper(:B_OWNER_NOT_LIKE))
+        and (:B_OWNER_NEG_RE is null or not regexp_like(owner, :B_OWNER_NEG_RE, 'i'))
+        and (:B_OWNER_RE is null or regexp_like(owner, :B_OWNER_RE, 'i'))
+        and (:B_OBJECT_TYPE_LIKE is null or upper(object_type) like upper(:B_OBJECT_TYPE_LIKE))
+        and (:B_OBJECT_NAME_LIKE is null or upper(object_name) like upper(:B_OBJECT_NAME))
+        and (:B_OBJECT_NAME_RE is null or regexp_like(object_name, :B_OBJECT_NAME_RE, 'i'))
+        and (lnnvl(upper(:B_EXCLUDE_ORA_SCHEMAS) = 'Y') or owner not in (
+                  'ANONYMOUS'
+                , 'APPQOSSYS'
+                , 'AUDSYS'
+                , 'DBSFWUSER'
+                , 'DBSNMP'
+                , 'DIP'
+                , 'GGSYS'
+                , 'GSMADMIN_INTERNAL'
+                , 'GSMCATUSER'
+                , 'GSMUSER'
+                , 'LBACSYS'
+                , 'ORACLE_OCM'
+                , 'OUTLN'
+                , 'REMOTE_SCHEDULER_AGENT'
+                , 'SYS'
+                , 'SYSBACKUP'
+                , 'SYSDG'
+                , 'SYSKM'
+                , 'SYSRAC'
+                , 'SYSTEM'
+                , 'SYS$UMF'
+                , 'WMSYS'
+                , 'XDB'
+                , 'XS$NULL'
+            ))
+    group by
+        owner, object_type, object_name,
+        grantee, grantable, hierarchy
+),
+direct_grant as (
+    select 
+        a.*,
+        'YES'   as direct_grant,
+        null    as granted_role,
+        a.grantee 
+                || case when a.grantable = 'YES' then ' >> ' else ' > ' end 
+                || dbms_assert.enquote_name(a.owner) 
+                || '.' || dbms_assert.enquote_name(a.object_name)   as grant_chain,
+        1       as grant_chain_len,
+        null    as admin_option,
+        --null    as delegate_option,  /* DB >= 12.1 */
+        null    as default_role
+    from
+        object_grant_grouped_priv a
+    where
+        a.grantee not in (select b.role from dba_roles b)
+        and a.grantee not in ('SYS', 'SYSTEM')
+),
+grant_through_roles as (
+    select distinct
+        a.owner, a.object_type, a.object_name,
+        c.grantee,
+        a.object_privs,
+        'NO'    as direct_grant,
+        c.granted_role,
+        b.grant_chain_len + 1       as grant_chain_len,
+        c.grantee 
+                || case when c.admin_option = 'YES' then ' >> ' else ' > ' end
+                || b.grant_chain || ' > ' || dbms_assert.enquote_name(owner) 
+                || '.' || dbms_assert.enquote_name(a.object_name)   as grant_chain,
+        --c.delegate_option,  /* DB >= 12.1 */
+        a.grantable, a.hierarchy,
+        c.default_role
+    from
+        object_grant_grouped_priv a,
+        role_chain b,
+        dba_role_privs c
+    where
+        a.grantee = b.granted_role
+        and b.role = c.granted_role
+        and c.grantee not in (select d.role from dba_roles d)
+        and c.grantee not in ('SYS', 'SYSTEM')
+)
+select
+    grantee, object_privs
+    , owner, object_type, object_name
+    , grantable, hierarchy
+    , direct_grant
+    , granted_role
+    , default_role
+    , grant_chain
+    --delegate_option,  /* DB >= 12.1 */
+    --, grant_chain_len
+from
+    (select 
+        owner, object_type, object_name,
+        grantee, object_privs,
+        direct_grant,
+        granted_role,
+        default_role,
+        grant_chain,
+        grantable, hierarchy,
+        --delegate_option,  /* DB >= 12.1 */
+        grant_chain_len
+    from
+        direct_grant
+    where
+        (lnnvl(upper(:B_ADD_PUBLIC) <> 'Y') and grantee = 'PUBLIC')
+        or ( (:B_GRANTEE is null or upper(grantee) = upper(:B_GRANTEE))
+            and (:B_GRANTEE_LIKE is null or upper(grantee) like upper(:B_GRANTEE_LIKE))
+            and (:B_GRANTEE_RE is null or regexp_like(grantee, :B_GRANTEE_RE, 'i')) )
+    union all
+    select 
+        owner, object_type, object_name,
+        grantee, object_privs,
+        direct_grant,
+        granted_role,
+        default_role,
+        grant_chain,
+        grantable, hierarchy,
+        --delegate_option,  /* DB >= 12.1 */
+        grant_chain_len
+    from
+        grant_through_roles
+    where
+        (lnnvl(upper(:B_ADD_PUBLIC) <> 'Y') and grantee = 'PUBLIC')
+        or ( (:B_GRANTEE is null or upper(grantee) = upper(:B_GRANTEE))
+            and (:B_GRANTEE_LIKE is null or upper(grantee) like upper(:B_GRANTEE_LIKE))
+            and (:B_GRANTEE_RE is null or regexp_like(grantee, :B_GRANTEE_RE, 'i')) )
+    )
+where
+    (:B_GRANT_CHAIN_LIKE is null or upper(grant_chain) like upper(:B_GRANT_CHAIN_LIKE))
+    and (:B_GRANT_CHAIN_NOT_LIKE is null or upper(grant_chain) not like upper(:B_GRANT_CHAIN_NOT_LIKE))
+    and (:B_GRANT_CHAIN_RE is null or regexp_like(grant_chain, :B_GRANT_CHAIN_RE, 'i'))
+    and (:B_GRANT_CHAIN_NEG_RE is null or not regexp_like(grant_chain, :B_GRANT_CHAIN_NEG_RE, 'i'))
+order by
+    owner, object_type, object_name,
+    grantee, direct_grant desc,
+    grant_chain_len asc, grant_chain asc]]></sql>
+		<binds>
+			<bind id="B_OWNER">
+				<prompt><![CDATA[Object owner?]]></prompt>
+				<tooltip><![CDATA[Object owner (case insensitive)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_LIKE">
+				<prompt><![CDATA[Owner like?]]></prompt>
+				<tooltip><![CDATA[Limit to matching owners (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_RE">
+				<prompt><![CDATA[Owner regexp?]]></prompt>
+				<tooltip><![CDATA[Limit to matching owners (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_NOT_LIKE">
+				<prompt><![CDATA[Owner not like?]]></prompt>
+				<tooltip><![CDATA[Exclude matching owners (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_NEG_RE">
+				<prompt><![CDATA[Owner negative regexp?]]></prompt>
+				<tooltip><![CDATA[Exclude matching owners (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_EXCLUDE_ORA_SCHEMAS">
+				<prompt><![CDATA[Exclude Oracle schemas?]]></prompt>
+				<tooltip><![CDATA[If Y, objects in Oracle schemas (predefined list) are excluded]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_TYPE_LIKE">
+				<prompt><![CDATA[Object type?]]></prompt>
+				<tooltip><![CDATA[Limit to objects of the specified type (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_NAME">
+				<prompt><![CDATA[Object name?]]></prompt>
+				<tooltip><![CDATA[Object name (case insensitive)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_NAME_LIKE">
+				<prompt><![CDATA[Object name like?]]></prompt>
+				<tooltip><![CDATA[Limit to objects with matching names (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_NAME_RE">
+				<prompt><![CDATA[Object name regexp?]]></prompt>
+				<tooltip><![CDATA[Limit to objects with matching names (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_PRIV_LIKE">
+				<prompt><![CDATA[Privilege?]]></prompt>
+				<tooltip><![CDATA[Show only matching privileges (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_PRIV_RE">
+				<prompt><![CDATA[Prvilege regexp?]]></prompt>
+				<tooltip><![CDATA[Show only matching privileges (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANTEE">
+				<prompt><![CDATA[Grantee?]]></prompt>
+				<tooltip><![CDATA[Grantee (case insensitive)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANTEE_LIKE">
+				<prompt><![CDATA[Grantee like?]]></prompt>
+				<tooltip><![CDATA[Limit to matching grantees (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANTEE_RE">
+				<prompt><![CDATA[Grantee regexp?]]></prompt>
+				<tooltip><![CDATA[Limit to matching grantees (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ADD_PUBLIC">
+				<prompt><![CDATA[Add grants to PUBLIC?]]></prompt>
+				<tooltip><![CDATA[If 'Y', list grants to PUBLIC in addition to grants to the specified grantees]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANT_CHAIN_LIKE">
+				<prompt><![CDATA[Grant chain like?]]></prompt>
+				<tooltip><![CDATA[Show only matching grant chains (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANT_CHAIN_RE">
+				<prompt><![CDATA[Grant chain regexp?]]></prompt>
+				<tooltip><![CDATA[Show only matching grant chains (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANT_CHAIN_NOT_LIKE">
+				<prompt><![CDATA[Grant chain not like?]]></prompt>
+				<tooltip><![CDATA[Show only non-matching grant chains (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANT_CHAIN_NEG_RE">
+				<prompt><![CDATA[Grant chain regative regexp?]]></prompt>
+				<tooltip><![CDATA[Show only non-matching grant chains (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				null				</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+</display>
+</displays>

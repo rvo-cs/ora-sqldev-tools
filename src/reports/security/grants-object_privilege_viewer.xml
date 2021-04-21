@@ -138,10 +138,13 @@ direct_grant as (
         object_grant_grouped_priv a
     where
         a.grantee not in (select b.role from dba_roles b)
-        and a.grantee not in ('SYS', 'SYSTEM')
+        and a.grantee not in ('SYS', 'SYSTEM')  /* Exclude grants to SYS, SYSTEM */
+        and a.grantee <> a.owner                /* Exclude direct grants to self */
 ),
 grant_through_roles as (
-    select distinct
+    select /*+ merge(@subr) no_merge(a) no_merge(b) no_merge(c)
+               leading(a b c d@subr) */
+    distinct
         a.owner, a.object_type, a.object_name,
         c.grantee,
         a.object_privs,
@@ -162,8 +165,9 @@ grant_through_roles as (
     where
         a.grantee = b.granted_role
         and b.role = c.granted_role
-        and c.grantee not in (select d.role from dba_roles d)
-        and c.grantee not in ('SYS', 'SYSTEM')
+        and c.grantee not in (select /*+ qb_name(subr) */ d.role from dba_roles d)
+        and c.grantee not in ('SYS', 'SYSTEM')  /* Exclude grants to SYS, SYSTEM */
+        and c.grantee <> a.owner                /* Exclude indirect grants to self */
 )
 select
     grantee, object_privs
@@ -192,7 +196,9 @@ from
         (lnnvl(upper(:B_ADD_PUBLIC) <> 'Y') and grantee = 'PUBLIC')
         or ( (:B_GRANTEE is null or upper(grantee) = upper(:B_GRANTEE))
             and (:B_GRANTEE_LIKE is null or upper(grantee) like upper(:B_GRANTEE_LIKE))
-            and (:B_GRANTEE_RE is null or regexp_like(grantee, :B_GRANTEE_RE, 'i')) )
+            and (:B_GRANTEE_RE is null or regexp_like(grantee, :B_GRANTEE_RE, 'i'))
+            and (:B_GRANTEE_NOT_LIKE is null or upper(grantee) not like upper(:B_GRANTEE_NOT_LIKE))
+            and (:B_GRANTEE_NEG_RE is null or not regexp_like(grantee, :B_GRANTEE_NEG_RE, 'i')) )
     union all
     select 
         owner, object_type, object_name,
@@ -210,13 +216,17 @@ from
         (lnnvl(upper(:B_ADD_PUBLIC) <> 'Y') and grantee = 'PUBLIC')
         or ( (:B_GRANTEE is null or upper(grantee) = upper(:B_GRANTEE))
             and (:B_GRANTEE_LIKE is null or upper(grantee) like upper(:B_GRANTEE_LIKE))
-            and (:B_GRANTEE_RE is null or regexp_like(grantee, :B_GRANTEE_RE, 'i')) )
+            and (:B_GRANTEE_RE is null or regexp_like(grantee, :B_GRANTEE_RE, 'i'))
+            and (:B_GRANTEE_NOT_LIKE is null or upper(grantee) not like upper(:B_GRANTEE_NOT_LIKE))
+            and (:B_GRANTEE_NEG_RE is null or not regexp_like(grantee, :B_GRANTEE_NEG_RE, 'i')) )
     )
 where
     (:B_GRANT_CHAIN_LIKE is null or upper(grant_chain) like upper(:B_GRANT_CHAIN_LIKE))
     and (:B_GRANT_CHAIN_NOT_LIKE is null or upper(grant_chain) not like upper(:B_GRANT_CHAIN_NOT_LIKE))
     and (:B_GRANT_CHAIN_RE is null or regexp_like(grant_chain, :B_GRANT_CHAIN_RE, 'i'))
     and (:B_GRANT_CHAIN_NEG_RE is null or not regexp_like(grant_chain, :B_GRANT_CHAIN_NEG_RE, 'i'))
+    and (:B_GRANTED_ROLE_LIKE is null or upper(granted_role) like upper(:B_GRANTED_ROLE_LIKE))
+    and (:B_GRANTED_ROLE_RE is null or regexp_like(granted_role, :B_GRANTED_ROLE_RE, 'i'))
 order by
     owner, object_type, object_name,
     grantee, direct_grant desc,
@@ -312,6 +322,18 @@ order by
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
+			<bind id="B_GRANTEE_NOT_LIKE">
+				<prompt><![CDATA[Grantee not like?]]></prompt>
+				<tooltip><![CDATA[Exclude matching grantees (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANTEE_NEG_RE">
+				<prompt><![CDATA[Grantee negative regexp?]]></prompt>
+				<tooltip><![CDATA[Exclude matching grantees (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
 			<bind id="B_ADD_PUBLIC">
 				<prompt><![CDATA[Add grants to PUBLIC?]]></prompt>
 				<tooltip><![CDATA[If 'Y', list grants to PUBLIC in addition to grants to the specified grantees]]></tooltip>
@@ -339,6 +361,18 @@ order by
 			<bind id="B_GRANT_CHAIN_NEG_RE">
 				<prompt><![CDATA[Grant chain regative regexp?]]></prompt>
 				<tooltip><![CDATA[Show only non-matching grant chains (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANTED_ROLE_LIKE">
+				<prompt><![CDATA[Granted role like?]]></prompt>
+				<tooltip><![CDATA[Show only privs granted through matching roles (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_GRANTED_ROLE_RE">
+				<prompt><![CDATA[Granted role regexp?]]></prompt>
+				<tooltip><![CDATA[Show only privs granted through matching roles (regexp, CI)]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>

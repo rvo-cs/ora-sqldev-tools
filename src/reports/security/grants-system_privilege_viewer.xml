@@ -37,9 +37,10 @@ role_chain (role, granted_role,
         a.grant_chain_len + 1
     from
         role_chain a,
-        role_role_privs b
+        dba_role_privs b
     where
-        a.granted_role = b.role
+        a.granted_role = b.grantee
+        and b.grantee in (select c.role from dba_roles c)
 ),
 direct_grant as (
     select distinct

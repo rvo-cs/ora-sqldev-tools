@@ -17,8 +17,8 @@ target_sys_privs as (
         system_privilege_map
     where 
         (:B_SYS_PRIVS_ANY is null 
-            or (upper(:B_SYS_PRIVS_ANY) = 'N' and name not like '% ANY %')
-            or (upper(:B_SYS_PRIVS_ANY) = 'Y' and name like '% ANY %'))
+            or (upper(:B_SYS_PRIVS_ANY) = 'N' and name not like '% ANY %' and name not like '% ANY')
+            or (upper(:B_SYS_PRIVS_ANY) = 'Y' and (name like '% ANY %' or name like '% ANY')) )
         and (:B_SYS_PRIVS_LIKE is null or name like upper(:B_SYS_PRIVS_LIKE))
         and (:B_SYS_PRIVS_RE is null or regexp_like(name, :B_SYS_PRIVS_RE, 'i'))
 ),

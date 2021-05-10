@@ -16,7 +16,7 @@ This file contains a single line:
 ```
 @E:\Home\...\SQL_Developer\startup\_sqldev-login.sql
 ```
-which calls the `_sqldev-login.sql` file _with its full path soecified_.
+which calls the `_sqldev-login.sql` file _with its full path specified_.
 
 Reason: bug in SQL Developer (tested in 20.2): calling sub-files with the `@@file` syntax
 would not work if done directly in `sqldev-login.sql`, but would in `_sqldev-login.sql`—as

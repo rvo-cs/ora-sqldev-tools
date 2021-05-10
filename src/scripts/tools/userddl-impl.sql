@@ -3,6 +3,8 @@ clear screen
 define def_username_impl = "&1"
 
 set verify off
+set linesize 500
+set trimout on
 set serveroutput on size unlimited format word_wrapped
 
 declare
@@ -117,7 +119,7 @@ declare
                                )
                            )
                    end
-                || ' ON TABLESPACE "' || a.tablespace_name || '"'  as ts_quota
+                || ' ON "' || a.tablespace_name || '"'  as ts_quota
             from
                 dba_ts_quotas a,
                 dba_tablespaces b

@@ -106,7 +106,8 @@ object_grant as (
                 'FUNCTION', 'INDEXTYPE', 'JOB CLASS', 'JOB'
                 , 'LIBRARY', 'OPERATOR', 'PACKAGE', 'PROCEDURE'
                 , 'PROGRAM', 'SCHEDULE', 'SCHEDULER GROUP'
-                , 'SEQUENCE', 'SYNONYM'
+                , 'SEQUENCE'
+                --, 'SYNONYM'   /* Grants on synonyms are grants on base objects */
                 , 'TABLE', 'TYPE', 'VIEW', 'WINDOW'
                 /* Namespace: 9 */
                 , 'DIRECTORY'

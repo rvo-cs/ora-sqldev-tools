@@ -1,0 +1,1 @@
+undefine def_db_version_ge_12

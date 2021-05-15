@@ -7,7 +7,8 @@ whenever oserror exit failure rollback
 
 set verify off
 
-@@userddl-settings
+@@userprivs-settings
+@@def_db_version
 
 set termout off
 set feedback off
@@ -69,9 +70,9 @@ where
 
 set termout on
 
-define def_spool_filename = "cr_user-&&def_db_name-&&def_username_xc..sql"
+define def_spool_filename = "user_privs-&&def_db_name-&&def_username_xc..out"
 
-@@userddl-&&def_action
+@@userprivs-&&def_action
 
 set feedback on
 
@@ -85,7 +86,12 @@ undefine def_error_msg
 undefine def_action
 undefine def_spool_directory
 undefine def_spool_filename
+undefine def_hide_column_common
+undefine def_hide_column_inherited
+undefine def_hide_grants_to_public
 undefine 1
+
+@@undef_db_version
 
 whenever sqlerror continue none
 whenever oserror continue none

@@ -71,7 +71,7 @@ set termout on
 
 define def_spool_filename = "cr_user-&&def_db_name-&&def_username_xc..sql"
 
-@@userddl-&&def_action
+@@userddl/userddl-&&def_action
 
 set feedback on
 

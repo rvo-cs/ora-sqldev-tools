@@ -8,10 +8,10 @@ whenever oserror exit failure rollback
 set verify off
 
 @@userprivs-settings
-@@def_db_version
-@@def_ora_client
+@@common/util/def_db_version
+@@common/util/def_ora_client
 
-@@set_sqlfmt_default-&&def_ora_client
+@@common/util/set_sqlfmt_default-&&def_ora_client
 
 set termout off
 set feedback off
@@ -75,7 +75,7 @@ set termout on
 
 define def_spool_filename = "user_privs-&&def_db_name-&&def_username_xc..out"
 
-@@userprivs-&&def_action
+@@userprivs/userprivs-&&def_action
 
 set feedback on
 
@@ -96,8 +96,8 @@ undefine def_hide_ora_obj
 undefine def_set_termout
 undefine 1
 
-@@undef_db_version
-@@undef_ora_client
+@@common/util/undef_db_version
+@@common/util/undef_ora_client
 
 whenever sqlerror continue none
 whenever oserror continue none

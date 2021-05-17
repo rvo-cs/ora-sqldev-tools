@@ -1,0 +1,1 @@
+-- Privileges on Oracle-owned objects are shown in the readout

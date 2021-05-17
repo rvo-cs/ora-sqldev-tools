@@ -9,6 +9,9 @@ set verify off
 
 @@userprivs-settings
 @@def_db_version
+@@def_ora_client
+
+@@set_sqlfmt_default-&&def_ora_client
 
 set termout off
 set feedback off
@@ -89,9 +92,12 @@ undefine def_spool_filename
 undefine def_hide_column_common
 undefine def_hide_column_inherited
 undefine def_hide_grants_to_public
+undefine def_hide_ora_obj
+undefine def_set_termout
 undefine 1
 
 @@undef_db_version
+@@undef_ora_client
 
 whenever sqlerror continue none
 whenever oserror continue none

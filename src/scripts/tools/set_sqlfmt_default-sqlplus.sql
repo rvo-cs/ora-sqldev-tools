@@ -1,0 +1,1 @@
+-- No op: set sqlformat is not supported in SQL*Plus

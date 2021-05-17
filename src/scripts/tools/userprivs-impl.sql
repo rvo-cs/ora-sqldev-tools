@@ -1,5 +1,3 @@
-clear screen
-
 define def_username_impl = "&1"
 
 set linesize 400
@@ -311,6 +309,8 @@ prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All system privileges
 prompt ---------------------
 
+@@userprivs-note-public&&def_hide_grants_to_public
+
 column grantee                  format a30 wrapped
 column privilege                format a40 word_wrapped
 column admin_option             format a9
@@ -444,6 +444,9 @@ prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All object privileges
 prompt ---------------------
 
+@@userprivs-note-oraobj&&def_hide_ora_obj
+@@userprivs-note-public&&def_hide_grants_to_public
+
 column grantee                  format a30 wrapped
 column object_privs             format a50 word_wrapped
 column owner                    format a30 wrapped
@@ -529,6 +532,33 @@ object_grant_grouped_priv as (
         grantable, hierarchy
     from
         object_grant
+    where 
+        1 = 1
+        &&def_hide_ora_obj and owner not in ( 'ANONYMOUS'
+        &&def_hide_ora_obj                  , 'APPQOSSYS'
+        &&def_hide_ora_obj                  , 'AUDSYS'
+        &&def_hide_ora_obj                  , 'DBSFWUSER'
+        &&def_hide_ora_obj                  , 'DBSNMP'
+        &&def_hide_ora_obj                  , 'DIP'
+        &&def_hide_ora_obj                  , 'GGSYS'
+        &&def_hide_ora_obj                  , 'GSMADMIN_INTERNAL'
+        &&def_hide_ora_obj                  , 'GSMCATUSER'
+        &&def_hide_ora_obj                  , 'GSMUSER'
+        &&def_hide_ora_obj                  , 'LBACSYS'
+        &&def_hide_ora_obj                  , 'ORACLE_OCM'
+        &&def_hide_ora_obj                  , 'OUTLN'
+        &&def_hide_ora_obj                  , 'REMOTE_SCHEDULER_AGENT'
+        &&def_hide_ora_obj                  , 'SYS'
+        &&def_hide_ora_obj                  , 'SYSBACKUP'
+        &&def_hide_ora_obj                  , 'SYSDG'
+        &&def_hide_ora_obj                  , 'SYSKM'
+        &&def_hide_ora_obj                  , 'SYSRAC'
+        &&def_hide_ora_obj                  , 'SYSTEM'
+        &&def_hide_ora_obj                  , 'SYS$UMF'
+        &&def_hide_ora_obj                  , 'WMSYS'
+        &&def_hide_ora_obj                  , 'XDB'
+        &&def_hide_ora_obj                  , 'XS$NULL' 
+        &&def_hide_ora_obj                  )    
     group by
         owner, object_type, object_name,
         grantee, grantable, hierarchy

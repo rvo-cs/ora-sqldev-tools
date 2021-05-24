@@ -74,7 +74,7 @@ select * from table(dbms_xplan.display_awr('091fb1shwqyn8', null, null, 'Advance
 /* On-going transactions */
 
 select
-    a.inst_id, a.con_id,
+    a.inst_id,
     b.sid, b.serial#, b.type, b.username,
     a.xid, a.status,
     a.used_ublk, a.used_urec, a.start_time,

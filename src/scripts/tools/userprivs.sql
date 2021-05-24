@@ -92,6 +92,7 @@ undefine def_spool_filename
 undefine def_hide_column_common
 undefine def_hide_column_inherited
 undefine def_hide_grants_to_public
+undefine def_show_db_links
 undefine def_hide_ora_obj
 undefine def_set_termout
 undefine 1

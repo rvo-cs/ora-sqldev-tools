@@ -202,8 +202,6 @@ prompt ~~~~~~~~~~~~~~~~~~~~~~~
 prompt Object privilege grants
 prompt -----------------------
 
-set pagesize 18
-
 column grantee                  format a30 wrapped
 column object_privs             format a50 word_wrapped
 column owner                    format a30 wrapped
@@ -664,6 +662,8 @@ column direct_grant             clear
 column granted_role             clear
 column default_role             clear
 column grant_chain              clear
+
+@@userprivs-dblinks-&&def_show_db_links
 
 prompt === End ===
 

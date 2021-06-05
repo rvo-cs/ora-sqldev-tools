@@ -2,9 +2,9 @@ define def_username_impl = "&1"
 
 set linesize 400
 
-prompt ==============================
-prompt User privilege details report
-prompt ------------------------------
+prompt ===============================================================================
+prompt User privilege details report                         Date: &&_DATE
+prompt -------------------------------------------------------------------------------
 
 prompt
 
@@ -12,10 +12,11 @@ prompt ~~~~~~~~~~~~~~~~
 prompt User information
 prompt ----------------
 
-column item format a31
-column value format a80 word_wrapped
 set heading off
 set feedback off
+
+column item format a31
+column value format a80 word_wrapped
 
 select
     item, value
@@ -56,6 +57,8 @@ from
         temporary_tablespace            as 'Temp. tablespace             : '
     ))
 ;
+
+clear columns
 
 set feedback on
 set heading on
@@ -122,12 +125,7 @@ where
     client = '&&def_username_impl'
 ;
 
-column proxy                    clear
-column client                   clear
-column authentication	        clear
-column authorization_constraint	clear
-column role	                    clear
-column proxy_authority	        clear
+clear columns
 
 
 prompt ~~~~~~~~~~~
@@ -158,13 +156,7 @@ order by
     a.granted_role
 ;
 
-column grantee                  clear
-column granted_role             clear
-column admin_option             clear
-column delegate_option          clear
-column default_role             clear
-column common                   clear
-column inherited                clear
+clear columns
 
 
 prompt ~~~~~~~~~~~~~~~~~~~~~~~
@@ -191,11 +183,7 @@ order by
     a.privilege
 ;
 
-column grantee                  clear
-column privilege                clear
-column admin_option             clear
-column common                   clear
-column inherited                clear
+clear columns
 
 
 prompt ~~~~~~~~~~~~~~~~~~~~~~~
@@ -292,15 +280,7 @@ order by
     &&def_db_version_ge_12 &&def_hide_column_inherited , inherited
 ;
 
-column grantee                  clear
-column object_privs             clear
-column owner                    clear
-column object_type              clear
-column object_name              clear
-column grantable                clear
-column hierarchy                clear
-column common                   clear
-column inherited                clear
+clear columns
 
 
 prompt ~~~~~~~~~~~~~~~
@@ -406,12 +386,9 @@ order by
     grant_chain asc
 ;
 
-column rep_text                 clear
-column grantee                  clear
-column granted_role             clear
-column grant_chain              clear
-
+clear columns
 clear breaks
+
 
 prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All system privileges
@@ -539,13 +516,7 @@ order by
     grant_chain_len asc, grant_chain asc
 ;
 
-column grantee                  clear
-column privilege                clear
-column admin_option             clear
-column direct_grant             clear
-column granted_role             clear
-column default_role             clear
-column grant_chain              clear
+clear columns
 
 
 prompt ~~~~~~~~~~~~~~~~~~~~~
@@ -761,17 +732,7 @@ order by
     grant_chain_len asc, grant_chain asc
 ;    
 
-column grantee                  clear
-column object_privs             clear
-column owner                    clear
-column object_type              clear
-column object_name              clear
-column grantable                clear
-column hierarchy                clear
-column direct_grant             clear
-column granted_role             clear
-column default_role             clear
-column grant_chain              clear
+clear columns
 
 @@userprivs-dblinks-&&def_show_db_links
 

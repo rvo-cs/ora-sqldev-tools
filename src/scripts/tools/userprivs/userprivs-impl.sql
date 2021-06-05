@@ -303,6 +303,116 @@ column common                   clear
 column inherited                clear
 
 
+prompt ~~~~~~~~~~~~~~~
+prompt All role grants
+prompt ---------------
+
+column rep_text                 format a50
+column grantee                  format a30 wrapped
+column granted_role             format a30 wrapped
+column grant_chain              format a100 word_wrapped
+
+set heading off
+set feedback off
+
+select
+    'Count of default role(s) : ' || count(distinct granted_role)  as rep_text
+from
+    (select
+        a.granted_role
+    from 
+        dba_role_privs a
+    start with
+        a.grantee in ( '&&def_username_impl'
+                     &&def_hide_grants_to_public , 'PUBLIC'
+                     )
+        and a.default_role = 'YES'
+    connect by
+        prior a.granted_role = a.grantee
+        and a.default_role = 'YES'
+    )
+union all
+select 
+    'Count of all role(s)     : ' || count(distinct granted_role)  as rep_text
+from
+    (select
+        a.granted_role
+    from 
+        dba_role_privs a
+    start with
+        a.grantee in ( '&&def_username_impl'
+                     &&def_hide_grants_to_public , 'PUBLIC'
+                     )
+    connect by
+        prior a.granted_role = a.grantee
+    )
+;
+
+set heading on
+set feedback on
+
+break on granted_role on grantee noduplicates
+
+with
+role_chain (role, granted_role, 
+            grant_chain, grant_chain_len) as (
+    select 
+        role, role, role, 1
+    from 
+        dba_roles
+    union all
+    select
+        a.role, b.granted_role,
+        a.grant_chain 
+                || case when b.admin_option = 'YES' then ' >> ' else ' > ' end
+                || b.granted_role,
+        a.grant_chain_len + 1
+    from
+        role_chain a,
+        dba_role_privs b
+    where
+        a.granted_role = b.grantee
+        and b.grantee in (select c.role from dba_roles c)
+)
+select
+    grantee,
+    granted_role,
+    grant_chain
+from 
+    (select /*+ merge(@subr) no_merge(a) no_merge(b)
+               leading(a b c@subr) */
+    distinct
+        b.grantee,
+        a.granted_role,
+        b.grantee 
+                || case when b.admin_option = 'YES' then ' >> ' else ' > ' end
+                || a.grant_chain    as grant_chain,
+        a.grant_chain_len
+    from
+        role_chain a,
+        dba_role_privs b
+    where
+        a.role = b.granted_role
+        and b.grantee in ( '&&def_username_impl'
+                         &&def_hide_grants_to_public , 'PUBLIC'
+                         )
+        and b.grantee not in (select /*+ qb_name(subr) */ c.role from dba_roles c)
+    )
+order by
+    case when grantee = 'PUBLIC' then 1 else 0 end asc,
+    grantee,
+    granted_role,
+    grant_chain_len asc, 
+    grant_chain asc
+;
+
+column rep_text                 clear
+column grantee                  clear
+column granted_role             clear
+column grant_chain              clear
+
+clear breaks
+
 prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All system privileges
 prompt ---------------------

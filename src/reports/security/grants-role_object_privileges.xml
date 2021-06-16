@@ -89,10 +89,14 @@ roles_not_reaching_role (role) as (
         )
 ),
 object_grant as (
-    select /*+ materialize */ 
+    select /*+
+               materialize no_merge(a) no_merge(b)
+               leading(b a) full(a) full(b) use_hash(a)
+            */
            distinct  /* Note: each priv may have been granted
                         more than once by distinct grantors */
         b.owner, b.object_type, b.object_name,
+        null as column_name,
         a.privilege, a.grantee, a.grantable, a.hierarchy
     from
         dba_tab_privs a,
@@ -119,10 +123,22 @@ object_grant as (
                 , 'EDITION'
             )
         and (:B_OWNER is null or upper(b.owner) = upper(:B_OWNER))
+    union all
+    select distinct
+        a.owner,
+        'TABLE COLUMN'  as object_type,
+        a.table_name    as object_name,
+        a.column_name,
+        a.privilege, a.grantee, a.grantable, 
+        null            as hierarchy
+    from
+        dba_col_privs a
+    where
+        (:B_OWNER is null or upper(a.owner) = upper(:B_OWNER))
 ),
 object_grant_grouped_priv as (
     select
-        owner, object_type, object_name,
+        owner, object_type, object_name, column_name,
         grantee,
         listagg(privilege, ', ') within group (order by 
                 /* Fancy ordering of privileges */
@@ -179,7 +195,7 @@ object_grant_grouped_priv as (
                 , 'XS$NULL'
             ))
     group by
-        owner, object_type, object_name,
+        owner, object_type, object_name, column_name,
         grantee, grantable, hierarchy
 ),
 role_chain_obj_privs as (
@@ -187,9 +203,13 @@ role_chain_obj_privs as (
     distinct
         b.role,
         a.object_privs,
-        a.owner, a.object_type, a.object_name,
-        b.grant_chain || ' > ' || dbms_assert.enquote_name(owner) 
-                || '.' || dbms_assert.enquote_name(a.object_name)   as grant_chain,
+        a.owner, a.object_type, a.object_name, a.column_name,
+        b.grant_chain || ' > ' || dbms_assert.enquote_name(a.owner)
+                || '.' || dbms_assert.enquote_name(a.object_name)
+                || case 
+                    when a.column_name is not null 
+                    then '.' || dbms_assert.enquote_name(a.column_name)
+                   end              as grant_chain,
         b.grant_chain_len + 1       as grant_chain_len,
         a.grantable, a.hierarchy
     from
@@ -200,7 +220,13 @@ role_chain_obj_privs as (
 )
 select
     c.role, c.object_privs
-    , c.owner, c.object_type, c.object_name
+    , c.owner, c.object_type
+    , c.object_name
+            || case
+                when c.column_name is not null
+                then '.' || c.column_name
+               end
+        as object_name
     , c.grantable, c.hierarchy
     , c.grant_chain
     --, c.grant_chain_len

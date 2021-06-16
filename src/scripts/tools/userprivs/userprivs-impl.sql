@@ -218,6 +218,11 @@ select
             end)        as object_privs
     , owner
     , object_name
+            || case
+                when column_name is not null
+                then '.' || column_name
+               end
+        as object_name
     , object_type
     , grantable
     , hierarchy
@@ -231,6 +236,7 @@ from
         , b.owner
         , b.object_type
         , b.object_name
+        , null as column_name
         , a.grantable
         , a.hierarchy
         &&def_db_version_ge_12 &&def_hide_column_common , a.common
@@ -259,12 +265,29 @@ from
                 /* Namespace :64 */
                 , 'EDITION'
             )
-    )
+    union all
+    select distinct
+        a.grantee
+        , a.privilege
+        , a.owner
+        , 'TABLE COLUMN'    as object_type
+        , a.table_name      as object_name
+        , a.column_name
+        , a.grantable
+        , null              as hierarchy
+        &&def_db_version_ge_12 &&def_hide_column_common , a.common
+        &&def_db_version_ge_12 &&def_hide_column_inherited , a.inherited
+    from
+        dba_col_privs a
+    where
+        a.grantee = '&&def_username_impl'
+    ) b
 group by
     grantee
     , owner
     , object_type
     , object_name
+    , column_name
     , grantable
     , hierarchy
     &&def_db_version_ge_12 &&def_hide_column_common , common
@@ -272,7 +295,8 @@ group by
 order by
     owner
     , object_type
-    , object_name
+    , b.object_name
+    , b.column_name
     , object_privs
     , grantable
     , hierarchy
@@ -560,10 +584,14 @@ role_chain (role, granted_role,
         and b.grantee in (select c.role from dba_roles c)
 ),
 object_grant as (
-    select /*+ materialize */ 
+    select /*+
+               materialize no_merge(a) no_merge(b)
+               leading(b a) full(a) full(b) use_hash(a)
+            */ 
            distinct  /* Note: each priv may have been granted
                         more than once by distinct grantors */
         b.owner, b.object_type, b.object_name,
+        null as column_name,
         a.privilege, a.grantee, a.grantable, a.hierarchy
     from
         dba_tab_privs a,
@@ -589,10 +617,21 @@ object_grant as (
                 /* Namespace :64 */
                 , 'EDITION'
             )
+    union all
+    select distinct
+        a.owner,
+        'TABLE COLUMN'  as object_type,
+        a.table_name    as object_name,
+        a.column_name,
+        a.privilege, a.grantee, a.grantable, 
+        null            as hierarchy
+    from
+        dba_col_privs a
 ),
 object_grant_grouped_priv as (
     select
-        owner, object_type, object_name,
+        owner, object_type, 
+        object_name, column_name,
         grantee,
         listagg(privilege, ', ') within group (order by 
                 /* Fancy ordering of privileges */
@@ -639,7 +678,8 @@ object_grant_grouped_priv as (
         &&def_hide_ora_obj                  , 'XS$NULL' 
         &&def_hide_ora_obj                  )    
     group by
-        owner, object_type, object_name,
+        owner, object_type,
+        object_name, column_name,
         grantee, grantable, hierarchy
 ),
 direct_grant as (
@@ -650,7 +690,12 @@ direct_grant as (
         a.grantee 
                 || case when a.grantable = 'YES' then ' >> ' else ' > ' end 
                 || dbms_assert.enquote_name(a.owner) 
-                || '.' || dbms_assert.enquote_name(a.object_name)   as grant_chain,
+                || '.' || dbms_assert.enquote_name(a.object_name)
+                || case
+                    when a.column_name is not null 
+                    then '.' || dbms_assert.enquote_name(a.column_name)
+                   end
+                as grant_chain,
         1       as grant_chain_len,
         null    as admin_option,
         null    as default_role
@@ -667,7 +712,8 @@ grant_through_roles as (
     select /*+ merge(@subr) no_merge(a) no_merge(b) no_merge(c)
                leading(a b c d@subr) */
     distinct
-        a.owner, a.object_type, a.object_name,
+        a.owner, a.object_type,
+        a.object_name, a.column_name,
         c.grantee,
         a.object_privs,
         'NO'    as direct_grant,
@@ -676,7 +722,11 @@ grant_through_roles as (
         c.grantee 
                 || case when c.admin_option = 'YES' then ' >> ' else ' > ' end
                 || b.grant_chain || ' > ' || dbms_assert.enquote_name(owner) 
-                || '.' || dbms_assert.enquote_name(a.object_name)   as grant_chain,
+                || '.' || dbms_assert.enquote_name(a.object_name)
+                || case
+                    when a.column_name is not null 
+                    then '.' || dbms_assert.enquote_name(a.column_name)
+                   end              as grant_chain,
         a.grantable, a.hierarchy,
         c.default_role
     from
@@ -694,7 +744,14 @@ grant_through_roles as (
 )
 select
     grantee, object_privs
-    , owner, object_name, object_type
+    , owner
+    , object_name
+            || case
+                when column_name is not null 
+                then '.' || column_name
+               end
+        as object_name
+    , object_type
     , grantable, hierarchy
     , direct_grant
     , granted_role
@@ -702,7 +759,8 @@ select
     , grant_chain
 from
     (select 
-        owner, object_name, object_type,
+        owner, object_name, 
+        column_name, object_type,
         grantee, object_privs,
         direct_grant,
         granted_role,
@@ -714,7 +772,8 @@ from
         direct_grant
     union all
     select 
-        owner, object_name, object_type,
+        owner, object_name, 
+        column_name, object_type,
         grantee, object_privs,
         direct_grant,
         granted_role,
@@ -724,10 +783,10 @@ from
         grant_chain_len
     from
         grant_through_roles
-    )
+    ) a
 order by
     case when grantee = 'PUBLIC' then 1 else 0 end asc,
-    owner, object_type, object_name,
+    owner, object_type, a.object_name, a.column_name,
     grantee, direct_grant desc,
     grant_chain_len asc, grant_chain asc
 ;    

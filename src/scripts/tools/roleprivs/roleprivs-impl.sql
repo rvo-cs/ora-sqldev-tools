@@ -177,7 +177,7 @@ column default_role             format a12
 column common                   format a6
 column inherited                format a9
 
-select
+select distinct
     a.grantee
     , a.granted_role 
     , a.default_role
@@ -206,7 +206,7 @@ column admin_option             format a9
 column common                   format a6
 column inherited                format a9
 
-select
+select distinct
     a.grantee
     , a.privilege
     , a.admin_option
@@ -277,6 +277,7 @@ from
         dba_objects b
     where
         a.grantee = '&&def_role_impl'
+        and a.owner = b.owner
         and a.table_name = b.object_name
         &&def_db_version_ge_12 and a.type = b.object_type
         and b.object_type in (

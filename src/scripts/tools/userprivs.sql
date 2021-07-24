@@ -95,6 +95,7 @@ undefine def_hide_grants_to_public
 undefine def_show_db_links
 undefine def_hide_ora_obj
 undefine def_set_termout
+undefine def_10g_compat_impl
 undefine 1
 
 @@common/util/undef_db_version

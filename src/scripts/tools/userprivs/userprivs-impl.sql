@@ -246,6 +246,7 @@ from
         dba_objects b
     where
         a.grantee = '&&def_username_impl'
+        and a.owner = b.owner
         and a.table_name = b.object_name
         &&def_db_version_ge_12 and a.type = b.object_type
         and b.object_type in (

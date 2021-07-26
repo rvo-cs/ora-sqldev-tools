@@ -26,3 +26,13 @@ define def_hide_ora_obj = "--"
 --
 define def_set_termout = "off"
 --define def_set_termout = "on"
+
+-- Use 10.2-compatible implementation? Use "" for the default implementation,
+-- or "-10g" to enable an alternative implementation without the following
+-- SQL features:
+--    * The LISTAGG aggregate function
+--    * Recursive subquery factoring, aka recursive WITH
+--    * Lists of column aliases after the WITH query_name construct
+--
+--define def_10g_compat_impl = "-10g"
+define def_10g_compat_impl = ""

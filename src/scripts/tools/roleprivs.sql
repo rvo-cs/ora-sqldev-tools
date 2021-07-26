@@ -93,6 +93,7 @@ undefine def_hide_column_common
 undefine def_hide_column_inherited
 undefine def_hide_ora_obj
 undefine def_set_termout
+undefine def_10g_compat_impl
 undefine 1
 
 @@common/util/undef_db_version

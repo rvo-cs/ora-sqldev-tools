@@ -11,7 +11,7 @@ create or replace package body pkg_pub_stats_helper as
         l_rowid_value rowid;
     begin
         case 
-            when p_data_type = 'VARCHAR2' then 
+            when p_data_type in ('VARCHAR2', 'CHAR') then 
                 dbms_stats.convert_raw_value(rawval => p_raw, resval => l_varchar2_value);
         
             when p_data_type = 'FLOAT' then

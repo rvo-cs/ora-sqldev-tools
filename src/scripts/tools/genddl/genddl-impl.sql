@@ -11,6 +11,7 @@ declare
     gc_fetch_ddl_max  constant number := 100;
 
     gc_newln          constant varchar2(1) := chr(10);
+    gc_blank_or_nl    constant varchar2(2) := chr(32) || chr(10);
     gc_sql_terminator constant varchar2(1) := ';';
     
     g_fetch_ddl_cnt number := 0;    /* Count of DDL statements printed in the 
@@ -30,13 +31,25 @@ declare
     gc_strip_object_schema          constant boolean := &&def_strip_object_schema;
 
     procedure create_table_sxml_xslt (p_clob in out nocopy clob);
-    procedure create_synonym_sxml_xslt (p_clob in out nocopy clob);
+    procedure create_index_sxml_xslt (p_clob in out nocopy clob, p_object_owner in varchar2);
+    procedure create_synonym_sxml_xslt (p_clob in out nocopy clob, p_object_owner in varchar2);
+    procedure create_constraint_xml_xslt (p_clob in out nocopy clob);
 
-    procedure print_synonyms (p_schema_name in varchar2, p_table_name in varchar2);
+    procedure print_dependent_indexes (p_table_owner in varchar2, p_table_name in varchar2);
+    procedure print_dependent_synonyms (p_table_owner in varchar2, p_table_name in varchar2);
+    procedure print_dependent_constraints (p_table_owner in varchar2, p_table_name in varchar2,
+                p_constraint_type in varchar2);
     
     procedure print_nl;
     procedure print_clob (p_clob in clob);
-    function as_literal (p_bool in boolean) return varchar2;
+
+    function xlst_transform_param (p_param_name in varchar2, p_bool_value in boolean)
+    return varchar2;
+
+    procedure append_xsl_variable (p_clob in out nocopy clob,
+            p_variable_name in varchar2, p_variable_value in varchar2);
+
+    function pp_comment (p_clob in clob) return clob;
 
     
     procedure print_table_main_ddl (
@@ -69,7 +82,15 @@ declare
          */
         create_table_sxml_xslt(l_xslt_text);
         l_xslt := xmltype(l_xslt_text);
-        l_sxml := l_sxml.transform(l_xslt);
+        l_sxml := l_sxml.transform(
+            xsl       => l_xslt,
+            parammap  => xlst_transform_param('remove-object-schema' , gc_strip_object_schema)
+                    || xlst_transform_param('primary-key-as-alter'   , gc_primary_key_as_alter)
+                    || xlst_transform_param('unique-key-as-alter'    , gc_unique_key_as_alter)
+                    || xlst_transform_param('check-constraints-as-alter', gc_check_constraints_as_alter)
+                    || xlst_transform_param('foreign-key-as-alter'   , gc_foreign_key_as_alter)
+                    || xlst_transform_param('not-null-as-alter'      , gc_not_null_as_alter)
+        );
         dbms_lob.freetemporary(l_xslt_text);
 
         /*
@@ -95,9 +116,66 @@ declare
     end print_table_main_ddl;
     
 
+    procedure print_index_ddl (
+        p_index_owner   in varchar2,
+        p_index_name    in varchar2,
+        p_object_owner  in varchar2
+    )
+    is
+        l_mh        number;
+        l_th        number;
+        l_sxml      sys.xmltype;
+        l_xslt      sys.xmltype;
+        l_xslt_text clob;
+        l_ddl       clob;
+    begin
+        /*
+           Extract index metadata as SXML
+         */
+        l_mh := dbms_metadata.open('INDEX');
+        dbms_metadata.set_filter(l_mh, 'SCHEMA', p_index_owner);
+        dbms_metadata.set_filter(l_mh, 'NAME', p_index_name);
+
+        l_th := dbms_metadata.add_transform(l_mh, 'SXML');
+        l_sxml := dbms_metadata.fetch_xml(l_mh);
+        dbms_metadata.close(l_mh);
+    
+        /* 
+           Transform using XSLT: remove object's owner (if required), 
+           storage attributes, list of partitions (if locality is local)
+         */
+        create_index_sxml_xslt(l_xslt_text, p_object_owner);
+        l_xslt := xmltype(l_xslt_text);
+        l_sxml := l_sxml.transform(
+            xsl       => l_xslt,
+            parammap  => xlst_transform_param('remove-object-schema' , gc_strip_object_schema)
+        );
+        dbms_lob.freetemporary(l_xslt_text);
+
+        /*
+           Convert from SXML to DDL
+         */
+        dbms_lob.createtemporary(l_ddl, true);
+        
+        l_mh := dbms_metadata.openw('INDEX');
+        l_th := dbms_metadata.add_transform(l_mh, 'SXMLDDL');
+        dbms_metadata.convert(l_mh, l_sxml, l_ddl);
+        dbms_metadata.close(l_mh);
+       
+        dbms_lob.append(l_ddl, gc_sql_terminator);
+        print_clob(ltrim(regexp_replace(l_ddl, '(\s|\n)*\(\);$', ' ;')));    
+                         /* ^^^--- must remove trailing "(" and ")" left over 
+                                   from the list of partitions of local indexes */
+        dbms_lob.freetemporary(l_ddl);
+
+        g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+    end print_index_ddl;
+
+
     procedure print_synonym_ddl (
-        p_schema_name   in varchar2,
-        p_synonym_name  in varchar2
+        p_synonym_owner  in varchar2,
+        p_synonym_name   in varchar2,
+        p_object_owner   in varchar2
     )
     is
         l_mh        number;
@@ -111,8 +189,8 @@ declare
            Extract synonym metadata as SXML
          */
         l_mh := dbms_metadata.open('SYNONYM');
-        dbms_metadata.set_filter(l_mh, 'SCHEMA', p_schema_name);
-        dbms_metadata.set_filter(l_mh, 'NAME', p_synonym_name);
+        dbms_metadata.set_filter(l_mh, 'SCHEMA', p_synonym_owner);
+        dbms_metadata.set_filter(l_mh, 'NAME'  , p_synonym_name);
         
         l_th := dbms_metadata.add_transform(l_mh, 'SXML');
         l_sxml := dbms_metadata.fetch_xml(l_mh);
@@ -121,9 +199,12 @@ declare
         /* 
            Transform using XSLT: remove the object's schema
          */
-        create_synonym_sxml_xslt(l_xslt_text);
+        create_synonym_sxml_xslt(l_xslt_text, p_object_owner);
         l_xslt := xmltype(l_xslt_text);
-        l_sxml := l_sxml.transform(l_xslt);
+        l_sxml := l_sxml.transform(
+            xsl       => l_xslt,
+            parammap  => xlst_transform_param('remove-object-schema' , gc_strip_object_schema)
+        );
         dbms_lob.freetemporary(l_xslt_text);
 
         /*
@@ -134,6 +215,7 @@ declare
         l_mh := dbms_metadata.openw('SYNONYM');
         l_th := dbms_metadata.add_transform(l_mh, 'SXMLDDL');
         dbms_metadata.convert(l_mh, l_sxml, l_ddl);
+        dbms_metadata.close(l_mh);
         
         dbms_lob.append(l_ddl, gc_sql_terminator);
         print_clob(ltrim(l_ddl));
@@ -142,6 +224,59 @@ declare
         g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
     end print_synonym_ddl;
 
+
+    procedure print_constraint_ddl (
+        p_owner            in varchar2,
+        p_constraint_name  in varchar2,
+        p_object_type      in varchar2 := 'CONSTRAINT'
+    )
+    is
+        l_mh        number;
+        l_th        number;
+        l_xml       sys.xmltype;
+        l_xslt      sys.xmltype;
+        l_xslt_text clob;
+        l_ddl       clob;
+    begin
+        /*
+           Extract constraint metadata as XML
+           Note: SXML is _not_ avaiable for constraints.
+        */
+        l_mh := dbms_metadata.open(p_object_type);
+        dbms_metadata.set_filter(l_mh, 'SCHEMA', p_owner);
+        dbms_metadata.set_filter(l_mh, 'NAME'  , p_constraint_name);
+
+        l_xml := dbms_metadata.fetch_xml(l_mh);
+        dbms_metadata.close(l_mh);
+        
+        /* 
+           Transform using XSLT: remove the owner name if required,
+           remove details of the underlying index, etc.
+         */
+        create_constraint_xml_xslt(l_xslt_text);
+        l_xslt := xmltype(l_xslt_text);
+        l_xml := l_xml.transform(
+            xsl       => l_xslt,
+            parammap  => xlst_transform_param('remove-object-schema' , gc_strip_object_schema)
+        );
+        dbms_lob.freetemporary(l_xslt_text);
+            
+        /*
+           Convert from XML to DDL
+         */
+        dbms_lob.createtemporary(l_ddl, true);
+        
+        l_mh := dbms_metadata.openw(p_object_type);
+        l_th := dbms_metadata.add_transform(l_mh, 'DDL');
+        dbms_metadata.convert(l_mh, l_xml, l_ddl);
+        dbms_metadata.close(l_mh);
+
+        print_clob(ltrim(rtrim(l_ddl, gc_blank_or_nl), gc_blank_or_nl) || gc_sql_terminator);
+        dbms_lob.freetemporary(l_ddl);
+
+        g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+    end print_constraint_ddl;
+    
 
     procedure print_ddl_pieces(
         p_object_type       in  varchar2,
@@ -159,16 +294,6 @@ declare
         
         l_constraints_as_alter boolean := true;
     begin
-        if p_object_type = 'TABLE' and not p_is_dependent then
-            print_table_main_ddl (p_schema_name, p_object_name);
-            return;
-        end if;
-
-        if p_object_type = 'SYNONYM' and not p_is_dependent then
-            print_synonym_ddl (p_schema_name, p_object_name);
-            return;
-        end if;
-    
         l_mh := dbms_metadata.open(p_object_type);
     
         if p_is_dependent then
@@ -184,7 +309,9 @@ declare
             dbms_metadata.set_filter(l_mh, 'CUSTOM_FILTER', p_custom_filter);
         end if;
 
-        if gc_strip_object_schema and p_object_type <> 'SYNONYM' then
+        if gc_strip_object_schema 
+            and p_object_type not in ('COMMENT', 'SYNONYM') 
+        then
             l_rh := dbms_metadata.add_transform(l_mh, 'MODIFY');
             dbms_metadata.set_remap_param(l_rh, 'REMAP_SCHEMA', p_schema_name, null);
         end if;
@@ -220,7 +347,12 @@ declare
             
             for i in l_ddls.first .. l_ddls.last loop
                 g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
-                print_clob(l_ddls(i).ddltext);
+                print_clob(
+                    case p_object_type
+                        when 'COMMENT' then pp_comment(l_ddls(i).ddltext) 
+                        else l_ddls(i).ddltext 
+                    end
+                );
             end loop;
         end loop ddl_fetch_loop;
         
@@ -236,112 +368,84 @@ declare
             p_clob,
             q'{ <?xml version="1.0"?>
                 <xsl:stylesheet version="1.0"
-                    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                    xmlns:ora="http://xmlns.oracle.com/ku"
-                    xmlns="http://xmlns.oracle.com/ku"
-                    exclude-result-prefixes="ora">
-             }'
-        );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="primary-key-as-alter" select="'
-                || as_literal(gc_primary_key_as_alter)
-                || '()" />'
-        );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="unique-key-as-alter" select="'
-                || as_literal(gc_unique_key_as_alter)
-                || '()" />'
-        );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="check-constraints-as-alter" select="'
-                || as_literal(gc_check_constraints_as_alter)
-                || '()" />'
-        );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="foreign-key-as-alter" select="'
-                || as_literal(gc_foreign_key_as_alter)
-                || '()" />'
-        );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="not-null-as-alter" select="'
-                || as_literal(gc_not_null_as_alter)
-                || '()" />'
-        );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="remove-object-schema" select="'
-                || as_literal(gc_strip_object_schema)
-                || '()" />'
-        );
-        dbms_lob.append(
-            p_clob,
-            q'{ <xsl:output omit-xml-declaration="yes"/>
-                
-                <xsl:template match="node()|@*">
-                    <xsl:copy>
-                        <xsl:apply-templates/>
-                    </xsl:copy>
-                </xsl:template>
+                        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:ora="http://xmlns.oracle.com/ku"
+                        xmlns="http://xmlns.oracle.com/ku"
+                        exclude-result-prefixes="ora">
+                    
+                    <xsl:param name="remove-object-schema"        select="0" />
+                    <xsl:param name="primary-key-as-alter"        select="0" />
+                    <xsl:param name="unique-key-as-alter"         select="0" />
+                    <xsl:param name="check-constraints-as-alter"  select="0" />
+                    <xsl:param name="foreign-key-as-alter"        select="0" />
+                    <xsl:param name="not-null-as-alter"           select="0" />
+    
+                    <xsl:output omit-xml-declaration="yes"/>
 
-                <xsl:template match="ora:TABLE/ora:SCHEMA">
-                    <xsl:if test="$remove-object-schema = false()">
+                    <xsl:template match="node()|@*" priority="0">
                         <xsl:copy>
                             <xsl:apply-templates/>
                         </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
-                
-                <xsl:template match="ora:PRIMARY_KEY_CONSTRAINT_LIST">
-                    <xsl:if test="$primary-key-as-alter = false()">
-                        <xsl:copy>
-                            <xsl:apply-templates/>
-                        </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
-                
-                <xsl:template match="ora:UNIQUE_KEY_CONSTRAINT_LIST">
-                    <xsl:if test="$unique-key-as-alter = false()">
-                        <xsl:copy>
-                            <xsl:apply-templates/>
-                        </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
-                
-                <xsl:template match="ora:CHECK_CONSTRAINT_LIST">  
-                    <xsl:if test="$check-constraints-as-alter = false()">
-                        <xsl:copy>
-                            <xsl:apply-templates/>
-                        </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
+                    </xsl:template>
 
-                <xsl:template match="ora:FOREIGN_KEY_CONSTRAINT_LIST">  
-                    <xsl:if test="$foreign-key-as-alter = false()">
-                        <xsl:copy>
-                            <xsl:apply-templates/>
-                        </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
+                    <xsl:template match="ora:TABLE/ora:SCHEMA" priority="2">
+                        <xsl:if test="not($remove-object-schema)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
 
-                <xsl:template match="ora:COL_LIST_ITEM/ora:NOT_NULL">  
-                    <xsl:if test="$not-null-as-alter = false()">
-                        <xsl:copy>
-                            <xsl:apply-templates/>
-                        </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
-
-            </xsl:stylesheet>}'
+                    <xsl:template match="ora:PRIMARY_KEY_CONSTRAINT_LIST" priority="1">
+                        <xsl:if test="not($primary-key-as-alter)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
+                    
+                    <xsl:template match="ora:UNIQUE_KEY_CONSTRAINT_LIST" priority="1">
+                        <xsl:if test="not($unique-key-as-alter)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
+                    
+                    <xsl:template match="ora:CHECK_CONSTRAINT_LIST" priority="1">  
+                        <xsl:if test="not($check-constraints-as-alter)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
+    
+                    <xsl:template match="ora:FOREIGN_KEY_CONSTRAINT_LIST" priority="1">  
+                        <xsl:if test="not($foreign-key-as-alter)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
+    
+                    <xsl:template match="ora:COL_LIST_ITEM/ora:NOT_NULL" priority="2">  
+                        <xsl:if test="not($not-null-as-alter)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
+    
+                </xsl:stylesheet>
+              }'
         );
     end create_table_sxml_xslt;
     
 
-    procedure create_synonym_sxml_xslt (p_clob in out nocopy clob)
+    procedure create_index_sxml_xslt (
+        p_clob          in out nocopy  clob, 
+        p_object_owner  in  varchar2
+    )
     is
     begin
         dbms_lob.createtemporary(p_clob, true);
@@ -349,30 +453,99 @@ declare
             p_clob,
             q'{ <?xml version="1.0"?>
                 <xsl:stylesheet version="1.0"
-                    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                    xmlns:ora="http://xmlns.oracle.com/ku"
-                    xmlns="http://xmlns.oracle.com/ku"
-                    exclude-result-prefixes="ora">
+                        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:ora="http://xmlns.oracle.com/ku"
+                        xmlns="http://xmlns.oracle.com/ku"
+                        exclude-result-prefixes="ora">
+
+                    <xsl:param name="remove-object-schema" select="0" />
              }'
         );
-        dbms_lob.append(
-            p_clob, 
-            '<xsl:variable name="remove-object-schema" select="'
-                || as_literal(gc_strip_object_schema)
-                || '()" />'
-        );
+
+        append_xsl_variable(p_clob, 'object-owner', p_object_owner);
+        
         dbms_lob.append(
             p_clob,
             q'{ <xsl:output omit-xml-declaration="yes"/>
                 
-                <xsl:template match="node()|@*">
+                <xsl:template match="node()|@*" priority="0">
                     <xsl:copy>
                         <xsl:apply-templates/>
                     </xsl:copy>
                 </xsl:template>
                 
-                <xsl:template match="ora:OBJECT_SCHEMA">
-                    <xsl:if test="$remove-object-schema = false()">
+                <xsl:template match="ora:LOCAL_PARTITIONING/ora:PARTITION_LIST" priority="2" />
+                <xsl:template match="ora:INDEX_ATTRIBUTES/ora:STORAGE" priority="2" />
+            
+                <xsl:template match="/ora:INDEX/ora:SCHEMA" priority="2">
+                    <xsl:variable name="index-owner" select="." />
+                    <xsl:if test="not($remove-object-schema) or $index-owner != $object-owner">
+                        <xsl:copy>
+                            <xsl:apply-templates/>
+                        </xsl:copy>
+                    </xsl:if>
+                </xsl:template>                 
+
+                <xsl:template match="ora:TABLE_INDEX/ora:ON_TABLE/ora:SCHEMA" priority="3">
+                    <xsl:variable name="table-owner" select="." />
+                    <xsl:if test="not($remove-object-schema) or $table-owner != $object-owner">
+                        <xsl:copy>
+                            <xsl:apply-templates/>
+                        </xsl:copy>
+                    </xsl:if>
+                </xsl:template>                    
+
+            </xsl:stylesheet>}'
+        );
+    end create_index_sxml_xslt;
+
+
+    procedure create_synonym_sxml_xslt (
+        p_clob          in out nocopy  clob,
+        p_object_owner  in  varchar2
+    )
+    is
+    begin
+        dbms_lob.createtemporary(p_clob, true);
+        dbms_lob.append(
+            p_clob,
+            q'{ <?xml version="1.0"?>
+                <xsl:stylesheet version="1.0"
+                        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                        xmlns:ora="http://xmlns.oracle.com/ku"
+                        xmlns="http://xmlns.oracle.com/ku"
+                        exclude-result-prefixes="ora">
+
+                    <xsl:param name="remove-object-schema" select="0" />
+             }'
+        );
+        
+        append_xsl_variable(p_clob, 'object-owner', p_object_owner);
+        
+        dbms_lob.append(
+            p_clob,
+            q'{ <xsl:output omit-xml-declaration="yes"/>
+                
+                <xsl:template match="node()|@*" priority="0">
+                    <xsl:copy>
+                        <xsl:apply-templates/>
+                    </xsl:copy>
+                </xsl:template>
+                
+                <xsl:template match="ora:SCHEMA" priority="1">
+                    <xsl:variable name="synonym-schema" select="." />
+                    <xsl:if test="not($remove-object-schema)
+                                  or $object-owner != $synonym-schema">
+                        <xsl:copy>
+                            <xsl:apply-templates/>
+                        </xsl:copy>
+                    </xsl:if>
+                </xsl:template>
+
+                <xsl:template match="ora:OBJECT_SCHEMA" priority="1">
+                    <xsl:variable name="object-schema" select="." />
+                    <xsl:if test="not($remove-object-schema)
+                                  or $object-owner != $object-schema">
                         <xsl:copy>
                             <xsl:apply-templates/>
                         </xsl:copy>
@@ -382,16 +555,86 @@ declare
         );
     end create_synonym_sxml_xslt;
 
+
+    procedure create_constraint_xml_xslt (p_clob in out nocopy clob)
+    is
+    begin
+        dbms_lob.createtemporary(p_clob, true);
+        dbms_lob.append(
+            p_clob,
+            q'{<?xml version="1.0"?>
+            <xsl:stylesheet version="1.0"
+                     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                     xmlns:ora="http://xmlns.oracle.com/ku"
+                     xmlns="http://xmlns.oracle.com/ku"
+                     exclude-result-prefixes="ora">
+
+                <xsl:param name="remove-object-schema" select="0" />
+
+                <xsl:variable name="object-owner" 
+                        select="/ROWSET/ROW/CONSTRAINT_T/OWNER_NAME 
+                                | /ROWSET/ROW/REF_CONSTRAINT_T/OWNER_NAME" />                    
+                    
+                <xsl:output omit-xml-declaration="yes"/>
+                
+                <xsl:template match="node()|@*" priority="0">
+                    <xsl:copy>
+                        <xsl:apply-templates/>
+                    </xsl:copy>
+                </xsl:template>
+
+                <xsl:template match="CONSTRAINT_T/BASE_OBJ/OWNER_NAME" priority="2">
+                    <xsl:variable name="base-object-owner" select="." />
+                    <xsl:if test="not($remove-object-schema)
+                                    or $base-object-owner != $object-owner">
+                        <xsl:copy>
+                            <xsl:apply-templates/>
+                        </xsl:copy>
+                    </xsl:if>
+                </xsl:template>
+                
+                <xsl:template match="REF_CONSTRAINT_T/BASE_OBJ/OWNER_NAME" priority="2">
+                    <xsl:variable name="base-object-owner" select="." />
+                    <xsl:if test="not($remove-object-schema)
+                                    or $base-object-owner != $object-owner">
+                        <xsl:copy>
+                            <xsl:apply-templates/>
+                        </xsl:copy>
+                    </xsl:if>
+                </xsl:template>
+
+                <xsl:template match="REF_CONSTRAINT_T/*/SCHEMA_OBJ/OWNER_NAME" priority="2">
+                    <xsl:variable name="target-object-owner" select="." />
+                    <xsl:if test="not($remove-object-schema)
+                                    or $target-object-owner != $object-owner">
+                        <xsl:copy>
+                            <xsl:apply-templates/>
+                        </xsl:copy>
+                    </xsl:if>
+                </xsl:template>
+                
+                <xsl:template match="IND/PCT_FREE" priority="1" />
+                <xsl:template match="IND/INITRANS" priority="1" />
+                <xsl:template match="IND/MAXTRANS" priority="1" />
+                <xsl:template match="IND/STORAGE" priority="1" />
+                <xsl:template match="IND/PART_OBJ" priority="1" />
+                <xsl:template match="IND/FLAGS" priority="1" />
+            </xsl:stylesheet>}'
+        );
+    end create_constraint_xml_xslt;
+
     
     procedure print_table_ddl (p_schema_name in varchar2, p_table_name in varchar2)
     is
     begin
-        print_ddl_pieces('TABLE', p_schema_name, p_table_name);
+        print_table_main_ddl(p_schema_name, p_table_name);
         print_nl;
 
-        print_ddl_pieces('INDEX', p_schema_name, p_table_name, 
+        print_ddl_pieces('COMMENT', p_schema_name, p_table_name, 
                 p_is_dependent => true, p_base_object_type => 'TABLE');
         print_nl;
+        
+        print_dependent_indexes(p_schema_name, p_table_name);
         
         /* 
             Remark: for custom filters on constraint type, 
@@ -406,41 +649,30 @@ declare
             print_nl;
         end if;
         
-        /* CHECK constraints */
-        if gc_check_constraints_as_alter then
-            print_ddl_pieces('CONSTRAINT', p_schema_name, p_table_name, 
-                    p_is_dependent => true, p_base_object_type => 'TABLE',
-                    p_custom_filter => 'TYPE_NUM = 1');
-            print_nl;
-        end if;
-
         /* PRIMARY KEY constraints */
         if gc_primary_key_as_alter then
-            print_ddl_pieces('CONSTRAINT', p_schema_name, p_table_name, 
-                    p_is_dependent => true, p_base_object_type => 'TABLE',
-                    p_custom_filter => 'TYPE_NUM = 2');
-            print_nl;
+            print_dependent_constraints(p_schema_name, p_table_name, p_constraint_type => 'P');
         end if;
 
         /* UNIQUE KEY constraints */
         if gc_unique_key_as_alter then
-            print_ddl_pieces('CONSTRAINT', p_schema_name, p_table_name, 
-                    p_is_dependent => true, p_base_object_type => 'TABLE',
-                    p_custom_filter => 'TYPE_NUM = 3');
-            print_nl;
+            print_dependent_constraints(p_schema_name, p_table_name, p_constraint_type => 'U');
+        end if;
+
+        /* CHECK constraints */
+        if gc_check_constraints_as_alter then
+            print_dependent_constraints(p_schema_name, p_table_name, p_constraint_type => 'C');
         end if;
 
         if gc_foreign_key_as_alter then
-            print_ddl_pieces('REF_CONSTRAINT', p_schema_name, p_table_name,
-                    p_is_dependent => true, p_base_object_type => 'TABLE');
-            print_nl;
+            print_dependent_constraints(p_schema_name, p_table_name, p_constraint_type => 'R');
         end if;
 
         print_ddl_pieces('OBJECT_GRANT', p_schema_name, p_table_name,
                 p_is_dependent => true, p_base_object_type => 'TABLE');
         print_nl;
 
-        print_synonyms(p_schema_name, p_table_name);
+        print_dependent_synonyms(p_schema_name, p_table_name);
     end print_table_ddl;
     
 
@@ -454,7 +686,7 @@ declare
                 p_is_dependent => true, p_base_object_type => 'VIEW');
         print_nl;
 
-        print_synonyms(p_schema_name, p_view_name);
+        print_dependent_synonyms(p_schema_name, p_view_name);
     end print_view_ddl;
 
 
@@ -469,7 +701,43 @@ declare
     end print_other_ddl;
 
 
-    procedure print_synonyms (p_schema_name in varchar2, p_table_name in varchar2)
+    procedure print_dependent_indexes (
+        p_table_owner  in varchar2,
+        p_table_name   in varchar2
+    )
+    is
+    begin
+        for c in (
+            select
+                a.owner,
+                a.index_name,
+                (select count(*) from dba_constraints b
+                  where b.constraint_type = 'P' 
+                    and b.index_owner = a.owner and b.index_name = a.index_name) as cnt_p
+            from
+                dba_indexes a
+            where
+                a.table_owner = p_table_owner
+                and a.table_name = p_table_name
+            order by
+                cnt_p desc,
+                a.owner, a.index_name
+        )
+        loop
+            print_index_ddl(
+                p_index_owner  => c.owner, 
+                p_index_name   => c.index_name,
+                p_object_owner => p_table_owner
+            );
+            print_nl;
+        end loop;
+    end print_dependent_indexes;
+
+
+    procedure print_dependent_synonyms (
+        p_table_owner  in varchar2, 
+        p_table_name   in varchar2
+    )
     is
     begin
         for c in (
@@ -481,7 +749,7 @@ declare
             from
                 dba_synonyms a
             where
-                a.table_owner = p_schema_name
+                a.table_owner = p_table_owner
                 and a.table_name = p_table_name
             order by
                 decode(a.owner, 'PUBLIC', 0, 1) asc,
@@ -491,12 +759,62 @@ declare
             if (c.owner = 'PUBLIC' and gc_print_public_synonyms)
                 or (c.owner <> 'PUBLIC' and gc_print_private_synonyms)
             then
-                print_ddl_pieces('SYNONYM', c.owner, c.synonym_name);
+                print_synonym_ddl(
+                    p_synonym_owner => c.owner, 
+                    p_synonym_name  => c.synonym_name,
+                    p_object_owner  => p_table_owner
+                );
                 print_nl;
             end if;
         end loop;
-    end print_synonyms;
+    end print_dependent_synonyms;
 
+
+    procedure print_dependent_constraints (
+        p_table_owner       in varchar2, 
+        p_table_name        in varchar2,
+        p_constraint_type   in varchar2
+    )
+    is
+        cursor c_constraint is
+            select
+                a.constraint_name
+            from
+                /*
+                   Note: dba_constraints does _not_ expose cdef$.type#, which we
+                   need to tell apart "true" check constraints (cdef$.type# = 1)
+                   from plain NOT NULL constraints (cdef.$type# = 7) which must
+                   not appear here because they are dealt with elsewhere.
+                */
+                dba_constraints a,
+                dba_users b,
+                sys.cdef$ c,
+                sys.con$ oc
+            where
+                a.owner = p_table_owner
+                and a.table_name = p_table_name
+                and a.constraint_type = p_constraint_type
+                and b.username = a.owner
+                and oc.owner# = b.user_id
+                and oc.name = a.constraint_name
+                and oc.con# = c.con#
+                and (a.constraint_type <> 'C' or c.type# <> 7)
+            order by
+                a.constraint_name;
+    begin
+        for c in c_constraint loop
+            print_constraint_ddl(
+                p_owner             => p_table_owner, 
+                p_constraint_name   => c.constraint_name,
+                p_object_type       => case
+                                        when p_constraint_type = 'R' then 'REF_CONSTRAINT'
+                                        else 'CONSTRAINT'
+                                       end
+            );
+            print_nl;
+        end loop;
+    end print_dependent_constraints;
+    
 
     procedure print_nl
     is begin
@@ -524,14 +842,49 @@ declare
     end print_clob;
 
 
-    function as_literal (p_bool in boolean) return varchar2
+    function xlst_transform_param (
+        p_param_name in varchar2, 
+        p_bool_value in boolean
+    )
+    return varchar2
     is
     begin
-        return case 
-                when p_bool then 'true'
-                when not p_bool then 'false'
-               end;
-    end as_literal;
+        return p_param_name 
+                || '=' 
+                || case 
+                     when p_bool_value      then '"1"'
+                     when not p_bool_value  then '"0"'
+                     else '""'
+                   end
+                || ' ';
+    end xlst_transform_param;
+
+
+    procedure append_xsl_variable (
+        p_clob            in out nocopy clob,
+        p_variable_name   in varchar2,
+        p_variable_value  in varchar2
+    )
+    is
+    begin
+        dbms_lob.append(p_clob, '<xsl:variable name="' || p_variable_name || '">'
+                || p_variable_value || '</xsl:variable>');
+    end append_xsl_variable;
+    
+    
+    function pp_comment (p_clob in clob) return clob
+    is
+    begin
+        return rtrim(regexp_replace(
+                p_clob,
+                '\s*(comment\s+on\s+(table|column)\s+)"([^"]+)"\.(.*)$',
+                case
+                    when gc_strip_object_schema then '\1\4'
+                    else '\1"\3".\4'
+                end,
+                1, 1, 'in'
+            ));
+    end pp_comment;
 
 begin
     case gc_object_type

@@ -2,6 +2,13 @@
 -- 
 define def_spool_directory = "E:\Home\romain\Temp"
 
+-- Choice of naming scheme for the spool file
+-- Use "simple" to omit the source database and schema names,
+-- or "normal" to include both in the name of the spool file
+--
+define def_spool_naming_scheme = "simple"
+--define def_spool_naming_scheme = "normal"
+
 -- Constraints as ALTER statements?
 -- Use "true" to have constraints generated as ALTER TABLE statements
 -- or "false" to have constraints generated inline
@@ -35,3 +42,15 @@ define def_print_public_synonyms    = "true"
 --
 define def_strip_object_schema  = "true"
 --define def_strip_object_schema  = "false"
+
+-- Strip / include segment attributes?
+-- Use "true" to omit segment attributes, "false" to keep them
+--
+define def_strip_segment_attrs = "true"
+--define def_strip_segment_attrs = "false"
+
+-- Strip / include the tablespace clause?
+-- Use "true" to omit the tablespace clause, "false" to keep it
+--
+define def_strip_tablespace_clause = "true"
+--define def_strip_tablespace_clause = "false"

@@ -126,7 +126,7 @@ where
 
 set termout on
 
-define def_spool_filename = "cr_&&def_object_type_sfn-&&def_db_name-&&def_schema_name_xc-&&def_object_name_xc..sql"
+@@genddl/genddl-fname-&&def_spool_naming_scheme
 
 @@genddl/genddl-&&def_ivalid_schema-&&def_ivalid_objnam
 
@@ -158,8 +158,11 @@ undefine def_constraint_not_null_as_alter
 undefine def_print_private_synonyms
 undefine def_print_public_synonyms
 undefine def_strip_object_schema
+undefine def_strip_segment_attrs
+undefine def_strip_tablespace_clause
 undefine def_spool_directory
 undefine def_spool_filename
+undefine def_spool_naming_scheme
 undefine 1
 undefine 2
 undefine 3

@@ -16,6 +16,8 @@ declare
     
     g_fetch_ddl_cnt number := 0;    /* Count of DDL statements printed in the 
                                        previous call to print_ddl_pieces */
+    
+    g_pending_newln boolean := false;   /* Add a newln before the next DDL statement? */
 
     gc_schema_name constant user_users.username      %type := '&&def_schema_name';
     gc_object_type constant user_objects.object_type %type := '&&def_object_type';
@@ -29,6 +31,8 @@ declare
     gc_print_private_synonyms       constant boolean := &&def_print_private_synonyms;
     gc_print_public_synonyms        constant boolean := &&def_print_public_synonyms;
     gc_strip_object_schema          constant boolean := &&def_strip_object_schema;
+    gc_strip_tablespace_clause      constant boolean := &&def_strip_tablespace_clause;
+    gc_strip_segment_attrs          constant boolean := &&def_strip_segment_attrs;
 
     procedure create_table_sxml_xslt (p_clob in out nocopy clob);
     procedure create_index_sxml_xslt (p_clob in out nocopy clob, p_object_owner in varchar2);
@@ -101,9 +105,14 @@ declare
         l_mh := dbms_metadata.openw('TABLE');
 
         l_th := dbms_metadata.add_transform(l_mh, 'SXMLDDL');
-        dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES' , true);  
+        dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES' , not(gc_strip_segment_attrs));  
         dbms_metadata.set_transform_param(l_th, 'STORAGE'            , false);
-        dbms_metadata.set_transform_param(l_th, 'TABLESPACE'         , true);  
+        dbms_metadata.set_transform_param(l_th, 'TABLESPACE', not(gc_strip_tablespace_clause));  
+        /* 
+           Remark: the SIZE_BYTE_KEYWORD transform param is not supported in
+           the SXMLDDL transform, which is a pity: the results will only be
+           valid if NLS_LENGTH_SEMANTIC is set to BYTE :-(
+         */
 
         dbms_metadata.convert(l_mh, l_sxml, l_ddl);
         dbms_metadata.close(l_mh);
@@ -159,6 +168,8 @@ declare
         
         l_mh := dbms_metadata.openw('INDEX');
         l_th := dbms_metadata.add_transform(l_mh, 'SXMLDDL');
+        dbms_metadata.set_transform_param(l_th, 'TABLESPACE', not(gc_strip_tablespace_clause));  
+        dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES', not(gc_strip_segment_attrs));
         dbms_metadata.convert(l_mh, l_sxml, l_ddl);
         dbms_metadata.close(l_mh);
        
@@ -328,9 +339,9 @@ declare
         end if;
         
         if p_object_type in ('TABLE', 'INDEX') then
-            dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES', true);
+            dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES', not(gc_strip_segment_attrs));
             dbms_metadata.set_transform_param(l_th, 'STORAGE', false);
-            dbms_metadata.set_transform_param(l_th, 'TABLESPACE', true);
+            dbms_metadata.set_transform_param(l_th, 'TABLESPACE', not(gc_strip_tablespace_clause));
 
         elsif p_object_type in ('CONSTRAINT') then
             dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES', false);
@@ -819,7 +830,7 @@ declare
     procedure print_nl
     is begin
         if g_fetch_ddl_cnt > 0 then
-            dbms_output.new_line;
+            g_pending_newln := true;
         end if;
     end print_nl;
 
@@ -829,6 +840,15 @@ declare
         l_pos0  pls_integer;
         l_pos   pls_integer;
     begin
+        if p_clob is null or length(p_clob) = 0 then
+            return;
+        end if;
+        
+        if g_pending_newln then
+            dbms_output.new_line;
+            g_pending_newln := false;
+        end if;
+        
         l_pos0 := 1;
         l_pos := instr(p_clob, gc_newln, l_pos0);
         while l_pos > 0 loop

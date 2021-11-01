@@ -10,12 +10,10 @@
 	</CustomValues>
 	<query>
 		<sql><![CDATA[with table_like_list as (
-    select 
-        trim(regexp_substr(:TABLE_LIKE_LIST, '([^|]+)', 1, level)) as table_like
+    select /*+ materialize */
+        column_value as table_like
     from
-        dual
-    connect by
-        instr(:TABLE_LIKE_LIST, '|', 1, level - 1) > 0
+        table(c##pkg_pub_utility.strtok(:TABLE_LIKE_LIST))
 ),
 matching_tables as (
     select
@@ -64,7 +62,7 @@ order by
 		<binds>
 			<bind id="TABLE_LIKE_LIST">
 				<prompt><![CDATA[Table like?]]></prompt>
-				<tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by '|']]></tooltip>
+				<tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by blanks]]></tooltip>
 				<value><![CDATA[foo%]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
@@ -2911,6 +2909,392 @@ order by
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Grants]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+        <queries>
+		<query minversion="12.1">
+			<sql><![CDATA[select
+    grantee
+    , nvl((select 'Y' from dba_roles r where r.role = d.grantee), 'N')  as is_role
+    , max(decode(rn, 1, privilege))
+            || max(decode(rn, 2, ', ' || privilege))
+            || max(decode(rn, 3, ', ' || privilege))
+            || max(decode(rn, 4, ', ' || privilege))
+            || max(decode(rn, 5, ', ' || privilege))
+            || max(decode(rn, 6, ', ' || privilege))
+            || max(decode(rn, 7, ', ' || privilege))
+            || max(decode(rn, 8, ', ' || privilege))
+            || max(decode(rn, 9, ', ' || privilege))
+            || max(decode(rn, 10, ', ' || privilege))
+            || max(decode(rn, 11, ', ' || privilege))
+            || max(decode(rn, 12, ', ' || privilege))
+            || max(decode(rn, 13, ', ' || privilege))
+            || max(decode(rn, 14, ', ' || privilege))
+            || max(decode(rn, 15, ', ' || privilege))
+            || max(decode(rn, 16, ', ' || privilege))
+            || /* 
+                  This purposely raises ORA-01722 invalid number if there are 
+                  more than 16 distinct privileges in the same group.
+                */
+               max(decode(rn, 17, to_char(to_number('too many privs!'))))
+        as object_privs
+    , owner
+    , object_name 
+            || case 
+                when column_name is not null 
+                then '.' || column_name
+               end
+        as object_name
+    , object_type
+    , grantable
+    , hierarchy
+    , common         /* DB version >= 12.1 */
+    -- , inherited      /* DB version >= 12.2 */
+from
+    (select
+        c.grantee
+        , c.privilege
+        , c.owner
+        , c.object_type
+        , c.object_name
+        , c.column_name
+        , c.grantable
+        , c.hierarchy
+        , c.common       /* DB version >= 12.1 */
+        -- , c.inherited    /* DB version >= 12.2 */
+        , /* Fancy ordering of privileges in the same group */ 
+          row_number() over (
+                partition by
+                    c.grantee
+                    , c.owner
+                    , c.object_type
+                    , c.object_name
+                    , c.column_name
+                    , c.grantable
+                    , c.hierarchy
+                    , c.common       /* DB version >= 12.1 */
+                    -- , c.inherited    /* DB version >= 12.2 */
+                order by
+                    case c.object_type
+                        when 'TABLE' 
+                            then decode(c.privilege, 'ALTER', '1', 'READ', '2', 'SELECT', '3',
+                                        'INSERT', '4', 'UPDATE', '5', 'DELETE', '6', c.privilege)
+                        else
+                            c.privilege
+                    end)
+            as rn
+    from
+        (select distinct  /* Note: each priv may have been granted
+                             more than once by distinct grantors */
+            a.grantee
+            , a.privilege
+            , b.owner
+            , b.object_type
+            , b.object_name
+            , null as column_name
+            , a.grantable
+            , a.hierarchy
+            , a.common       /* DB version >= 12.1 */
+            -- , a.inherited    /* DB version >= 12.2 */
+        from
+            dba_tab_privs a,
+            dba_objects b
+        where
+            a.owner = b.owner
+            and a.table_name = b.object_name
+            and a.type = b.object_type   /* DB version >= 12.1 */
+            and b.owner = :OWNER
+            and b.object_type = 'TABLE'
+            and b.object_name = :TABLE_NAME
+        union all
+        select distinct
+            a.grantee
+            , a.privilege
+            , a.owner
+            , 'TABLE COLUMN'    as object_type
+            , a.table_name      as object_name
+            , a.column_name
+            , a.grantable
+            , null              as hierarchy
+            , a.common       /* DB version >= 12.1 */
+            -- , a.inherited    /* DB version >= 12.2 */
+        from
+            dba_col_privs a
+        where
+            a.owner = :OWNER
+            and a.table_name = :TABLE_NAME
+        ) c
+    ) d
+group by
+    grantee
+    , owner
+    , object_type
+    , object_name
+    , column_name
+    , grantable
+    , hierarchy
+    , common         /* DB version >= 12.1 */
+    -- , inherited      /* DB version >= 12.2 */
+order by
+    owner
+    , d.object_name
+    , grantee
+    , d.column_name  nulls first
+    , object_privs
+    , grantable
+    , hierarchy
+    , common         /* DB version >= 12.1 */
+    -- , inherited      /* DB version >= 12.2 */
+]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+		<query>
+			<sql><![CDATA[select
+    grantee
+    , nvl((select 'Y' from dba_roles r where r.role = d.grantee), 'N')  as is_role
+    , max(decode(rn, 1, privilege))
+            || max(decode(rn, 2, ', ' || privilege))
+            || max(decode(rn, 3, ', ' || privilege))
+            || max(decode(rn, 4, ', ' || privilege))
+            || max(decode(rn, 5, ', ' || privilege))
+            || max(decode(rn, 6, ', ' || privilege))
+            || max(decode(rn, 7, ', ' || privilege))
+            || max(decode(rn, 8, ', ' || privilege))
+            || max(decode(rn, 9, ', ' || privilege))
+            || max(decode(rn, 10, ', ' || privilege))
+            || max(decode(rn, 11, ', ' || privilege))
+            || max(decode(rn, 12, ', ' || privilege))
+            || max(decode(rn, 13, ', ' || privilege))
+            || max(decode(rn, 14, ', ' || privilege))
+            || max(decode(rn, 15, ', ' || privilege))
+            || max(decode(rn, 16, ', ' || privilege))
+            || /* 
+                  This purposely raises ORA-01722 invalid number if there are 
+                  more than 16 distinct privileges in the same group.
+                */
+               max(decode(rn, 17, to_char(to_number('too many privs!'))))
+        as object_privs
+    , owner
+    , object_name 
+            || case 
+                when column_name is not null 
+                then '.' || column_name
+               end
+        as object_name
+    , object_type
+    , grantable
+    , hierarchy
+    -- , common         /* DB version >= 12.1 */
+    -- , inherited      /* DB version >= 12.2 */
+from
+    (select
+        c.grantee
+        , c.privilege
+        , c.owner
+        , c.object_type
+        , c.object_name
+        , c.column_name
+        , c.grantable
+        , c.hierarchy
+        -- , c.common       /* DB version >= 12.1 */
+        -- , c.inherited    /* DB version >= 12.2 */
+        , /* Fancy ordering of privileges in the same group */ 
+          row_number() over (
+                partition by
+                    c.grantee
+                    , c.owner
+                    , c.object_type
+                    , c.object_name
+                    , c.column_name
+                    , c.grantable
+                    , c.hierarchy
+                    -- , c.common       /* DB version >= 12.1 */
+                    -- , c.inherited    /* DB version >= 12.2 */
+                order by
+                    case c.object_type
+                        when 'TABLE' 
+                            then decode(c.privilege, 'ALTER', '1', 'READ', '2', 'SELECT', '3',
+                                        'INSERT', '4', 'UPDATE', '5', 'DELETE', '6', c.privilege)
+                        else
+                            c.privilege
+                    end)
+            as rn
+    from
+        (select distinct  /* Note: each priv may have been granted
+                             more than once by distinct grantors */
+            a.grantee
+            , a.privilege
+            , b.owner
+            , b.object_type
+            , b.object_name
+            , null as column_name
+            , a.grantable
+            , a.hierarchy
+            -- , a.common       /* DB version >= 12.1 */
+            -- , a.inherited    /* DB version >= 12.2 */
+        from
+            dba_tab_privs a,
+            dba_objects b
+        where
+            a.owner = b.owner
+            and a.table_name = b.object_name
+            -- and a.type = b.object_type   /* DB version >= 12.1 */
+            and b.owner = :OWNER
+            and b.object_type = 'TABLE'
+            and b.object_name = :TABLE_NAME
+        union all
+        select distinct
+            a.grantee
+            , a.privilege
+            , a.owner
+            , 'TABLE COLUMN'    as object_type
+            , a.table_name      as object_name
+            , a.column_name
+            , a.grantable
+            , null              as hierarchy
+            -- , a.common       /* DB version >= 12.1 */
+            -- , a.inherited    /* DB version >= 12.2 */
+        from
+            dba_col_privs a
+        where
+            a.owner = :OWNER
+            and a.table_name = :TABLE_NAME
+        ) c
+    ) d
+group by
+    grantee
+    , owner
+    , object_type
+    , object_name
+    , column_name
+    , grantable
+    , hierarchy
+    -- , common         /* DB version >= 12.1 */
+    -- , inherited      /* DB version >= 12.2 */
+order by
+    owner
+    , d.object_name
+    , grantee
+    , d.column_name  nulls first
+    , object_privs
+    , grantable
+    , hierarchy
+    -- , common         /* DB version >= 12.1 */
+    -- , inherited      /* DB version >= 12.2 */
+]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+        </queries>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[References]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 
+    owner,
+    name,
+    type,
+    referenced_owner,
+    referenced_name,
+    referenced_type,
+    dependency_type
+from 
+    dba_dependencies
+where
+    referenced_owner = :OWNER
+    and referenced_name = :TABLE_NAME
+order by
+    owner, name, type
+]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					null					</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
 	</display>
 </display>
 </displays>

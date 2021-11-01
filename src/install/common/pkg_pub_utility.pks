@@ -50,6 +50,55 @@ create or replace package pkg_pub_utility authid current_user as
     return sys.odcivarchar2list
     pipelined;
 
+    /*
+        Extracts tokens from the p_str argument, using strings of consecutive
+        whitespace characters (including newlines) as delimiters. Returns the
+        collection of extracted tokens. Note that leading and trailing blanks
+        are always discarded. Tokens in the input string can be enclosed using
+        pairs of double quote (") characters in order to allow blanks inside
+        tokens; enclosing double quotes are discarded from resulting tokens,
+        unless the p_unquote argument is 'N'. Additionally, if p_backslash_esc
+        is 'Y', the backslash character (\) can be used to escape the character
+        following it in the input string; escaping backslashes are discarded
+        from resulting tokens.
+        
+        Remark: simple (slow) implementation using recursive SQL + regexp.
+     */
+    function strtok (
+        p_str            in varchar2,
+        p_unquote        in varchar2  default 'Y',
+        p_backslash_esc  in varchar2  default 'N'
+    )
+    return sys.odcivarchar2list;
+    
+    /*
+        Encloses the argument in double quotes, unless it is already enclosed,
+        then raises an exception if the result is not a valid (quoted) simple
+        SQL name. (In practice this means that double quotes characters are
+        not allowed, except in the enclosure.) This is the same as calling
+        DBMS_ASSERT.enquote_name, with the conversion to uppercase disabled.
+    */
+    function enquote_name ( p_sql_name in varchar2 ) return varchar2;
+
+    /*
+        Returns 'Y' if the argument is enclosed in a pair of quote characters,
+        otherwise 'N'.
+     */
+    function is_quoted_string (
+        p_str        in varchar2,
+        p_quote_chr  in varchar2  default '"'
+    )
+    return varchar2;
+
+    /*
+        Returns the argument with the pair of enclosing quote characters,
+        if any, removed.
+     */
+    function dequote_string ( 
+        p_str        in varchar2,
+        p_quote_chr  in varchar2  default '"'
+    )
+    return varchar2;
 
     /*
         Returns the p_arg argument, rounded to at least p_digits places past

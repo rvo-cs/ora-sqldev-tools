@@ -9,11 +9,41 @@
 		<TYPE><![CDATA[horizontal]]></TYPE>
 	</CustomValues>
 	<query>
-		<sql><![CDATA[with table_like_list as (
-    select /*+ materialize */
-        column_value as table_like
+		<sql><![CDATA[with 
+table_like_in as (
+    select
+        :TABLE_LIKE_LIST  as str,
+        '\s* ( ( [^"[:space:]] "? )+ | " ( [^"] )* " ) \s*'  as rex
     from
-        table(c##pkg_pub_utility.strtok(:TABLE_LIKE_LIST))
+        dual
+),
+table_pattrn_raw as (
+    select
+        regexp_substr(a.str, a.rex, 1, level, 'x')  as tok
+    from
+        table_like_in a
+    connect by
+        regexp_instr (a.str, a.rex, 1, level, 0, 'x') > 0
+),
+table_pattrn_trimmed as (
+    select
+        regexp_replace(regexp_replace(b.tok, '^\s*'), '\s*$')  as tok
+    from
+        table_pattrn_raw b
+),
+table_pattrn_dequoted as (
+    select 
+        regexp_replace(c.tok, '^" (.*) "$', '\1', 1, 1, 'nx')  as tok
+    from
+        table_pattrn_trimmed c
+),
+table_like_list as (
+    select /*+ materialize */
+        d.tok  as table_like
+    from
+        table_pattrn_dequoted d
+    where
+        d.tok is not null
 ),
 matching_tables as (
     select

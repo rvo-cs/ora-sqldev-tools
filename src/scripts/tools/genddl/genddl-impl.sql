@@ -26,8 +26,8 @@ declare
     gc_primary_key_as_alter         constant boolean := &&def_constraint_pk_as_alter;
     gc_unique_key_as_alter          constant boolean := &&def_constraint_unique_as_alter;
     gc_check_constraints_as_alter   constant boolean := &&def_constraint_check_as_alter;
-    gc_foreign_key_as_alter         constant boolean := &&def_constraint_foreign_as_alter;
-    gc_not_null_as_alter            constant boolean := &&def_constraint_not_null_as_alter;
+    gc_foreign_key_as_alter         constant boolean := &&def_cnstraint_foreign_as_alter;
+    gc_not_null_as_alter            constant boolean := &&def_cnstraint_notnull_as_alter;
     gc_print_private_synonyms       constant boolean := &&def_print_private_synonyms;
     gc_print_public_synonyms        constant boolean := &&def_print_public_synonyms;
     gc_strip_object_schema          constant boolean := &&def_strip_object_schema;

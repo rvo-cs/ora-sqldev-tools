@@ -1,6 +1,6 @@
 -- Spool directory
 -- 
-define def_spool_directory = "E:\Home\romain\Temp"
+define def_spool_directory = "E:/Home/romain/Temp"
 
 -- Choice of naming scheme for the spool file
 -- Use "simple" to omit the source database and schema names,
@@ -22,11 +22,11 @@ define def_constraint_unique_as_alter   = "true"
 define def_constraint_check_as_alter    = "true"
 --define def_constraint_check_as_alter    = "false"
 
-define def_constraint_foreign_as_alter  = "true"
---define def_constraint_foreign_as_alter  = "false"
+define def_cnstraint_foreign_as_alter  = "true"
+--define def_cnstraint_foreign_as_alter  = "false"
 
-define def_constraint_not_null_as_alter = "false"
---define def_constraint_not_null_as_alter = "true"
+define def_cnstraint_notnull_as_alter = "false"
+--define def_cnstraint_notnull_as_alter = "true"
 
 -- How to deal with synonyms?
 -- Use "true" to print synonyms, "false" to omit them

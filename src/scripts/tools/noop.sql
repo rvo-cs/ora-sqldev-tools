@@ -1,0 +1,1 @@
+-- noop.sql: this script purposely does nothing.

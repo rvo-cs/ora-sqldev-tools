@@ -20,14 +20,22 @@ REM from jdbc:oci to jdbc:thin; basically 2 messages will appear instead
 REM of just 1, even in cases where OCI is not supposed to be used.
 
 REM =======================================================================
+REM [Optional] Search path for .sql files invoked using @file and @@file
+REM -----------------------------------------------------------------------
+
+REM set SQLPATH=E:\_path_to_\git-src\ora-sqldev-tools\src\scripts\tools
+
+REM =======================================================================
 REM Command aliases
 REM -----------------------------------------------------------------------
 
 REM SQLcl with jdbc:thin
 doskey sqlcl=F:\Produits\Win_7\Oracle\SQLcl\sql.cmd $*
+doskey sqlcl-prev=F:\Produits\Win_7\Oracle\SQLcl\sql-prev.cmd $*
 
 REM SQLcl with jdbc:oci
 doskey sqlcl-oci=F:\Produits\Win_7\Oracle\SQLcl\sql+oci.cmd -oci $*
 
 REM SQL Developer
-doskey sqldev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-20.4.0.379.2205-x64\sqldeveloper.exe
+doskey sqldev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-21.2.0.187.1842-x64\sqldeveloper.exe $*
+doskey sqldev-prev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-20.4.0.379.2205-x64\sqldeveloper.exe $*

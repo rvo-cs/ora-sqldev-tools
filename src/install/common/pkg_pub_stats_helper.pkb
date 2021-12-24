@@ -17,6 +17,10 @@ create or replace package body pkg_pub_stats_helper as
 
     begin
         case 
+            when p_raw is null 
+            then
+                null;
+                
             when p_data_type in ('VARCHAR2', 'CHAR') then 
                 dbms_stats.convert_raw_value(rawval => p_raw, resval => l_varchar2_value);
         

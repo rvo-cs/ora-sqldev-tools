@@ -57,24 +57,6 @@ from
 			</bind>
 		</binds>
 	</query>
-		<pdf version="VERSION_1_7" compression="CONTENT">
-			<docproperty title="" author="" subject="" keywords="" />
-			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
-			<column>
-				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
-				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
-				<blob blob="NONE" zip="false" />
-			</column>
-			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
-			<header enable="false" generatedate="false">
-				<data>
-				null				</data>
-			</header>
-			<footer enable="false" generatedate="false">
-				<data value="null" />
-			</footer>
-			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
-		</pdf>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Stat preferences]]></name>
 		<description><![CDATA[]]></description>
@@ -182,24 +164,6 @@ order by
 				</bind>
 			</binds>
 		</query>
-			<pdf version="VERSION_1_7" compression="CONTENT">
-				<docproperty title="" author="" subject="" keywords="" />
-				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
-				<column>
-					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
-					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
-					<blob blob="NONE" zip="false" />
-				</column>
-				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
-				<header enable="false" generatedate="false">
-					<data>
-					null					</data>
-				</header>
-				<footer enable="false" generatedate="false">
-					<data value="null" />
-				</footer>
-				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
-			</pdf>
 	</display>
 	<display id="null" type="" style="Script" enable="true">
 		<name><![CDATA[PL/SQL code block]]></name>
@@ -338,24 +302,6 @@ end;]]></sql>
 				</bind>
 			</binds>
 		</query>
-			<pdf version="VERSION_1_7" compression="CONTENT">
-				<docproperty title="" author="" subject="" keywords="" />
-				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
-				<column>
-					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
-					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
-					<blob blob="NONE" zip="false" />
-				</column>
-				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
-				<header enable="false" generatedate="false">
-					<data>
-					null					</data>
-				</header>
-				<footer enable="false" generatedate="false">
-					<data value="null" />
-				</footer>
-				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
-			</pdf>
 	</display>
 </display>
 </displays>

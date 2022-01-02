@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Security]]></name>
+<display id="0b0485bc-0179-1000-8009-c0a8010c2e5b" type="" style="Table" enable="true">
+	<name><![CDATA[Grants - Role system privileges]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with 
+target_sys_privs as (
+    select 
+        name as privilege
+    from 
+        system_privilege_map
+    where 
+        (:B_SYS_PRIVS_ANY is null 
+            or (upper(:B_SYS_PRIVS_ANY) = 'N' and name not like '% ANY %' and name not like '% ANY')
+            or (upper(:B_SYS_PRIVS_ANY) = 'Y' and (name like '% ANY %' or name like '% ANY')) )
+        and (:B_SYS_PRIVS_LIKE is null or name like upper(:B_SYS_PRIVS_LIKE))
+        and (:B_SYS_PRIVS_RE is null or regexp_like(name, :B_SYS_PRIVS_RE, 'i'))
+),
+role_chain (role, granted_role, 
+            grant_chain, grant_chain_len) as (
+    select 
+        role, role, role, 1
+    from 
+        dba_roles
+    union all
+    select
+        a.role, b.granted_role,
+        a.grant_chain 
+                || case when b.admin_option = 'YES' then ' >> ' else ' > ' end
+                || b.granted_role,
+        a.grant_chain_len + 1
+    from
+        role_chain a,
+        dba_role_privs b
+    where
+        a.granted_role = b.grantee
+        and b.grantee in (select c.role from dba_roles c)
+),
+roles_reaching_role (role) as (
+    select
+        a.role as role
+    from
+        dba_roles a
+    where
+        exists (
+            select 1 from role_chain b
+            where 
+                b.role = a.role 
+                and (:B_INCLUDED_ROLE is null or upper(b.granted_role) = upper(:B_INCLUDED_ROLE))
+        )
+        and exists (
+            select 1 from role_chain c
+            where 
+                c.role = a.role 
+                and (:B_INCLUDED_ROLE_LIKE is null or upper(c.granted_role) like upper(:B_INCLUDED_ROLE_LIKE))
+        )
+        and exists (
+            select 1 from role_chain d
+            where 
+                d.role = a.role 
+                and (:B_INCLUDED_ROLE_RE is null or regexp_like(d.granted_role, :B_INCLUDED_ROLE_RE, 'i'))
+        )
+),
+roles_not_reaching_role (role) as (
+    select
+        a.role as role
+    from
+        dba_roles a
+    where
+        (:B_NOT_INCL_ROLE is null
+         or not exists (
+                select 1 from role_chain b
+                where 
+                    b.role = a.role
+                    and upper(b.granted_role) = upper(:B_NOT_INCL_ROLE)
+            )
+        )
+        and
+        (:B_NOT_INCL_ROLE_LIKE is null
+         or not exists (
+                select 1 from role_chain c
+                where 
+                    c.role = a.role
+                    and upper(c.granted_role) like upper(:B_NOT_INCL_ROLE_LIKE)
+            )
+        )
+        and
+        (:B_NOT_INCL_ROLE_RE is null
+         or not exists (
+                select 1 from role_chain d
+                where 
+                    d.role = a.role
+                    and regexp_like(d.granted_role, :B_NOT_INCL_ROLE_RE, 'i')
+            )
+        )
+),
+role_chain_sys_privs as (
+    select /*+ no_merge(a) no_merge(b) */
+    distinct
+        c.role,
+        a.privilege,
+        a.admin_option,
+        c.grant_chain 
+                || case when a.admin_option = 'YES' then ' >> ' else ' > ' end
+                || a.privilege  as grant_chain,
+        c.grant_chain_len       as grant_chain_len
+    from
+        dba_sys_privs a,
+        target_sys_privs b,
+        role_chain c
+    where
+        a.privilege = b.privilege
+        and a.grantee = c.granted_role
+)
+select
+    c.role, c.privilege, c.admin_option, 
+    c.grant_chain
+from
+    roles_reaching_role a,
+    roles_not_reaching_role b,
+    role_chain_sys_privs c
+where
+    a.role = b.role
+    and b.role = c.role
+    and (:B_ROLE is null or upper(c.role) = upper(:B_ROLE))
+    and (:B_ROLE_LIKE is null or upper(c.role) like upper(:B_ROLE_LIKE))
+    and (:B_ROLE_RE is null or regexp_like(c.role, :B_ROLE_RE, 'i'))
+    and (:B_ROLE_NOT_LIKE is null or upper(c.role) not like upper(:B_ROLE_NOT_LIKE))
+    and (:B_ROLE_NEG_RE is null or not regexp_like(c.role, :B_ROLE_NEG_RE, 'i'))
+order by
+    c.role,
+    regexp_substr(c.privilege, '.*ANY (.*)', 1, 1, null, 1), 
+    c.privilege,
+    c.grant_chain_len asc, c.grant_chain asc
+]]></sql>
+		<binds>
+			<bind id="B_INCLUDED_ROLE">
+				<prompt><![CDATA[Included role?]]></prompt>
+				<tooltip><![CDATA[List roles which include the specified role (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_INCLUDED_ROLE_LIKE">
+				<prompt><![CDATA[Included role like?]]></prompt>
+				<tooltip><![CDATA[List roles which include the specified role (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_INCLUDED_ROLE_RE">
+				<prompt><![CDATA[Included role regexp?]]></prompt>
+				<tooltip><![CDATA[List roles which include the specified role (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_NOT_INCL_ROLE">
+				<prompt><![CDATA[Not reaching role?]]></prompt>
+				<tooltip><![CDATA[List roles which do not include the specified role as a subrole (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_NOT_INCL_ROLE_LIKE">
+				<prompt><![CDATA[Not reaching role like?]]></prompt>
+				<tooltip><![CDATA[List roles which do not include the specified role as a subrole (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_NOT_INCL_ROLE_RE">
+				<prompt><![CDATA[Not reaching role regexp?]]></prompt>
+				<tooltip><![CDATA[List roles which do not include the specified role as a subrole (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE">
+				<prompt><![CDATA[Role name?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchy of the specified role (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_LIKE">
+				<prompt><![CDATA[Role name like?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of matching roles (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_RE">
+				<prompt><![CDATA[Role name regexp?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of matching roles (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_NOT_LIKE">
+				<prompt><![CDATA[Role name not like?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of non-matching roles (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_NEG_RE">
+				<prompt><![CDATA[Role name negative regexp?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of non-matching roles (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SYS_PRIVS_LIKE">
+				<prompt><![CDATA[System privilege name?]]></prompt>
+				<tooltip><![CDATA[System privilege name (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SYS_PRIVS_RE">
+				<prompt><![CDATA[System privilege regexp?]]></prompt>
+				<tooltip><![CDATA[Show only matching privileges (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SYS_PRIVS_ANY">
+				<prompt><![CDATA[Show only / exclude %ANY% privileges?]]></prompt>
+				<tooltip><![CDATA[If 'Y', show only %ANY% privileges; if 'N', exclude %ANY% privileges; if null (default): no filtering]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+</display>
+</folder>
+</displays>

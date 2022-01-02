@@ -1,0 +1,395 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Security]]></name>
+<display id="0adfa7ed-0179-1000-8008-c0a8010c2e5b" type="" style="Table" enable="true">
+	<name><![CDATA[Grants - Role object privileges]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with 
+role_chain (role, granted_role, 
+            grant_chain, grant_chain_len) as (
+    select 
+        role, role, role, 1
+    from 
+        dba_roles
+    union all
+    select
+        a.role, b.granted_role,
+        a.grant_chain 
+                || case when b.admin_option = 'YES' then ' >> ' else ' > ' end
+                || b.granted_role,
+        a.grant_chain_len + 1
+    from
+        role_chain a,
+        dba_role_privs b
+    where
+        a.granted_role = b.grantee
+        and b.grantee in (select c.role from dba_roles c)
+),
+roles_reaching_role (role) as (
+    select
+        a.role as role
+    from
+        dba_roles a
+    where
+        exists (
+            select 1 from role_chain b
+            where 
+                b.role = a.role 
+                and (:B_INCLUDED_ROLE is null or upper(b.granted_role) = upper(:B_INCLUDED_ROLE))
+        )
+        and exists (
+            select 1 from role_chain c
+            where 
+                c.role = a.role 
+                and (:B_INCLUDED_ROLE_LIKE is null or upper(c.granted_role) like upper(:B_INCLUDED_ROLE_LIKE))
+        )
+        and exists (
+            select 1 from role_chain d
+            where 
+                d.role = a.role 
+                and (:B_INCLUDED_ROLE_RE is null or regexp_like(d.granted_role, :B_INCLUDED_ROLE_RE, 'i'))
+        )
+),
+roles_not_reaching_role (role) as (
+    select
+        a.role as role
+    from
+        dba_roles a
+    where
+        (:B_NOT_INCL_ROLE is null
+         or not exists (
+                select 1 from role_chain b
+                where 
+                    b.role = a.role
+                    and upper(b.granted_role) = upper(:B_NOT_INCL_ROLE)
+            )
+        )
+        and
+        (:B_NOT_INCL_ROLE_LIKE is null
+         or not exists (
+                select 1 from role_chain c
+                where 
+                    c.role = a.role
+                    and upper(c.granted_role) like upper(:B_NOT_INCL_ROLE_LIKE)
+            )
+        )
+        and
+        (:B_NOT_INCL_ROLE_RE is null
+         or not exists (
+                select 1 from role_chain d
+                where 
+                    d.role = a.role
+                    and regexp_like(d.granted_role, :B_NOT_INCL_ROLE_RE, 'i')
+            )
+        )
+),
+object_grant as (
+    select /*+
+               materialize no_merge(a) no_merge(b)
+               leading(b a) full(a) full(b) use_hash(a)
+            */
+           distinct  /* Note: each priv may have been granted
+                        more than once by distinct grantors */
+        b.owner, b.object_type, b.object_name,
+        null as column_name,
+        a.privilege, a.grantee, a.grantable, a.hierarchy
+    from
+        dba_tab_privs a,
+        dba_objects b
+    where
+        a.owner = b.owner
+        and a.table_name = b.object_name
+        --and a.type = b.object_type        /* /!\ Caution: not in 11.2 /!\ */
+        and b.object_type in (
+                /* Namespace: 1 */
+                'FUNCTION', 'INDEXTYPE', 'JOB CLASS', 'JOB'
+                , 'LIBRARY', 'OPERATOR', 'PACKAGE', 'PROCEDURE'
+                , 'PROGRAM', 'SCHEDULE', 'SCHEDULER GROUP'
+                , 'SEQUENCE'
+                --, 'SYNONYM'   /* Grants on synonyms are grants on base objects */
+                , 'TABLE', 'TYPE', 'VIEW', 'WINDOW'
+                /* Namespace: 9 */
+                , 'DIRECTORY'
+                /* Namespace: 10 */
+                , 'QUEUE'
+                /* Namespace: 19 */
+                --, 'MATERIALIZED VIEW' /* Privs on MVs are linked to container tables */
+                /* Namespace :64 */
+                , 'EDITION'
+            )
+        and (:B_OWNER is null or upper(b.owner) = upper(:B_OWNER))
+    union all
+    select distinct
+        a.owner,
+        'TABLE COLUMN'  as object_type,
+        a.table_name    as object_name,
+        a.column_name,
+        a.privilege, a.grantee, a.grantable, 
+        null            as hierarchy
+    from
+        dba_col_privs a
+    where
+        (:B_OWNER is null or upper(a.owner) = upper(:B_OWNER))
+),
+object_grant_grouped_priv as (
+    select
+        owner, object_type, object_name, column_name,
+        grantee,
+        listagg(privilege, ', ') within group (order by 
+                /* Fancy ordering of privileges */
+                case 
+                    when object_type = 'TABLE' 
+                        then decode(privilege, 'ALTER', '1', 'READ', '2', 'SELECT', '3',
+                                    'INSERT', '4', 'UPDATE', '5', 'DELETE', '6', privilege)
+                    when object_type = 'VIEW'
+                        then decode(privilege, 'READ', '1', 'SELECT', '2', 'INSERT', '3',
+                                    'UPDATE', '4', 'DELETE', '5', privilege)
+                    when object_type = 'DIRECTORY'
+                        then decode(privilege, 'READ', '1', 'WRITE', '2', 'EXECUTE', '3')
+                    else
+                        privilege
+                end)        as object_privs,
+        grantable, hierarchy
+    from
+        object_grant
+    where 1 = 1
+        and (:B_PRIV_LIKE is null or upper(privilege) like upper(:B_PRIV_LIKE))
+        and (:B_PRIV_RE is null or regexp_like(privilege, :B_PRIV_RE, 'i'))
+        and (:B_OWNER_LIKE is null or upper(owner) like upper(:B_OWNER_LIKE))
+        and (:B_OWNER_NOT_LIKE is null or upper(owner) not like upper(:B_OWNER_NOT_LIKE))
+        and (:B_OWNER_NEG_RE is null or not regexp_like(owner, :B_OWNER_NEG_RE, 'i'))
+        and (:B_OWNER_RE is null or regexp_like(owner, :B_OWNER_RE, 'i'))
+        and (:B_OBJECT_TYPE_LIKE is null or upper(object_type) like upper(:B_OBJECT_TYPE_LIKE))
+        and (:B_OBJECT_NAME is null or upper(object_name) = upper(:B_OBJECT_NAME))
+        and (:B_OBJECT_NAME_LIKE is null or upper(object_name) like upper(:B_OBJECT_NAME_LIKE))
+        and (:B_OBJECT_NAME_RE is null or regexp_like(object_name, :B_OBJECT_NAME_RE, 'i'))
+        and (lnnvl(upper(:B_EXCLUDE_ORA_SCHEMAS) = 'Y') or owner not in (
+                  'ANONYMOUS'
+                , 'APPQOSSYS'
+                , 'AUDSYS'
+                , 'DBSFWUSER'
+                , 'DBSNMP'
+                , 'DIP'
+                , 'GGSYS'
+                , 'GSMADMIN_INTERNAL'
+                , 'GSMCATUSER'
+                , 'GSMUSER'
+                , 'LBACSYS'
+                , 'ORACLE_OCM'
+                , 'OUTLN'
+                , 'REMOTE_SCHEDULER_AGENT'
+                , 'SYS'
+                , 'SYSBACKUP'
+                , 'SYSDG'
+                , 'SYSKM'
+                , 'SYSRAC'
+                , 'SYSTEM'
+                , 'SYS$UMF'
+                , 'WMSYS'
+                , 'XDB'
+                , 'XS$NULL'
+            ))
+    group by
+        owner, object_type, object_name, column_name,
+        grantee, grantable, hierarchy
+),
+role_chain_obj_privs as (
+    select /*+ no_merge(a) no_merge(b) */
+    distinct
+        b.role,
+        a.object_privs,
+        a.owner, a.object_type, a.object_name, a.column_name,
+        b.grant_chain || ' > ' || dbms_assert.enquote_name(a.owner)
+                || '.' || dbms_assert.enquote_name(a.object_name)
+                || case 
+                    when a.column_name is not null 
+                    then '.' || dbms_assert.enquote_name(a.column_name)
+                   end              as grant_chain,
+        b.grant_chain_len + 1       as grant_chain_len,
+        a.grantable, a.hierarchy
+    from
+        object_grant_grouped_priv a,
+        role_chain b
+    where
+        a.grantee = b.granted_role
+)
+select
+    c.role, c.object_privs
+    , c.owner, c.object_type
+    , c.object_name
+            || case
+                when c.column_name is not null
+                then '.' || c.column_name
+               end
+        as object_name
+    , c.grantable, c.hierarchy
+    , c.grant_chain
+    --, c.grant_chain_len
+from
+    roles_reaching_role a,
+    roles_not_reaching_role b,
+    role_chain_obj_privs c
+where
+    a.role = b.role
+    and b.role = c.role
+    and (:B_ROLE is null or upper(c.role) = upper(:B_ROLE))
+    and (:B_ROLE_LIKE is null or upper(c.role) like upper(:B_ROLE_LIKE))
+    and (:B_ROLE_RE is null or regexp_like(c.role, :B_ROLE_RE, 'i'))
+    and (:B_ROLE_NOT_LIKE is null or upper(c.role) not like upper(:B_ROLE_NOT_LIKE))
+    and (:B_ROLE_NEG_RE is null or not regexp_like(c.role, :B_ROLE_NEG_RE, 'i'))
+order by
+    role,
+    owner, object_type, object_name,
+    grant_chain_len asc, grant_chain asc
+]]></sql>
+		<binds>
+			<bind id="B_INCLUDED_ROLE">
+				<prompt><![CDATA[Included role?]]></prompt>
+				<tooltip><![CDATA[List roles which include the specified role (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_INCLUDED_ROLE_LIKE">
+				<prompt><![CDATA[Included role like?]]></prompt>
+				<tooltip><![CDATA[List roles which include the specified role (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_INCLUDED_ROLE_RE">
+				<prompt><![CDATA[Included role regexp?]]></prompt>
+				<tooltip><![CDATA[List roles which include the specified role (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_NOT_INCL_ROLE">
+				<prompt><![CDATA[Not reaching role?]]></prompt>
+				<tooltip><![CDATA[List roles which do not include the specified role as a subrole (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_NOT_INCL_ROLE_LIKE">
+				<prompt><![CDATA[Not reaching role like?]]></prompt>
+				<tooltip><![CDATA[List roles which do not include the specified role as a subrole (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_NOT_INCL_ROLE_RE">
+				<prompt><![CDATA[Not reaching role regexp?]]></prompt>
+				<tooltip><![CDATA[List roles which do not include the specified role as a subrole (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE">
+				<prompt><![CDATA[Role name?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchy of the specified role (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_LIKE">
+				<prompt><![CDATA[Role name like?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of matching roles (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_RE">
+				<prompt><![CDATA[Role name regexp?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of matching roles (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_NOT_LIKE">
+				<prompt><![CDATA[Role name not like?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of non-matching roles (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ROLE_NEG_RE">
+				<prompt><![CDATA[Role name negative regexp?]]></prompt>
+				<tooltip><![CDATA[Show only the hierarchies of non-matching roles (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER">
+				<prompt><![CDATA[Object owner?]]></prompt>
+				<tooltip><![CDATA[Object owner (case insensitive)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_LIKE">
+				<prompt><![CDATA[Owner like?]]></prompt>
+				<tooltip><![CDATA[Limit to matching owners (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_RE">
+				<prompt><![CDATA[Owner regexp?]]></prompt>
+				<tooltip><![CDATA[Limit to matching owners (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_NOT_LIKE">
+				<prompt><![CDATA[Owner not like?]]></prompt>
+				<tooltip><![CDATA[Exclude matching owners (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_NEG_RE">
+				<prompt><![CDATA[Owner negative regexp?]]></prompt>
+				<tooltip><![CDATA[Exclude matching owners (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_EXCLUDE_ORA_SCHEMAS">
+				<prompt><![CDATA[Exclude Oracle schemas?]]></prompt>
+				<tooltip><![CDATA[If Y, objects in Oracle schemas (predefined list) are excluded]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_TYPE_LIKE">
+				<prompt><![CDATA[Object type?]]></prompt>
+				<tooltip><![CDATA[Limit to objects of the specified type (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_NAME">
+				<prompt><![CDATA[Object name?]]></prompt>
+				<tooltip><![CDATA[Object name (case insensitive)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_NAME_LIKE">
+				<prompt><![CDATA[Object name like?]]></prompt>
+				<tooltip><![CDATA[Limit to objects with matching names (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OBJECT_NAME_RE">
+				<prompt><![CDATA[Object name regexp?]]></prompt>
+				<tooltip><![CDATA[Limit to objects with matching names (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_PRIV_LIKE">
+				<prompt><![CDATA[Privilege?]]></prompt>
+				<tooltip><![CDATA[Show only matching privileges (LIKE pattern, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_PRIV_RE">
+				<prompt><![CDATA[Prvilege regexp?]]></prompt>
+				<tooltip><![CDATA[Show only matching privileges (regexp, CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+</display>
+</folder>
+</displays>

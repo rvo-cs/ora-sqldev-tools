@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Data Dictionary]]></name>
+<display id="1b1060d6-0168-1000-8002-c0a8010c7da7" type="" style="Script" enable="true">
+	<name><![CDATA[Statistics operations report - HTML]]></name>
+	<description><![CDATA[Generates, and spools to an output file, the report of operations on dictionary statistics, in HTML format.]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[whenever sqlerror exit failure rollback
+whenever oserror exit failure rollback
+
+set long 5000000
+set linesize 10000
+set trimspool on
+set heading off
+set feedback off
+set pagesize 0
+
+set termout off
+set verify off
+
+define spool_directory
+define spool_filename
+
+column spool_directory noprint new_value spool_directory
+column spool_filename noprint new_value spool_filename
+
+select NVL(:SPOOL_DIR, :DEFAULT_SPOOL_DIR) as spool_directory 
+from dual;
+
+select NVL(:SPOOL_FILENAME, 
+        'stats_oper_report' 
+            || '-' || sys_context('USERENV', 'DB_NAME')
+            || '-' || to_char(to_timestamp_tz(:DATETIME_TZ_FROM, 'YYYY-MM-DD HH24:MI:SS TZH:TZM')
+                        , 'YYYYMMDD_HH24MISSTZHTZM')
+            || '-' || to_char(case when :DATETIME_TZ_TO is null then systimestamp
+                            else to_timestamp_tz(:DATETIME_TZ_TO, 'YYYY-MM-DD HH24:MI:SS TZH:TZM') end
+                        , 'YYYYMMDD_HH24MISSTZHTZM')
+            || '-' || nvl(upper(trim(:DETAIL_LEVEL)), 'ALL')
+            || '.html')
+    as spool_filename 
+from dual;
+
+cd "&spool_directory"
+
+spool "&spool_filename"
+
+
+select * 
+from table(c##pkg_pub_utility.clob_as_varchar2list(
+        dbms_stats.report_stats_operations (
+            detail_level => nvl(upper(trim(:DETAIL_LEVEL)), 'ALL'),
+            format => 'HTML',
+            since => to_timestamp_tz(:DATETIME_TZ_FROM, 'YYYY-MM-DD HH24:MI:SS TZH:TZM'),
+            until => case when :DATETIME_TZ_TO is null then null
+                        else to_timestamp_tz(:DATETIME_TZ_TO, 'YYYY-MM-DD HH24:MI:SS TZH:TZM') end
+        ))
+    )
+;
+
+spool off
+
+set termout on
+
+select 'Report completed: ' 
+    || '&spool_filename' 
+    || chr(10) || '(directory: &spool_directory)'
+from dual;]]></sql>
+		<binds>
+			<bind id="SPOOL_DIR">
+				<prompt><![CDATA[Spool directory?]]></prompt>
+				<tooltip><![CDATA[Spool directory (NULL: use default)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DEFAULT_SPOOL_DIR">
+				<prompt><![CDATA[Default spool directory?]]></prompt>
+				<tooltip><![CDATA[Default spool directory]]></tooltip>
+				<!--##USER_CONFIG##--><value><![CDATA[E:\Home\romain\SQL_Developer\output\]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="SPOOL_FILENAME">
+				<prompt><![CDATA[Spool filename?]]></prompt>
+				<tooltip><![CDATA[Spool filename (NULL: use default naming conventions)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DATETIME_TZ_FROM">
+				<prompt><![CDATA[From timestamp with tz?]]></prompt>
+				<tooltip><![CDATA[From timestamp with timezone (YYYY-MM-DD HH24:MI:SS TZH:TZM)]]></tooltip>
+				<value><![CDATA[2021-12-01 00:00:00 00:00]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DATETIME_TZ_TO">
+				<prompt><![CDATA[To timestamp with tz?]]></prompt>
+				<tooltip><![CDATA[To timestamp with timezone (YYYY-MM-DD HH24:MI:SS TZH:TZM)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DETAIL_LEVEL">
+				<prompt><![CDATA[Detail level?]]></prompt>
+				<tooltip><![CDATA[Detail level (BASIC | TYPICAL | ALL); defaults: ALL]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+</display>
+</folder>
+</displays>

@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Data Dictionary]]></name>
+<display id="a10d6888-0168-1000-8008-c0a8010c9550" type="" style="Table" enable="true">
+	<name><![CDATA[Data Dict – Table stat preferences]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with quoting_style as (
+    select
+        trim(nvl(:Q_BEGIN, '''')) as beginq,
+        decode(trim(nvl(:Q_BEGIN, '''')), 
+                '''', '''',
+                'q''<', '>''',
+                'q''[', ']''',
+                'q''(', ')''',
+                'q''{', '}''',
+                case when regexp_like(trim(:Q_BEGIN), '^q''[^'']$') 
+                    then regexp_replace(trim(:Q_BEGIN), '^q''([^''])$', '\1''') end) as endq
+    from dual
+)
+select
+    :TABLE_OWNER as table_owner,
+    :TABLE_NAME_LIKE as table_name_like,
+    :TABLE_NAME_RE as table_name_re,
+    beginq as q_begin,
+    endq as q_end
+from
+    quoting_style]]></sql>
+		<binds>
+			<bind id="TABLE_OWNER">
+				<prompt><![CDATA[Table owner?]]></prompt>
+				<tooltip><![CDATA[Table owner (case sensitive)]]></tooltip>
+				<value><![CDATA[SCOTT]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="TABLE_NAME_LIKE">
+				<prompt><![CDATA[Table name like?]]></prompt>
+				<tooltip><![CDATA[Table name LIKE pattern (case insensitive, escape '\')]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="TABLE_NAME_RE">
+				<prompt><![CDATA[Table name regexp?]]></prompt>
+				<tooltip><![CDATA[Table name regexp (case insensitive)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="Q_BEGIN">
+				<prompt><![CDATA[Quoted string delim?]]></prompt>
+				<tooltip><![CDATA[Starting delimiter for quoted strings, e.g. q'#]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Stat preferences]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with
+tab_part_count as (
+    select
+        table_owner as owner,
+        table_name,
+        count(*) as partition_count
+    from
+        dba_tab_partitions
+    group by
+        table_owner,
+        table_name
+),
+tab_subpart_count as (
+    select
+        table_owner as owner,
+        table_name,
+        count(*) as subpartition_count
+    from
+        dba_tab_subpartitions
+    group by
+        table_owner,
+        table_name
+),
+tab_segment_size as (
+    select
+        owner,
+        segment_name as table_name,
+        sum(bytes) as bytes
+    from
+        dba_segments
+    where
+        owner = :TABLE_OWNER
+        and (:TABLE_NAME_LIKE is null or upper(segment_name) like upper(:TABLE_NAME_LIKE) escape '\')
+        and (:TABLE_NAME_RE is null or regexp_like(segment_name, :TABLE_NAME_RE, 'i'))
+        and segment_type in ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
+    group by
+        owner,
+        segment_name
+)
+select
+    a.owner,
+    a.table_name,
+    a.temporary,
+    a.partitioned,
+    c.partitioning_type,
+    decode(c.subpartitioning_type, 'NONE', null, c.subpartitioning_type) as subpartitioning_type,
+    d.partition_count,
+    e.subpartition_count,
+    round(f.bytes / power(2, 20)) as tab_size_mb,
+    b.preference_name,
+    b.preference_value
+from
+    dba_tables a,
+    dba_tab_stat_prefs b,
+    dba_part_tables c,
+    tab_part_count d,
+    tab_subpart_count e,
+    tab_segment_size f
+where
+    a.owner = :TABLE_OWNER
+    and (:TABLE_NAME_LIKE is null or upper(a.table_name) like upper(:TABLE_NAME_LIKE) escape '\')
+    and (:TABLE_NAME_RE is null or regexp_like(a.table_name, :TABLE_NAME_RE, 'i'))
+    and a.nested = 'NO'
+    and a.owner = b.owner (+)
+    and a.table_name = b.table_name (+)
+    and a.owner = c.owner (+)
+    and a.table_name = c.table_name (+)
+    and a.owner = d.owner (+)
+    and a.table_name = d.table_name (+)
+    and a.owner = e.owner (+)
+    and a.table_name = e.table_name (+)
+    and a.owner = f.owner (+)
+    and a.table_name = f.table_name (+)
+order by
+    a.owner,
+    a.table_name,
+    b.preference_name]]></sql>
+			<binds>
+				<bind id="TABLE_OWNER">
+					<prompt><![CDATA[TABLE_OWNER]]></prompt>
+					<tooltip><![CDATA[TABLE_OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME_LIKE">
+					<prompt><![CDATA[TABLE_NAME_LIKE]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME_LIKE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME_RE">
+					<prompt><![CDATA[TABLE_NAME_RE]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME_RE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[PL/SQL code block]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[set feedback off
+set serveroutput on size unlimited format word_wrapped
+set linesize 500
+set trimout on
+
+declare
+    gc_indent constant varchar2(4) := '    ';
+    gc_newln constant varchar2(1) := chr(10);
+    
+    gc_wipe_prefs_proc constant varchar2(1000) := q'<
+        procedure wipe_tab_stat_prefs(p_ownname in varchar2, p_tabname in varchar2)
+        is begin
+            for c in (select a.preference_name from dba_tab_stat_prefs a
+                    where a.owner = p_ownname and a.table_name = p_tabname
+                    order by a.preference_name)
+            loop
+                dbms_stats.delete_table_prefs(ownname => p_ownname, 
+                        tabname => p_tabname, pname => c.preference_name);
+            end loop;
+        end wipe_tab_stat_prefs;
+    >';
+begin
+    dbms_output.enable(null);
+    dbms_output.put_line('declare');
+    dbms_output.put_line(
+        regexp_replace(
+            regexp_replace(
+                regexp_replace(gc_wipe_prefs_proc, 
+                    '^' || gc_indent, '', 1, 0, 'm'
+                ),
+                '^\s*' || gc_newln, ''
+            ),
+            gc_newln || '\s*$'
+        )
+    );
+    dbms_output.put_line('begin');
+    for c in (
+        with quoting_style as (
+            select
+                trim(nvl(:Q_BEGIN, '''')) as beginq,
+                decode(trim(nvl(:Q_BEGIN, '''')), 
+                        '''', '''',
+                        'q''<', '>''',
+                        'q''[', ']''',
+                        'q''(', ')''',
+                        'q''{', '}''',
+                        case when regexp_like(trim(:Q_BEGIN), '^q''[^'']$') 
+                            then regexp_replace(trim(:Q_BEGIN), '^q''([^''])$', '\1''') end) as endq
+            from dual
+        )
+        select
+            c.owner, c.table_name,
+            'wipe_tab_stat_prefs(p_ownname => ' 
+                    || q.beginq || dbms_assert.enquote_name(c.owner) || q.endq
+                    || ', p_tabname => '
+                    || q.beginq || dbms_assert.enquote_name(c.table_name) || q.endq
+                    || ');' as call_delete_prefs,
+            listagg(c.set_table_prefs_call, chr(10)) within group (order by c.preference_name) as call_set_table_prefs
+        from
+            (select
+                a.owner,
+                a.table_name,
+                b.preference_name,
+                case 
+                    when b.preference_name is not null
+                    then 'dbms_stats.set_table_prefs(ownname => ' 
+                        || q.beginq || dbms_assert.enquote_name(a.owner) || q.endq
+                        || ', tabname => ' 
+                        || q.beginq || dbms_assert.enquote_name(a.table_name) || q.endq
+                        || ', pname => ''' || b.preference_name || ''''
+                        || ', pvalue => ''' || b.preference_value || ''');'
+                end as set_table_prefs_call
+            from
+                dba_tables a,
+                dba_tab_stat_prefs b,
+                quoting_style q
+            where
+                a.owner = :TABLE_OWNER
+                and (:TABLE_NAME_LIKE is null or upper(a.table_name) like upper(:TABLE_NAME_LIKE) escape '\')
+                and (:TABLE_NAME_RE is null or regexp_like(a.table_name, :TABLE_NAME_RE, 'i'))
+                and a.nested = 'NO'
+                and a.owner = b.owner (+)
+                and a.table_name = b.table_name (+)
+            ) c,
+            quoting_style q
+        group by
+            c.owner,
+            c.table_name,
+            q.beginq, q.endq
+        order by
+            c.owner,
+            c.table_name
+    )
+    loop
+        dbms_output.put_line(regexp_replace(c.call_delete_prefs, '^', gc_indent, 1, 0, 'm'));
+        if c.call_set_table_prefs is not null then
+            dbms_output.put_line(regexp_replace(c.call_set_table_prefs, '^', gc_indent, 1, 0, 'm'));
+        end if;
+    end loop;
+    dbms_output.put_line('end;');
+    dbms_output.put_line('/');
+end;]]></sql>
+			<binds>
+				<bind id="Q_BEGIN">
+					<prompt><![CDATA[Q_BEGIN]]></prompt>
+					<tooltip><![CDATA[Q_BEGIN]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_OWNER">
+					<prompt><![CDATA[TABLE_OWNER]]></prompt>
+					<tooltip><![CDATA[TABLE_OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME_LIKE">
+					<prompt><![CDATA[TABLE_NAME_LIKE]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME_LIKE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME_RE">
+					<prompt><![CDATA[TABLE_NAME_RE]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME_RE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+	</display>
+</display>
+</folder>
+</displays>

@@ -164,8 +164,34 @@ create or replace package body pkg_pub_textfile_viewer as
                 l_rec.sqlerrm := gc_sqlerrm_value_error;
             end if;
             l_rec.text := p_rec_impl.text;
+            l_last_emit_fno := l_rec.file#;
             return l_rec;
         end as_line_rec;
+
+        function as_line_rec (
+            p_fileno   in pls_integer,
+            p_sqlerrm  in varchar2  default null
+        )
+        return t_rec_line
+        is
+            l_rec t_rec_line;
+        begin
+            copy_line_meta(l_tab_file_proc(p_fileno), l_rec);
+            l_rec.file# := p_fileno;
+            if p_sqlerrm is not null then
+                l_rec.sqlerrm := p_sqlerrm;
+            else
+                l_rec.sqlcode := l_tab_file_proc(p_fileno).sqlcode;
+                l_rec.sqlerrm := l_tab_file_proc(p_fileno).sqlerrm;
+            end if;
+            /*
+                Note: this is the line for notifying the final status of the 
+                file (end-of-file or I/O error); l_last_emit_fno is set to 
+                p_fileno + 1 in order to prevent from emitting it twice.
+            */
+            l_last_emit_fno := l_rec.file# + 1;
+            return l_rec;
+        end as_line_rec;        
 
     begin
         /*
@@ -225,17 +251,14 @@ create or replace package body pkg_pub_textfile_viewer as
                          */
                         if l_has_wrapped then
                             declare
-                                l_rec     t_rec_line;
                                 l_skipcnt number;
                             begin
                                 l_skipcnt := l_buf(l_lo).lineno - 1
                                         - l_tab_file_proc(l_cur_fno).emitcnt;
                                 if l_skipcnt > 0 then
-                                    l_rec.file# := l_cur_fno;
-                                    copy_line_meta(l_tab_file_proc(l_cur_fno), l_rec);
-                                    l_rec.sqlerrm := '[...Skipping ' || to_char(l_skipcnt) || ' line'
-                                        || case when l_skipcnt > 1 then 's' end || '...]';
-                                    pipe row (l_rec);
+                                    pipe row (as_line_rec(l_cur_fno, 
+                                            '[...Skipping ' || to_char(l_skipcnt) || ' line'
+                                            || case when l_skipcnt > 1 then 's' end || '...]'));
                                 end if;
                             end;
                         end if;
@@ -251,17 +274,9 @@ create or replace package body pkg_pub_textfile_viewer as
                         l_hi  := 0;
                     end if;
             
-                    if l_tab_file_proc(l_cur_fno).sqlcode is not null then
-                        /* Emit EOF or I/O error line */
-                        declare 
-                            l_rec t_rec_line;
-                        begin
-                            l_rec.file# := l_cur_fno;
-                            copy_line_meta(l_tab_file_proc(l_cur_fno), l_rec);
-                            l_rec.sqlcode := l_tab_file_proc(l_cur_fno).sqlcode;
-                            l_rec.sqlerrm := l_tab_file_proc(l_cur_fno).sqlerrm;
-                            pipe row (l_rec);
-                        end;
+                    /* Emit EOF or I/O error line */
+                    if l_cur_fno >= l_last_emit_fno then
+                        pipe row (as_line_rec(l_cur_fno));
                     end if;
                 end if;
                 
@@ -282,8 +297,10 @@ create or replace package body pkg_pub_textfile_viewer as
                     if (p_head_limit is null and p_tail_limit is null)  -- unlimited
                         or l_tst_linecnt <= p_head_limit                -- first N lines
                     then
+                        for i in greatest(l_last_emit_fno, 1) .. l_cur_fno - 1 loop
+                            pipe row (as_line_rec(i));
+                        end loop;
                         pipe row (as_line_rec(l_buf(l_idx)));
-                        l_last_emit_fno := l_buf(l_idx).fileno;
                         l_tab_file_proc(l_cur_fno).emitcnt := 
                                 l_tab_file_proc(l_cur_fno).emitcnt + 1;
                         
@@ -294,16 +311,12 @@ create or replace package body pkg_pub_textfile_viewer as
                         l_linecnt := 0;
                         utl_file.fclose(l_fh);
                         l_fh := null;
-                        declare
-                            l_rec t_rec_line;
-                        begin
-                            l_rec.file# := l_cur_fno;
-                            copy_line_meta(l_tab_file_proc(l_cur_fno), l_rec);
-                            l_rec.sqlerrm := '[Max of ' || to_char(p_head_limit)
-                                    || ' line' || case when p_head_limit > 1 then 's' end
-                                    || ' reached.]';
-                            pipe row (l_rec);
-                        end;
+                        for i in greatest(l_last_emit_fno, 1) .. l_cur_fno - 1 loop
+                            pipe row (as_line_rec(i));
+                        end loop;
+                        pipe row (as_line_rec(l_cur_fno, '[Max of ' || to_char(p_head_limit)
+                                || ' line' || case when p_head_limit > 1 then 's' end
+                                || ' reached.]'));
                         continue main_loop;
                     
                     elsif p_tail_limit is not null
@@ -385,7 +398,8 @@ create or replace package body pkg_pub_textfile_viewer as
                         or utl_file.access_denied       --> Access to the directory object is denied
                     then
                         l_tab_file_proc(l_cur_fno).sqlcode := sqlcode;
-                        l_tab_file_proc(l_cur_fno).sqlerrm := sqlerrm;
+                        l_tab_file_proc(l_cur_fno).sqlerrm :=   -- keep 1st line of sqlerrm
+                                regexp_substr(sqlerrm, '^(.*)$', 1, 1, 'm', 1);
                         continue main_loop;
                 end;
             end if;
@@ -446,11 +460,8 @@ create or replace package body pkg_pub_textfile_viewer as
                 if l_has_wrapped then
                     for i in greatest(l_last_emit_fno, 1) .. l_buf(l_lo).fileno loop
                         declare
-                            l_rec     t_rec_line;
                             l_skipcnt number;
                         begin
-                            l_rec.file# := i;
-                            copy_line_meta(l_tab_file_proc(i), l_rec);
                             l_skipcnt := case
                                            when i < l_buf(l_lo).fileno
                                            then l_tab_file_proc(i).linecnt
@@ -458,36 +469,31 @@ create or replace package body pkg_pub_textfile_viewer as
                                          end
                                             - l_tab_file_proc(i).emitcnt;
                             if l_skipcnt > 0 then
-                                l_rec.sqlerrm := '[...Skipping ' || to_char(l_skipcnt) || ' line'
-                                    || case when l_skipcnt > 1 then 's' end || '...]';
-                                pipe row (l_rec);
+                                pipe row (as_line_rec(i, '[...Skipping ' 
+                                        || to_char(l_skipcnt) || ' line'
+                                        || case when l_skipcnt > 1 then 's' end || '...]'));
                             end if;
                             if i < l_buf(l_lo).fileno then
-                                l_rec.sqlcode := l_tab_file_proc(i).sqlcode;
-                                l_rec.sqlerrm := l_tab_file_proc(i).sqlerrm;
-                                pipe row (l_rec);
+                                pipe row (as_line_rec(i));
                             end if;
                         end;
                     end loop;
                 end if;
                 loop
+                    for i in greatest(l_last_emit_fno, 1) .. l_buf(l_lo).fileno - 1 loop
+                        pipe row (as_line_rec(i));
+                    end loop;
                     pipe row (as_line_rec(l_buf(l_lo)));
                     exit when l_lo = l_hi;
                     l_lo := 1 + mod(l_lo, l_bufsize);
                 end loop;
             end if;
     
-            if l_tab_file_proc(l_cur_fno).sqlcode is not null then
-                declare
-                    l_rec t_rec_line;
-                begin
-                    l_rec.file# := l_cur_fno;
-                    copy_line_meta(l_tab_file_proc(l_cur_fno), l_rec);
-                    l_rec.sqlcode := l_tab_file_proc(l_cur_fno).sqlcode;
-                    l_rec.sqlerrm := l_tab_file_proc(l_cur_fno).sqlerrm;
-                    pipe row (l_rec);
-                end;
-            end if;
+            for i in greatest(l_last_emit_fno, 1) .. l_cur_fno loop
+                if l_tab_file_proc(i).sqlcode is not null then
+                    pipe row (as_line_rec(i));
+                end if;
+            end loop;
         end if;
 
     end file_text;

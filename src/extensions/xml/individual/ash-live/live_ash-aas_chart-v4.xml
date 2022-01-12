@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <displays>
 <folder>
-<name><![CDATA[ASH - Live]]></name>
+<name><![CDATA[ASH]]></name>
 <display id="a3c7a50c-53a5-4df7-8a54-b8a478fbcefe" type="" style="Chart" enable="true">
 	<name><![CDATA[Live ASH - AAS chart (v4)]]></name>
 	<description><![CDATA[]]></description>

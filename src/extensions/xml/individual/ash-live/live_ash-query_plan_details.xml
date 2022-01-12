@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <displays>
 <folder>
-<name><![CDATA[ASH - Live]]></name>
+<name><![CDATA[ASH]]></name>
 <display id="da769889-0177-1000-8001-c0a8010cf875" type="" style="Script" enable="true">
 	<name><![CDATA[Live ASH - Query plan details]]></name>
 	<description><![CDATA[]]></description>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <displays>
 <folder>
-<name><![CDATA[ASH - Live]]></name>
+<name><![CDATA[ASH]]></name>
 <display id="1047bd7a-0168-1000-8001-c0a8010c00de" type="" style="Script" enable="true">
 	<name><![CDATA[ASH - Plain ASH report - HTML]]></name>
 	<description><![CDATA[Generates, and spools to an output file, an ASH report in HTML format.]]></description>

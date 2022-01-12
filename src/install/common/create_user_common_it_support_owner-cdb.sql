@@ -77,13 +77,23 @@ create or replace public synonym c##pkg_pub_call_stack_helper for pkg_pub_call_s
 
 /*----------------------------------------------------------------------------*/
 
-/* Not a mistake, must create this synonym first! */
+/* The following synonym is referenced in the package body. */
 create or replace public synonym c##pkg_pub_sesstat_helper for pkg_pub_sesstat_helper;
 
 @@pkg_pub_sesstat_helper.pks
 @@pkg_pub_sesstat_helper.pkb
 
 grant execute on pkg_pub_sesstat_helper to public;
+
+/*----------------------------------------------------------------------------*/
+
+/* The following synonym is referenced in the package body. */
+create or replace public synonym c##pkg_pub_textfile_viewer for pkg_pub_textfile_viewer;
+
+@@pkg_pub_textfile_viewer.pks
+@@pkg_pub_textfile_viewer.pkb
+
+grant execute on pkg_pub_textfile_viewer to public;
 
 /*----------------------------------------------------------------------------*/
 

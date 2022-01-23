@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[DBA]]></name>
+<folder>
+<name><![CDATA[Data Pump]]></name>
+<display id="59daeec0-017e-1000-8001-c0a8010a4923" type="" style="Table" enable="true">
+	<name><![CDATA[Data Pump jobs]]></name>
+	<description><![CDATA[This report lists Data Pump jobs from DBA_DATAPUMP_JOBS--click on the parent record to get started.]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[select
+    :B_CREATED_SINCE    as dte_min_created,
+    :B_CREATED_DAYS     as dte_min_days,
+    :B_OWNER_LIKE       as owner_like,
+    :B_OWNER_REGEXP     as owner_regexp,
+    :B_JOBNAME_LIKE     as jobname_like,
+    :B_JOBNAME_REGEXP   as jobname_regexp,
+    :B_OPERATION        as operation,
+    nvl(:B_LOGFILE_HEAD,  200)  as log_head_lines,
+    nvl(:B_LOGFILE_TAIL, 1000)  as log_tail_lines
+from
+    dual]]></sql>
+		<binds>
+			<bind id="B_CREATED_SINCE">
+				<prompt><![CDATA[Created since?]]></prompt>
+				<tooltip><![CDATA[Min creation time of the master table (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_CREATED_DAYS">
+				<prompt><![CDATA[Created in days?]]></prompt>
+				<tooltip><![CDATA[Show only jobs created since the specified number of days]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_LIKE">
+				<prompt><![CDATA[Job owner like?]]></prompt>
+				<tooltip><![CDATA[LIKE pattern for matching the job owner (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OWNER_REGEXP">
+				<prompt><![CDATA[Job owner regexp?]]></prompt>
+				<tooltip><![CDATA[Regular expression for matching the job owner (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_JOBNAME_LIKE">
+				<prompt><![CDATA[Job name like?]]></prompt>
+				<tooltip><![CDATA[LIKE pattern for matching the job name (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_JOBNAME_REGEXP">
+				<prompt><![CDATA[Job name regexp?]]></prompt>
+				<tooltip><![CDATA[Regulat expression for matching the job name (CI)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_OPERATION">
+				<prompt><![CDATA[Operation?]]></prompt>
+				<tooltip><![CDATA[Show only the specified operations (export | import)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_LOGFILE_HEAD">
+				<prompt><![CDATA[Max lines shown from log at head?]]></prompt>
+				<tooltip><![CDATA[This limits the # of lines shown from the logfile at the head end (default: 200)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_LOGFILE_TAIL">
+				<prompt><![CDATA[Max lines shown from log at tail?]]></prompt>
+				<tooltip><![CDATA[This limits the # of lines shown from the logfile at the tail end (default: 1000)]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Data Pump jobs]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[List of matching Data Pump jobs ]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select
+    d.*,
+    e.last_analyzed,
+    :LOG_HEAD_LINES   as log_head_lines,
+    :LOG_TAIL_LINES   as log_tail_lines
+from
+    (select
+        b.*,
+        c.created     as master_table_created
+    from
+        (select
+            a.owner_name,
+            a.job_name, 
+            trim(a.operation)   as operation,
+            trim(a.job_mode)    as job_mode,
+            a.state,
+            a.degree,
+            a.attached_sessions,
+            a.datapump_sessions
+        from
+            dba_datapump_jobs a
+        where
+            (:OWNER_LIKE          is null  or upper(a.owner_name) like upper(:OWNER_LIKE))
+            and (:OWNER_REGEXP    is null  or regexp_like(a.owner_name, :OWNER_REGEXP, 'i'))
+            and (:JOBNAME_LIKE    is null  or upper(a.job_name) like upper(:JOBNAME_LIKE))
+            and (:JOBNAME_REGEXP  is null  or regexp_like(a.job_name, :JOBNAME_REGEXP, 'i'))
+            and (:OPERATION       is null  or upper(trim(a.operation)) = upper(trim(:OPERATION)))
+        ) b,
+        dba_objects c
+    where
+        b.owner_name = c.owner (+)
+        and b.job_name = c.object_name (+)
+        and c.object_type (+) = 'TABLE'
+    ) d,
+    dba_tables e
+where
+    :LOG_HEAD_LINES is not null
+    and (:DTE_MIN_CREATED is null  or d.master_table_created >= to_date(:DTE_MIN_CREATED, 'YYYY-MM-DD HH24:MI:SS'))
+    and (:DTE_MIN_DAYS    is null  or d.master_table_created >= trunc(sysdate, 'DDD') - to_number(:DTE_MIN_DAYS))
+    and d.owner_name = e.owner (+)
+    and d.job_name = e.table_name (+)
+]]></sql>
+			<binds>
+				<bind id="LOG_HEAD_LINES">
+					<prompt><![CDATA[LOG_HEAD_LINES]]></prompt>
+					<tooltip><![CDATA[LOG_HEAD_LINES]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="LOG_TAIL_LINES">
+					<prompt><![CDATA[LOG_TAIL_LINES]]></prompt>
+					<tooltip><![CDATA[LOG_TAIL_LINES]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="DTE_MIN_CREATED">
+					<prompt><![CDATA[DTE_MIN_CREATED]]></prompt>
+					<tooltip><![CDATA[DTE_MIN_CREATED]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="DTE_MIN_DAYS">
+					<prompt><![CDATA[DTE_MIN_DAYS]]></prompt>
+					<tooltip><![CDATA[DTE_MIN_DAYS]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="OWNER_LIKE">
+					<prompt><![CDATA[OWNER_LIKE]]></prompt>
+					<tooltip><![CDATA[OWNER_LIKE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="OWNER_REGEXP">
+					<prompt><![CDATA[OWNER_REGEXP]]></prompt>
+					<tooltip><![CDATA[OWNER_REGEXP]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="JOBNAME_LIKE">
+					<prompt><![CDATA[JOBNAME_LIKE]]></prompt>
+					<tooltip><![CDATA[JOBNAME_LIKE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="JOBNAME_REGEXP">
+					<prompt><![CDATA[JOBNAME_REGEXP]]></prompt>
+					<tooltip><![CDATA[JOBNAME_REGEXP]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="OPERATION">
+					<prompt><![CDATA[OPERATION]]></prompt>
+					<tooltip><![CDATA[OPERATION]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+        <item reload="true" reloadparent="false" removeFromParent="false">
+            <title>Gather stats...</title>
+            <help>This enables to gather statistics on the job's master table.</help>
+            <prompt type="confirm">
+                <label>Confirm gather stats on #"OWNER_NAME"#.#"JOB_NAME"# ?</label>
+            </prompt>
+            <prompt type="radio">   <!-- index: 1 -->
+                <label>Degree:</label>
+                <default><![CDATA[STATIC:1]]></default>
+                <value><![CDATA[STATIC:1:2:4]]></value>
+            </prompt>
+            <prompt type="check">   <!-- index: 2 -->
+                <label>Invalidate cursors:</label>
+                <default>Y</default>
+                <value>Y</value>
+            </prompt>
+            <sql><![CDATA[begin
+    dbms_stats.gather_table_stats(
+        ownname       => q'#"OWNER_NAME"#'
+      , tabname       => q'#"JOB_NAME"#'
+      , degree        => #1#
+      , no_invalidate => (nvl('#2#', 'N') = 'N')
+    );
+end;]]></sql>
+            <confirmation>
+                <title>Statistics gathered</title>
+                <sql><![CDATA[select
+    to_char(last_analyzed, 'YYYY-MM-DD HH24:MI:SS')  as dte_last_analyzed
+from
+    dba_tables
+where
+    owner = q'#"OWNER_NAME"#'
+    and table_name = q'#"JOB_NAME"#']]></sql>
+                <prompt>Statistics on #"OWNER_NAME"#.#"JOB_NAME"# gathered; last analyzed time: #0.DTE_LAST_ANALYZED#</prompt>
+            </confirmation>
+        </item>
+        <item reload="true" reloadparent="false" removeFromParent="false">
+            <title>Kill job...</title>
+            <help>This will stop the Data Pump job, then drop the master table.</help>
+            <prompt type="confirm">
+                <label>Confirm kill job #"OWNER_NAME"#.#"JOB_NAME"# ?</label>
+            </prompt>
+            <prompt type="check">   <!-- index: 1 -->
+                <label>Keep the master table:</label>
+                <default>N</default>
+                <value>Y</value>
+            </prompt>
+            <sql><![CDATA[declare
+    procedure kill_job(
+        p_job_owner   in varchar2,
+        p_job_name    in varchar2,
+        p_keep_master in number
+    )
+    is
+        l_jh number;
+    begin
+        begin
+            l_jh := dbms_datapump.attach(
+                job_owner => p_job_owner,
+                job_name => p_job_name
+            );
+        exception
+            when dbms_datapump.success_with_info then null;
+        end;
+        dbms_datapump.stop_job(
+            handle => l_jh,
+            immediate => 1,
+            keep_master => p_keep_master
+        );
+    end kill_job;
+begin
+    kill_job(
+        p_job_owner   => q'#"OWNER_NAME"#',
+        p_job_name    => q'#"JOB_NAME"#',
+        p_keep_master => case when nvl('#1#', 'N') = 'Y'
+                           then 1 else 0 end
+    );
+end;]]></sql>
+            <confirmation>
+                <title>Data Pump job killed</title>
+                <sql><![CDATA[select
+    case
+        when a.cnt_job = 0 
+        then 'Job "' || q'#"JOB_NAME"#' || '" killed'
+        else 'Please check DBA_DATAPUMP_JOBS'
+    end  as kill_outcome,
+    case
+        when a.cnt_mt = 0
+        then ' (master table dropped)'
+        else ' (master table retained)'
+    end  as  drop_mt_outcome
+from
+    (select
+        (select
+            count(*)
+        from
+            dba_datapump_jobs
+        where
+            owner_name = q'#"OWNER_NAME"#'
+            and job_name = q'#"JOB_NAME"#'
+        ) as cnt_job,
+        (select
+            count(*)
+        from
+            dba_tables
+        where
+            owner = q'#"OWNER_NAME"#'
+            and table_name = q'#"JOB_NAME"#'
+        ) as cnt_mt
+    from
+        dual
+    ) a]]></sql>
+                <prompt>#0.KILL_OUTCOME##0.DROP_MT_OUTCOME#.</prompt>
+            </confirmation>
+        </item>
+        <display id="null" type="" style="Table" enable="true">
+            <name><![CDATA[Logfile]]></name>
+            <description><![CDATA[]]></description>
+            <tooltip><![CDATA[Contents of the logfile of the job]]></tooltip>
+            <drillclass><![CDATA[]]></drillclass>
+            <CustomValues>
+                <TYPE><![CDATA[horizontal]]></TYPE>
+            </CustomValues>
+            <query>
+                <sql><![CDATA[select 
+    case
+        when sqlcode < 0    then 'SQLDEV:GAUGE:0:100:100:100:0' -- Red
+        when sqlcode = 100  then 'SQLDEV:GAUGE:0:100:0:0:0'     -- Green
+        when sqlcode is null
+            and sqlerrm is not null then 'SQLDEV:GAUGE:0:100:0:100:0' -- Orange
+    end         as wl
+    , lineno    as line#
+    , text      as log_text
+    , sqlerrm   as note
+    , file#
+    , filepath
+    , :OWNER_NAME  as owner_name
+    , :JOB_NAME    as job_name
+from 
+    table(
+        c##pkg_pub_textfile_viewer.datapump_job_log_text(
+            :OWNER_NAME, :JOB_NAME
+            , p_head_limit => :LOG_HEAD_LINES
+            , p_tail_limit => :LOG_TAIL_LINES
+        ))
+where                
+    :OWNER_NAME is not null]]></sql>
+                <binds>
+                    <bind id="OWNER_NAME">
+                        <prompt><![CDATA[OWNER_NAME]]></prompt>
+                        <tooltip><![CDATA[OWNER_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="JOB_NAME">
+                        <prompt><![CDATA[JOB_NAME]]></prompt>
+                        <tooltip><![CDATA[JOB_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="LOG_HEAD_LINES">
+                        <prompt><![CDATA[LOG_HEAD_LINES]]></prompt>
+                        <tooltip><![CDATA[LOG_HEAD_LINES]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="LOG_TAIL_LINES">
+                        <prompt><![CDATA[LOG_TAIL_LINES]]></prompt>
+                        <tooltip><![CDATA[LOG_TAIL_LINES]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        </display>
+	</display>
+</display>
+</folder>
+</folder>
+</displays>

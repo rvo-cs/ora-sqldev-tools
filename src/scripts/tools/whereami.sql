@@ -43,7 +43,7 @@ select nvl(:CON_NAME, '--N/A--')  as con_name from dual;
 set termout on
 
 prompt
-prompt __You are HERE__
+prompt __You are HERE__  [ &&_DATE ]
 prompt
 prompt Database        : &&def_db_name
 prompt Instance        : &&def_inst_name
@@ -72,6 +72,9 @@ begin
     print_first_enabled_role( sys.odcivarchar2list( 'DBA'
                                                   , 'SELECT_CATALOG_ROLE'
                                                   ) );
+    if sys_context('USERENV', 'ISDBA') = 'TRUE' then
+        dbms_output.put_line('*** You have SYSDBA privileges ***');
+    end if;
 end;
 /
 

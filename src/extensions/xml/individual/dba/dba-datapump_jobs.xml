@@ -132,6 +132,13 @@ where
     and (:DTE_MIN_DAYS    is null  or d.master_table_created >= trunc(sysdate, 'DDD') - to_number(:DTE_MIN_DAYS))
     and d.owner_name = e.owner (+)
     and d.job_name = e.table_name (+)
+order by
+    least(d.datapump_sessions, 1) desc,
+    least(d.attached_sessions, 1) desc,
+    decode(d.operation, 'EXPORT', 1, 'IMPORT', 2, 3) asc,
+    d.master_table_created desc nulls last,
+    d.owner_name,
+    d.job_name
 ]]></sql>
 			<binds>
 				<bind id="LOG_HEAD_LINES">

@@ -94,6 +94,7 @@ declare
                     || xlst_transform_param('check-constraints-as-alter', gc_check_constraints_as_alter)
                     || xlst_transform_param('foreign-key-as-alter'   , gc_foreign_key_as_alter)
                     || xlst_transform_param('not-null-as-alter'      , gc_not_null_as_alter)
+                    || xlst_transform_param('strip-tabspc-clause'    , gc_strip_tablespace_clause)
         );
         dbms_lob.freetemporary(l_xslt_text);
 
@@ -390,6 +391,7 @@ declare
                     <xsl:param name="check-constraints-as-alter"  select="0" />
                     <xsl:param name="foreign-key-as-alter"        select="0" />
                     <xsl:param name="not-null-as-alter"           select="0" />
+                    <xsl:param name="strip-tabspc-clause"         select="0" />
     
                     <xsl:output omit-xml-declaration="yes"/>
 
@@ -441,6 +443,14 @@ declare
     
                     <xsl:template match="ora:COL_LIST_ITEM/ora:NOT_NULL" priority="2">  
                         <xsl:if test="not($not-null-as-alter)">
+                            <xsl:copy>
+                                <xsl:apply-templates/>
+                            </xsl:copy>
+                        </xsl:if>
+                    </xsl:template>
+
+                    <xsl:template match="ora:TABLESPACE" priority="1">  
+                        <xsl:if test="not($strip-tabspc-clause)">
                             <xsl:copy>
                                 <xsl:apply-templates/>
                             </xsl:copy>

@@ -33,6 +33,7 @@ declare
     gc_strip_object_schema          constant boolean := &&def_strip_object_schema;
     gc_strip_tablespace_clause      constant boolean := &&def_strip_tablespace_clause;
     gc_strip_segment_attrs          constant boolean := &&def_strip_segment_attrs;
+    gc_sort_table_grants            constant boolean := &&def_sort_table_grants;
 
     procedure create_table_sxml_xslt (p_clob in out nocopy clob);
     procedure create_index_sxml_xslt (p_clob in out nocopy clob, p_object_owner in varchar2);
@@ -46,6 +47,7 @@ declare
     
     procedure print_nl;
     procedure print_clob (p_clob in clob);
+    procedure print_vc2 (p_vc2 in varchar2);
 
     function xlst_transform_param (p_param_name in varchar2, p_bool_value in boolean)
     return varchar2;
@@ -303,8 +305,6 @@ declare
         l_rh   number;      /* handle from dbms_metadata.add_transform */
         l_th   number;      /* handle from dbms_metadata.add_transform */
         l_ddls ku$_ddls;
-        
-        l_constraints_as_alter boolean := true;
     begin
         l_mh := dbms_metadata.open(p_object_type);
     
@@ -335,8 +335,7 @@ declare
         if p_object_type = 'TABLE' then
             dbms_metadata.set_transform_param(l_th, 'CONSTRAINTS', true);
             dbms_metadata.set_transform_param(l_th, 'REF_CONSTRAINTS', false);
-            dbms_metadata.set_transform_param(l_th, 'CONSTRAINTS_AS_ALTER', 
-                    l_constraints_as_alter);
+            dbms_metadata.set_transform_param(l_th, 'CONSTRAINTS_AS_ALTER', true);
         end if;
         
         if p_object_type in ('TABLE', 'INDEX') then
@@ -371,7 +370,148 @@ declare
         dbms_metadata.close(l_mh);
     end print_ddl_pieces;
     
+
+    procedure print_object_grants(
+        p_schema_name       in  varchar2,
+        p_object_name       in  varchar2,
+        p_base_object_type  in  varchar2    default null
+    )
+    is
+        l_mh   number;      /* handle from dbms_metadata.open */
+        l_rh   number;      /* handle from dbms_metadata.add_transform */
+        l_th   number;      /* handle from dbms_metadata.add_transform */
+        l_ddls ku$_ddls;
+        
+        l_tab_grant sys.odcivarchar2list := sys.odcivarchar2list();
+    begin
+        l_mh := dbms_metadata.open('OBJECT_GRANT');
     
+        dbms_metadata.set_filter(l_mh, 'BASE_OBJECT_SCHEMA', p_schema_name);
+        dbms_metadata.set_filter(l_mh, 'BASE_OBJECT_TYPE',   p_base_object_type);
+        dbms_metadata.set_filter(l_mh, 'BASE_OBJECT_NAME',   p_object_name);
+        
+        if gc_strip_object_schema then
+            l_rh := dbms_metadata.add_transform(l_mh, 'MODIFY');
+            dbms_metadata.set_remap_param(l_rh, 'REMAP_SCHEMA', p_schema_name, null);
+        end if;
+
+        l_th := dbms_metadata.add_transform(l_mh, 'DDL');
+        dbms_metadata.set_transform_param(l_th, 'PRETTY', true);
+        dbms_metadata.set_transform_param(l_th, 'SQLTERMINATOR', true);
+
+        dbms_metadata.set_count(l_mh, gc_fetch_ddl_max);
+
+        g_fetch_ddl_cnt := 0;
+        
+        <<ddl_fetch_loop>>
+        loop
+            l_ddls := dbms_metadata.fetch_ddl(l_mh);
+            exit when l_ddls is null or l_ddls.count = 0;
+
+            <<inner_loop>>
+            for i in l_ddls.first .. l_ddls.last loop
+                g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+                if gc_sort_table_grants then
+                    l_tab_grant.extend;
+                    l_tab_grant(l_tab_grant.last) := to_char(l_ddls(i).ddltext);
+                    /*
+                       Remark: we make 2 (sensible) assumptions here:
+                        (i) There will be no more than 32K GRANTs on the same object
+                        And: (ii) Each GRANT statement will fit in a varchar2(4000 byte)
+                        Failing that, an exception would be raised.
+                     */
+                else
+                    print_clob(rtrim(l_ddls(i).ddltext, gc_blank_or_nl) || gc_newln);
+                end if;
+                
+            end loop inner_loop;
+        end loop ddl_fetch_loop;
+        
+        dbms_metadata.close(l_mh);
+        
+        if gc_sort_table_grants then
+            declare
+                /*
+                   Best effort to sort the GRANT statements so that they appear
+                   in a predictable manner, not one that changes from one database
+                   to the next.
+                 */
+                cursor c_sorted_grants is
+                    with grant_pieces_1 as (
+                        select 
+                            coalesce(
+                                regexp_substr(a.column_value, 
+                                        'GRANT\s(.*)\sON\s(.*)\sTO\s(.*)\sWITH\s(.*)?;\s*$',
+                                        1, 1, null, 1),
+                                regexp_substr(a.column_value,
+                                        'GRANT\s(.*)\sON\s(.*)\sTO\s(.*);\s*$',
+                                        1, 1, null, 1)
+                            ) as privilege,
+                            coalesce(
+                                regexp_substr(a.column_value,
+                                        'GRANT\s(.*)\sON\s(.*)\sTO\s(.*)\sWITH\s(.*)?;\s*$',
+                                        1, 1, null, 2),
+                                regexp_substr(a.column_value,
+                                        'GRANT\s(.*)\sON\s(.*)\sTO\s(.*);\s*$',
+                                        1, 1, null, 2)
+                            ) as object_name,
+                            coalesce(
+                                regexp_substr(a.column_value,
+                                        'GRANT\s(.*)\sON\s(.*)\sTO\s(.*)\sWITH\s(.*)?;\s*$',
+                                        1, 1, null, 3),
+                                regexp_substr(a.column_value,
+                                        'GRANT\s(.*)\sON\s(.*)\sTO\s(.*);\s*$',
+                                        1, 1, null, 3)
+                            ) as grantee,
+                            regexp_substr(a.column_value,
+                                    'GRANT\s(.*)\sON\s(.*)\sTO\s(.*)\sWITH\s(.*)?;\s*$',
+                                    1, 1, null, 4)
+                              as with_option,
+                            a.column_value as stmt
+                        from 
+                            table(l_tab_grant) a
+                    ),
+                    grant_pieces_2 as (
+                        select
+                            a.object_name,
+                            a.grantee,
+                            a.privilege,
+                            regexp_substr(a.privilege, '^(READ|SELECT|INSERT|UPDATE|DELETE)',
+                                    1, 1, null, 1)  as crud_priv,
+                            regexp_substr(a.privilege, '\( ([^)]+) \)$',
+                                    1, 1, 'x', 1)   as tab_col,
+                            a.with_option,
+                            a.stmt
+                        from
+                            grant_pieces_1 a
+                    )
+                    select
+                        a.stmt
+                    from
+                        grant_pieces_2 a
+                    order by
+                        a.object_name, 
+                        a.grantee, 
+                        a.tab_col  nulls first,
+                        decode(a.crud_priv, 'READ', 1, 'SELECT', 2, 'INSERT', 3,
+                                'UPDATE', 4, 'DELETE', 5, 100),
+                        a.privilege, 
+                        a.with_option  nulls last;
+                
+                l_stmt varchar2(4000 byte);
+            begin
+                open c_sorted_grants;
+                loop
+                    fetch c_sorted_grants into l_stmt;
+                    exit when c_sorted_grants%notfound;
+                    print_vc2(rtrim(l_stmt, gc_blank_or_nl) || gc_newln);
+                end loop;
+                close c_sorted_grants;
+            end;
+        end if;
+    end print_object_grants;
+    
+   
     procedure create_table_sxml_xslt (p_clob in out nocopy clob)
     is
     begin
@@ -690,8 +830,7 @@ declare
             print_dependent_constraints(p_schema_name, p_table_name, p_constraint_type => 'R');
         end if;
 
-        print_ddl_pieces('OBJECT_GRANT', p_schema_name, p_table_name,
-                p_is_dependent => true, p_base_object_type => 'TABLE');
+        print_object_grants(p_schema_name, p_table_name, 'TABLE');
         print_nl;
 
         print_dependent_synonyms(p_schema_name, p_table_name);
@@ -704,8 +843,7 @@ declare
         print_ddl_pieces('VIEW', p_schema_name, p_view_name);
         print_nl;
 
-        print_ddl_pieces('OBJECT_GRANT', p_schema_name, p_view_name,
-                p_is_dependent => true, p_base_object_type => 'VIEW');
+        print_object_grants(p_schema_name, p_view_name, 'VIEW');
         print_nl;
 
         print_dependent_synonyms(p_schema_name, p_view_name);
@@ -867,10 +1005,26 @@ declare
             l_pos0 := l_pos + 1;
             l_pos := instr(p_clob, gc_newln, l_pos0);
         end loop;
-        if l_pos0 <= length(p_clob) then
+        if l_pos0 <= length(p_clob) + 1 then
             dbms_output.put_line(substr(p_clob, l_pos0));
         end if;
     end print_clob;
+
+
+    procedure print_vc2 (p_vc2 in varchar2)
+    is
+    begin
+        if p_vc2 is null or length(p_vc2) = 0 then
+            return;
+        end if;
+
+        if g_pending_newln then
+            dbms_output.new_line;
+            g_pending_newln := false;
+        end if;
+        
+        dbms_output.put_line(p_vc2);
+    end print_vc2;
 
 
     function xlst_transform_param (
@@ -914,7 +1068,7 @@ declare
                     else '\1"\3".\4'
                 end,
                 1, 1, 'in'
-            ));
+            ), gc_blank_or_nl);
     end pp_comment;
 
 begin

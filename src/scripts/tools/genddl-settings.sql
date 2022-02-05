@@ -54,3 +54,9 @@ define def_strip_segment_attrs = "true"
 --
 define def_strip_tablespace_clause = "true"
 --define def_strip_tablespace_clause = "false"
+
+-- Sort GRANT statements on tables and views?
+-- Use "true" to sort GRANT statements, "false" to keep them unsorted.
+--
+define def_sort_table_grants = "true"
+--define def_sort_table_grants = "false"

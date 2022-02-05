@@ -160,6 +160,7 @@ undefine def_print_public_synonyms
 undefine def_strip_object_schema
 undefine def_strip_segment_attrs
 undefine def_strip_tablespace_clause
+undefine def_sort_table_grants
 undefine def_spool_directory
 undefine def_spool_filename
 undefine def_spool_naming_scheme

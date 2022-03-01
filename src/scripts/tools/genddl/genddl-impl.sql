@@ -858,6 +858,14 @@ declare
     is
     begin
         print_ddl_pieces(p_object_type, p_schema_name, p_object_name);
+        print_nl;
+        
+        if p_object_type in ('PROCEDURE', 'FUNCTION', 'PACKAGE', 'TYPE') then
+            print_object_grants(p_schema_name, p_object_name, p_object_type);
+            print_nl;
+
+            print_dependent_synonyms(p_schema_name, p_object_name);
+        end if;
     end print_other_ddl;
 
 

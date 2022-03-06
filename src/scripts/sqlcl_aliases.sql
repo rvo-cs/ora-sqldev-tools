@@ -22,3 +22,4 @@ alias desc show_system_stats : a report showing the state of system statistics +
 @@sqlcl/aliases/sql_trace
 @@sqlcl/aliases/sql_optimizer_trace
 @@sqlcl/aliases/sql_compiler_trace
+@@sqlcl/aliases/xplan_last

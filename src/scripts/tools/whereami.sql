@@ -8,6 +8,8 @@ define def_inst_num         = ""
 define def_con_name         = ""
 define def_session_user     = ""
 define def_current_schema   = ""
+define def_diag_trace       = ""
+define def_trace_file       = ""
 
 column db_name         noprint  new_value def_db_name
 column inst_name       noprint  new_value def_inst_name
@@ -15,13 +17,23 @@ column inst_num        noprint  new_value def_inst_num
 column con_name        noprint  new_value def_con_name
 column session_user    noprint  new_value def_session_user
 column current_schema  noprint  new_value def_current_schema
+column diag_trace      noprint  new_value def_diag_trace
+column trace_file      noprint  new_value def_trace_file
 
 select
     sys_context('USERENV', 'DB_NAME')           as db_name,
     sys_context('USERENV', 'INSTANCE_NAME')     as inst_name,
     sys_context('USERENV', 'INSTANCE')          as inst_num,
     sys_context('USERENV', 'SESSION_USER')      as session_user,
-    sys_context('USERENV', 'CURRENT_SCHEMA')    as current_schema
+    sys_context('USERENV', 'CURRENT_SCHEMA')    as current_schema,
+    (select value
+       from v$diag_info
+      where inst_id = sys_context('USERENV', 'INSTANCE')
+        and name = 'Diag Trace')                as diag_trace,
+    (select regexp_replace(value, '^.*/')
+       from v$diag_info
+      where inst_id = sys_context('USERENV', 'INSTANCE')
+        and name = 'Default Trace File')        as trace_file
 from 
     dual;
 
@@ -51,6 +63,8 @@ prompt Inst#           : &&def_inst_num
 prompt PDB Name        : &&def_con_name
 prompt Session user    : &&def_session_user
 prompt Current schema  : &&def_current_schema
+prompt Deft trace file : &&def_trace_file
+prompt Diag trace dir  : &&def_diag_trace
 prompt 
 
 set serveroutput on
@@ -90,6 +104,8 @@ column inst_num        clear
 column con_name        clear
 column session_user    clear
 column current_schema  clear
+column diag_trace      clear
+column trace_file      clear
 
 undefine def_db_name
 undefine def_inst_name
@@ -97,5 +113,7 @@ undefine def_inst_num
 undefine def_con_name
 undefine def_session_user
 undefine def_current_schema
+undefine def_diag_trace
+undefine def_trace_file
 
 set feedback 6

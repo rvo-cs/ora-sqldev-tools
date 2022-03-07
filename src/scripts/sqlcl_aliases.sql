@@ -16,8 +16,10 @@
         
  */
 
+set define off
 alias group=rvo-cs show_system_stats=@&RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/config/system_stats_report;
 alias desc show_system_stats : a report showing the state of system statistics + related optimizer parameters
+set define on
 
 @@sqlcl/aliases/sql_trace
 @@sqlcl/aliases/sql_optimizer_trace

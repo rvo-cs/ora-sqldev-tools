@@ -83,9 +83,9 @@ from
         c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
         c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
         case
-            when count(distinct px_server_group) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
-            when count(distinct px_server_group) * max(px_maxdop) = max(px_servers_allocated) then 'N'
-            when count(distinct px_server_group) * max(px_maxdop) < max(px_servers_allocated) then '??'
+            when count(distinct px_server_set) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
+            when count(distinct px_server_set) * max(px_maxdop) = max(px_servers_allocated) then 'N'
+            when count(distinct px_server_set) * max(px_maxdop) < max(px_servers_allocated) then '??'
         end                                     as dop_downgrade,
         max(px_maxdop)                          as px_maxdop,
         max(px_servers_requested)               as px_servers_requested,
@@ -348,9 +348,9 @@ from
         c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
         c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
         case
-            when count(distinct px_server_group) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
-            when count(distinct px_server_group) * max(px_maxdop) = max(px_servers_allocated) then 'N'
-            when count(distinct px_server_group) * max(px_maxdop) < max(px_servers_allocated) then '??'
+            when count(distinct px_server_set) * max(px_maxdop) > max(px_servers_allocated) then 'Y'
+            when count(distinct px_server_set) * max(px_maxdop) = max(px_servers_allocated) then 'N'
+            when count(distinct px_server_set) * max(px_maxdop) < max(px_servers_allocated) then '??'
         end                                     as dop_downgrade,
         max(px_maxdop)                          as px_maxdop,
         max(px_servers_requested)               as px_servers_requested,

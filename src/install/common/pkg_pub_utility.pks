@@ -111,12 +111,13 @@ create or replace package pkg_pub_utility authid current_user as
         are always rounded to the nearest integer.
         
         Examples:
-            prec_round (   0.007777 )  =   0.00778
-            prec_round (   0.077777 )  =   0.0778
-            prec_round (   0.777777 )  =   0.778
-            prec_round (   7.777777 )  =   7.78
-            prec_round (  77.77777  )  =  77.8
-            prec_round ( 777.7777   )  = 778
+            prec_round (    0.007777 )  =    0.00778
+            prec_round (    0.077777 )  =    0.0778
+            prec_round (    0.777777 )  =    0.778
+            prec_round (    7.777777 )  =    7.78
+            prec_round (   77.77777  )  =   77.8
+            prec_round (  777.7777   )  =  778
+            prec_round ( 7777.7777   )  = 7778
      */
     function prec_round(
         p_arg     in number,    /* The quantity to be rounded */

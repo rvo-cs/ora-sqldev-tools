@@ -209,7 +209,7 @@ create or replace package body pkg_pub_utility as
     begin
         return case 
             when p_arg = 0 then 0
-            else round( p_arg, greatest(0, p_digits - floor(log(10, p_arg))) )
+            else round( p_arg, greatest(0, p_digits - floor(log(10, abs(p_arg)))) )
            end;
     end prec_round;
 

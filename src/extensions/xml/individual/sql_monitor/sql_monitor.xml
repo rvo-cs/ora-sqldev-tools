@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <displays>
 <folder>
-<name><![CDATA[Live GV$]]></name>
-<display id="3e45e461-0176-1000-8009-c0a8010c382c" type="" style="Table" enable="true">
-	<name><![CDATA[GV$ - SQL Monitoring report]]></name>
+<name><![CDATA[Real Time SQL Monitor]]></name>
+<display id="6c2e0247-a8ac-4f25-a7c6-e56a448bb500" type="" style="Table" enable="true">
+	<name><![CDATA[SQL Monitoring reports (live)]]></name>
 	<description><![CDATA[]]></description>
 	<tooltip><![CDATA[]]></tooltip>
 	<drillclass><![CDATA[]]></drillclass>
@@ -56,9 +56,9 @@ from
         max(sql_text)                           as sql_text,
         max(last_refresh_time)                  as last_refresh_time,
         sum(refresh_count)                      as refresh_count,
-        c##pkg_pub_utility.prec_round( max(elapsed_time) / power(10,6) )                    as elapsed_time_s,
-        c##pkg_pub_utility.prec_round( sum(cpu_time)     / power(10,6) )                    as cpu_time_s,
-        c##pkg_pub_utility.prec_round( max(queuing_time) / power(10,6) )                    as queing_time_s,
+        round( max(elapsed_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( max(elapsed_time) / power(10,6) ), 0), 1)))) )  as elapsed_time_s,
+        round( sum(cpu_time)     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(cpu_time)     / power(10,6) ), 0), 1)))) )  as cpu_time_s,
+        round( max(queuing_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( max(queuing_time) / power(10,6) ), 0), 1)))) )  as queing_time_s,
         max(case when px_maxdop is null /* ignore QC */ then force_matching_signature end)  as force_matching_signature,
         max(case when px_maxdop is null /* ignore QC */ then sql_plan_hash_value end)       as sql_plan_hash_value,
         max(case when px_maxdop is null /* ignore QC */ then sql_full_plan_hash_value end)  as sql_full_plan_hash_value,
@@ -68,20 +68,20 @@ from
         sum(buffer_gets)                        as buffer_gets,
         sum(disk_reads)                         as disk_reads,
         sum(direct_writes)                      as direct_writes,
-        c##pkg_pub_utility.prec_round( sum(io_interconnect_bytes) / power(2,20) )           as io_interconnect_mb,
+        round( sum(io_interconnect_bytes) / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(io_interconnect_bytes) / power(2,20) ), 0), 1)))) )  as io_interconnect_mb,
         sum(physical_read_requests)             as phys_read_req,
-        c##pkg_pub_utility.prec_round( sum(physical_read_bytes)   / power(2,20) )           as phys_read_mb,
+        round( sum(physical_read_bytes)   / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(physical_read_bytes)   / power(2,20) ), 0), 1)))) )  as phys_read_mb,
         sum(physical_write_requests)            as phys_write_req,
-        c##pkg_pub_utility.prec_round( sum(physical_write_bytes)  / power(2,20) )           as phys_write_mb,
-        c##pkg_pub_utility.prec_round( sum(io_cell_uncompressed_bytes)     / power(2,20) )  as io_cell_uncompressed_mb,
-        c##pkg_pub_utility.prec_round( sum(io_cell_offload_eligible_bytes) / power(2,20) )  as io_cell_offload_eli_mb,
-        c##pkg_pub_utility.prec_round( sum(io_cell_offload_returned_bytes) / power(2,20) )  as io_cell_offload_ret_mb,
-        c##pkg_pub_utility.prec_round( sum(user_io_wait_time)     / power(10,6) )           as user_io_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(application_wait_time) / power(10,6) )           as app_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(concurrency_wait_time) / power(10,6) )           as conc_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(cluster_wait_time)     / power(10,6) )           as clus_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
-        c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
+        round( sum(physical_write_bytes)  / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(physical_write_bytes)  / power(2,20) ), 0), 1)))) )  as phys_write_mb,
+        round( sum(io_cell_uncompressed_bytes)     / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(io_cell_uncompressed_bytes)     / power(2,20) ), 0), 1)))) )  as io_cell_uncompressed_mb,
+        round( sum(io_cell_offload_eligible_bytes) / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(io_cell_offload_eligible_bytes) / power(2,20) ), 0), 1)))) )  as io_cell_offload_eli_mb,
+        round( sum(io_cell_offload_returned_bytes) / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(io_cell_offload_returned_bytes) / power(2,20) ), 0), 1)))) )  as io_cell_offload_ret_mb,
+        round( sum(user_io_wait_time)     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(user_io_wait_time)     / power(10,6) ), 0), 1)))) )  as user_io_wait_time_s,
+        round( sum(application_wait_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(application_wait_time) / power(10,6) ), 0), 1)))) )  as app_wait_time_s,
+        round( sum(concurrency_wait_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(concurrency_wait_time) / power(10,6) ), 0), 1)))) )  as conc_wait_time_s,
+        round( sum(cluster_wait_time)     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(cluster_wait_time)     / power(10,6) ), 0), 1)))) )  as clus_wait_time_s,
+        round( sum(plsql_exec_time)       / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(plsql_exec_time)       / power(10,6) ), 0), 1)))) )  as plsql_exec_time_s,
+        round( sum(java_exec_time)        / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(java_exec_time)        / power(10,6) ), 0), 1)))) )  as java_exec_time_s,
         case
             when count(distinct px_server_set) * max(px_maxdop) < max(px_servers_requested) then 'Y'
             when count(distinct px_server_set) * max(px_maxdop) = max(px_servers_requested) then 'N'
@@ -327,26 +327,26 @@ from
         max(sql_text)                           as sql_text,
         max(last_refresh_time)                  as last_refresh_time,
         sum(refresh_count)                      as refresh_count,
-        c##pkg_pub_utility.prec_round( max(elapsed_time) / power(10,6) )                    as elapsed_time_s,
-        c##pkg_pub_utility.prec_round( sum(cpu_time)     / power(10,6) )                    as cpu_time_s,
-        c##pkg_pub_utility.prec_round( max(queuing_time) / power(10,6) )                    as queing_time_s,
+        round( max(elapsed_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( max(elapsed_time) / power(10,6) ), 0), 1)))) )  as elapsed_time_s,
+        round( sum(cpu_time)     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(cpu_time)     / power(10,6) ), 0), 1)))) )  as cpu_time_s,
+        round( max(queuing_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( max(queuing_time) / power(10,6) ), 0), 1)))) )  as queing_time_s,
         max(case when px_maxdop is null /* ignore QC */ then force_matching_signature end)  as force_matching_signature,
         max(case when px_maxdop is null /* ignore QC */ then sql_plan_hash_value end)       as sql_plan_hash_value,
         sum(fetches)                            as fetches,
         sum(buffer_gets)                        as buffer_gets,
         sum(disk_reads)                         as disk_reads,
         sum(direct_writes)                      as direct_writes,
-        c##pkg_pub_utility.prec_round( sum(io_interconnect_bytes) / power(2,20) )           as io_interconnect_mb,
+        round( sum(io_interconnect_bytes) / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(io_interconnect_bytes) / power(2,20) ), 0), 1)))) )  as io_interconnect_mb,
         sum(physical_read_requests)             as phys_read_req,
-        c##pkg_pub_utility.prec_round( sum(physical_read_bytes)   / power(2,20) )           as phys_read_mb,
+        round( sum(physical_read_bytes)   / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(physical_read_bytes)   / power(2,20) ), 0), 1)))) )  as phys_read_mb,
         sum(physical_write_requests)            as phys_write_req,
-        c##pkg_pub_utility.prec_round( sum(physical_write_bytes)  / power(2,20) )           as phys_write_mb,
-        c##pkg_pub_utility.prec_round( sum(user_io_wait_time)     / power(10,6) )           as user_io_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(application_wait_time) / power(10,6) )           as app_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(concurrency_wait_time) / power(10,6) )           as conc_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(cluster_wait_time)     / power(10,6) )           as clus_wait_time_s,
-        c##pkg_pub_utility.prec_round( sum(plsql_exec_time)       / power(10,6) )           as plsql_exec_time_s,
-        c##pkg_pub_utility.prec_round( sum(java_exec_time)        / power(10,6) )           as java_exec_time_s,
+        round( sum(physical_write_bytes)  / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(physical_write_bytes)  / power(2,20) ), 0), 1)))) )  as phys_write_mb,
+        round( sum(user_io_wait_time)     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(user_io_wait_time)     / power(10,6) ), 0), 1)))) )  as user_io_wait_time_s,
+        round( sum(application_wait_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(application_wait_time) / power(10,6) ), 0), 1)))) )  as app_wait_time_s,
+        round( sum(concurrency_wait_time) / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(concurrency_wait_time) / power(10,6) ), 0), 1)))) )  as conc_wait_time_s,
+        round( sum(cluster_wait_time)     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(cluster_wait_time)     / power(10,6) ), 0), 1)))) )  as clus_wait_time_s,
+        round( sum(plsql_exec_time)       / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(plsql_exec_time)       / power(10,6) ), 0), 1)))) )  as plsql_exec_time_s,
+        round( sum(java_exec_time)        / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( sum(java_exec_time)        / power(10,6) ), 0), 1)))) )  as java_exec_time_s,
         case
             when count(distinct px_server_set) * max(px_maxdop) < max(px_servers_requested) then 'Y'
             when count(distinct px_server_set) * max(px_maxdop) = max(px_servers_requested) then 'N'
@@ -553,6 +553,56 @@ order by
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
         <queries>
+		<query minversion="19.0">
+			<sql><![CDATA[with child_cursor as (
+    select 
+        sql_id, child_number
+    from 
+        v$sql
+    where
+        sql_id = :SQL_ID
+        and lnnvl(plan_hash_value <> :SQL_PLAN_HASH_VALUE)
+        and lnnvl(full_plan_hash_value <> :SQL_FULL_PLAN_HASH_VALUE)
+        and lnnvl(plan_hash_value = 0)
+    order by
+        last_active_time desc
+    fetch first 1 row only
+)
+select b.* 
+from 
+    child_cursor a,
+    table(dbms_xplan.display_cursor(
+            sql_id => a.sql_id,
+            cursor_child_no => a.child_number,
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection -qbregistry +allstats last')
+    )) b]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_PLAN_HASH_VALUE">
+					<prompt><![CDATA[SQL_PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[SQL_PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_FULL_PLAN_HASH_VALUE">
+					<prompt><![CDATA[SQL_FULL_PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[SQL_FULL_PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_DISPLAY_FMT">
+					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
 		<query minversion="12.1">
 			<sql><![CDATA[with child_cursor as (
     select 
@@ -574,9 +624,7 @@ from
     table(dbms_xplan.display_cursor(
             sql_id => a.sql_id,
             cursor_child_no => a.child_number,
-            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection'
-                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end
-                    || ' +allstats last')
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection +allstats last')
     )) b]]></sql>
 			<binds>
 				<bind id="SQL_ID">
@@ -662,7 +710,8 @@ from
 		<CustomValues>
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
-		<query>
+        <queries>
+		<query minversion="19.0">
 			<sql><![CDATA[with hist_plan as (
     select 
         dbid, sql_id, plan_hash_value
@@ -679,9 +728,7 @@ from
     table(dbms_xplan.display_awr(
             sql_id => a.sql_id,
             plan_hash_value => a.plan_hash_value,
-            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced'
-                    || case when c##pkg_pub_utility.db_version >= 12 then ' +adaptive' end
-                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end )
+            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced +adaptive -qbregistry' )
     )) b]]></sql>
 			<binds>
 				<bind id="SQL_ID">
@@ -704,6 +751,87 @@ from
 				</bind>
 			</binds>
 		</query>
+		<query minversion="12.1">
+			<sql><![CDATA[with hist_plan as (
+    select 
+        dbid, sql_id, plan_hash_value
+    from 
+        dba_hist_sql_plan
+    where
+        sql_id = :SQL_ID
+        and plan_hash_value = :SQL_PLAN_HASH_VALUE
+        and rownum <= 1
+)
+select b.* 
+from 
+    hist_plan a,
+    table(dbms_xplan.display_awr(
+            sql_id => a.sql_id,
+            plan_hash_value => a.plan_hash_value,
+            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced +adaptive' )
+    )) b]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_PLAN_HASH_VALUE">
+					<prompt><![CDATA[SQL_PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[SQL_PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_DISPLAY_FMT">
+					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+		<query>
+			<sql><![CDATA[with hist_plan as (
+    select 
+        dbid, sql_id, plan_hash_value
+    from 
+        dba_hist_sql_plan
+    where
+        sql_id = :SQL_ID
+        and plan_hash_value = :SQL_PLAN_HASH_VALUE
+        and rownum <= 1
+)
+select b.* 
+from 
+    hist_plan a,
+    table(dbms_xplan.display_awr(
+            sql_id => a.sql_id,
+            plan_hash_value => a.plan_hash_value,
+            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced' )
+    )) b]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_PLAN_HASH_VALUE">
+					<prompt><![CDATA[SQL_PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[SQL_PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_DISPLAY_FMT">
+					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+        </queries>
 	</display>
 	<display id="null" type="" style="Script" enable="true">
 		<name><![CDATA[SQL Monitoring Report (text)]]></name>
@@ -957,6 +1085,1200 @@ where :SPOOL_DIRECTORY is not null;]]></sql>
 			</binds>
 		</query>
 	</display>
+
+    <display id="null" type="" style="Chart" enable="true">
+        <name><![CDATA[Metrics: IOPS]]></name>
+        <description><![CDATA[]]></description>
+        <tooltip><![CDATA[]]></tooltip>
+        <drillclass><![CDATA[]]></drillclass>
+        <CustomValues>
+            <PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+            <Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+            <Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+            <Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+            <Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+            <LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+            <PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-26368,-3394816,-10066279,-16751002,-26368]]></PLOT_SERIES_OPTIONS_COLOR>
+            <LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+            <XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+            <DATA_MAP_COLUMNS><![CDATA[\,"BUCKET_TS","BUCKET_TS",,]]></DATA_MAP_COLUMNS>
+            <Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+            <XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+            <Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+            <TYPE><![CDATA[LINE_VERT_ABS]]></TYPE>
+            <GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+            <PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+            <FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+            <DATA_MAP_COLNAMES><![CDATA[\,"BUCKET_TS","INTERCO_MBPS","PGA_ALLOC","READ_IOPS","READ_MBPS","TEMP_ALLOC","WRITE_IOPS","WRITE_MBPS"]]></DATA_MAP_COLNAMES>
+            <DATA_MAP_SERIES><![CDATA[\,Read IOPS,Write IOPS,,]]></DATA_MAP_SERIES>
+            <Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+            <DATA_MAP_COUNT><![CDATA[4]]></DATA_MAP_COUNT>
+            <STYLE><![CDATA[Default]]></STYLE>
+            <TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+            <Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+            <PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THIN,THIN,THICKER,THICKER,THICKER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+            <Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+            <DATA_MAP_VALUES><![CDATA[\,"READ_IOPS","WRITE_IOPS",,]]></DATA_MAP_VALUES>
+            <Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+            <PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+            <Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+            <SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+        </CustomValues>
+        <query>
+            <sql><![CDATA[with
+ash_samp as (
+    select
+        extract(second from (sample_time 
+                            - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 60 * extract(minute from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 3600 * extract(hour from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 86400 * extract(day from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+            as obs_end_s,
+        delta_time / 1000000        as delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        gv$active_session_history
+    where
+        ( ( inst_id             = :INST_ID
+            and session_id      = :SID
+            and session_serial# = :SESSION_SERIAL# )
+          or
+          ( qc_instance_id         = :INST_ID
+            and qc_session_id      = :SID
+            and qc_session_serial# = :SESSION_SERIAL# ) 
+        )
+        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and delta_time > 0
+),
+ash_samp_2 as (
+    select
+        greatest(1, floor(:ELAPSED_TIME_S))
+                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
+                                    as bucket_width_s,
+        obs_end_s - delta_s         as obs_start_s,
+        obs_end_s,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp
+),
+ash_samp_3 as (
+    select
+        bucket_width_s,
+        floor(obs_start_s / bucket_width_s)                                         as obs_start_bucket, 
+        obs_start_s - floor(obs_start_s / bucket_width_s) * bucket_width_s          as obs_start_offset,
+        floor(obs_end_s / bucket_width_s)                                           as obs_end_bucket,
+        obs_end_s - floor(obs_end_s / bucket_width_s) * bucket_width_s              as obs_end_offset,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp_2
+),
+ash_samp_4 as (
+    select
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket,
+        case
+            when obs_start_bucket < obs_end_bucket
+            then (bucket_width_s - obs_start_offset) / delta_s   
+            else 1
+        end                                                 as start_bucket_weight,
+        case
+            when obs_start_bucket + 1 < obs_end_bucket
+            then bucket_width_s / delta_s
+            else 0
+        end                                                 as inner_bucket_weight,
+        case
+            when obs_start_bucket < obs_end_bucket
+            then obs_end_offset / delta_s
+            else 0
+        end                                                 as end_bucket_weight,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp_3
+),
+ash_bucket_grp as (
+    select
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket,
+        obs_end_bucket - obs_start_bucket + 1                   as obs_spanned_buckets,
+        --
+        sum(delta_read_io_requests * start_bucket_weight)       as delta_read_io_req_start,
+        sum(delta_read_io_requests * inner_bucket_weight)       as delta_read_io_req_inner,
+        sum(delta_read_io_requests * end_bucket_weight)         as delta_read_io_req_end,
+        --
+        sum(delta_write_io_requests * start_bucket_weight)      as delta_write_io_req_start, 
+        sum(delta_write_io_requests * inner_bucket_weight)      as delta_write_io_req_inner, 
+        sum(delta_write_io_requests * end_bucket_weight)        as delta_write_io_req_end, 
+        --
+        sum(delta_read_io_bytes * start_bucket_weight)          as delta_read_io_bytes_start, 
+        sum(delta_read_io_bytes * inner_bucket_weight)          as delta_read_io_bytes_inner, 
+        sum(delta_read_io_bytes * end_bucket_weight)            as delta_read_io_bytes_end, 
+        --
+        sum(delta_write_io_bytes * start_bucket_weight)         as delta_write_io_bytes_start,
+        sum(delta_write_io_bytes * inner_bucket_weight)         as delta_write_io_bytes_inner,
+        sum(delta_write_io_bytes * end_bucket_weight)           as delta_write_io_bytes_end,
+        --
+        sum(delta_interconnect_io_bytes * start_bucket_weight)  as delta_interco_io_bytes_start, 
+        sum(delta_interconnect_io_bytes * inner_bucket_weight)  as delta_interco_io_bytes_inner, 
+        sum(delta_interconnect_io_bytes * end_bucket_weight)    as delta_interco_io_bytes_end, 
+        --
+        sum(pga_allocated * delta_s * start_bucket_weight)      as pga_allocated_start, 
+        sum(pga_allocated * delta_s * inner_bucket_weight)      as pga_allocated_inner, 
+        sum(pga_allocated * delta_s * end_bucket_weight)        as pga_allocated_end, 
+        --
+        sum(temp_space_allocated * delta_s * start_bucket_weight)   as temp_space_allocated_start,
+        sum(temp_space_allocated * delta_s * inner_bucket_weight)   as temp_space_allocated_inner,
+        sum(temp_space_allocated * delta_s * end_bucket_weight)     as temp_space_allocated_end
+    from
+        ash_samp_4
+    group by
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket
+),
+ash_all_bucket_grp as (
+    select
+        a.bucket_width_s,
+        b.column_value as bucket_num,
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_read_io_req_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_read_io_req_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_read_io_req_inner
+            end)                                                    as delta_read_io_req,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_write_io_req_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_write_io_req_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_write_io_req_inner
+            end)                                                    as delta_write_io_req,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_read_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_read_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_read_io_bytes_inner
+            end)                                                    as delta_read_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_write_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_write_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_write_io_bytes_inner
+            end)                                                    as delta_write_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_interco_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_interco_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_interco_io_bytes_inner
+            end)                                                    as delta_interco_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.pga_allocated_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.pga_allocated_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.pga_allocated_inner
+            end)                                                    as pga_allocated,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.temp_space_allocated_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.temp_space_allocated_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.temp_space_allocated_inner
+            end)                                                    as temp_space_allocated
+    from
+        ash_bucket_grp a,
+        table(cast(multiset(
+                select a.obs_start_bucket + (level - 1)  as bucket_num
+                from dual
+                connect by level <= 1 + (a.obs_end_bucket - a.obs_start_bucket)
+            ) as sys.odcinumberlist)) b
+    group by
+        a.bucket_width_s,
+        b.column_value
+    having
+        b.column_value >= 0
+)
+select 
+    cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+            + numtodsinterval(bucket_num * bucket_width_s, 'SECOND')        as bucket_ts,
+    round( delta_read_io_req  / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_read_io_req  / bucket_width_s ), 0), 1)))) )  as read_iops,
+    round( delta_write_io_req / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_write_io_req / bucket_width_s ), 0), 1)))) )  as write_iops,
+    round( delta_read_io_bytes    / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_read_io_bytes    / bucket_width_s / power(2,20) ), 0), 1)))) )  as read_mbps,
+    round( delta_write_io_bytes   / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_write_io_bytes   / bucket_width_s / power(2,20) ), 0), 1)))) )  as write_mbps,
+    round( delta_interco_io_bytes / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_interco_io_bytes / bucket_width_s / power(2,20) ), 0), 1)))) )  as interco_mbps,
+    round( pga_allocated          / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( pga_allocated          / bucket_width_s / power(2,20) ), 0), 1)))) )  as pga_alloc,
+    round( temp_space_allocated   / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( temp_space_allocated   / bucket_width_s / power(2,20) ), 0), 1)))) )  as temp_alloc
+from 
+    ash_all_bucket_grp 
+order by 
+    bucket_num]]></sql>
+            <binds>
+                <bind id="SQL_EXEC_START">
+                    <prompt><![CDATA[SQL_EXEC_START]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="INST_ID">
+                    <prompt><![CDATA[INST_ID]]></prompt>
+                    <tooltip><![CDATA[INST_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SID">
+                    <prompt><![CDATA[SID]]></prompt>
+                    <tooltip><![CDATA[SID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SESSION_SERIAL#">
+                    <prompt><![CDATA[SESSION_SERIAL#]]></prompt>
+                    <tooltip><![CDATA[SESSION_SERIAL#]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="ELAPSED_TIME_S">
+                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
+                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+    </display>
+    <display id="null" type="" style="Chart" enable="true">
+        <name><![CDATA[Metrics: MBPS]]></name>
+        <description><![CDATA[]]></description>
+        <tooltip><![CDATA[]]></tooltip>
+        <drillclass><![CDATA[]]></drillclass>
+        <CustomValues>
+            <PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+            <Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+            <Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+            <Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+            <PLOT_SERIES_OPTIONS_FITLINE_TYPE><![CDATA[\,NONE,NONE,NONE,NONE,NONE]]></PLOT_SERIES_OPTIONS_FITLINE_TYPE>
+            <Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+            <LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+            <PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-16750849,-26368,-3394816,-16751002,-26368]]></PLOT_SERIES_OPTIONS_COLOR>
+            <LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+            <XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+            <DATA_MAP_COLUMNS><![CDATA[\,"BUCKET_TS","BUCKET_TS","BUCKET_TS",,]]></DATA_MAP_COLUMNS>
+            <Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+            <XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+            <Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+            <TYPE><![CDATA[LINE_VERT_ABS]]></TYPE>
+            <GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+            <PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+            <FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+            <PLOT_SERIES_OPTIONS_LINE_TYPE><![CDATA[\,LINE,LINE,LINE,LINE,LINE]]></PLOT_SERIES_OPTIONS_LINE_TYPE>
+            <XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+            <DATA_MAP_COLNAMES><![CDATA[\,"BUCKET_TS","INTERCO_MBPS","PGA_ALLOC","READ_IOPS","READ_MBPS","TEMP_ALLOC","WRITE_IOPS","WRITE_MBPS"]]></DATA_MAP_COLNAMES>
+            <DATA_MAP_SERIES><![CDATA[\,Interco Mb/s,Read Mb/s,Write Mb/s,,]]></DATA_MAP_SERIES>
+            <Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+            <DATA_MAP_COUNT><![CDATA[5]]></DATA_MAP_COUNT>
+            <STYLE><![CDATA[Default]]></STYLE>
+            <TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+            <Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+            <PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THINNEST,THIN,THIN,THICKER,THICKER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+            <Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+            <DATA_MAP_VALUES><![CDATA[\,"INTERCO_MBPS","READ_MBPS","WRITE_MBPS",,]]></DATA_MAP_VALUES>
+            <Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+            <PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+            <Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+            <SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+        </CustomValues>
+        <query>
+            <sql><![CDATA[with
+ash_samp as (
+    select
+        extract(second from (sample_time 
+                            - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 60 * extract(minute from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 3600 * extract(hour from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 86400 * extract(day from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+            as obs_end_s,
+        delta_time / 1000000        as delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        gv$active_session_history
+    where
+        ( ( inst_id             = :INST_ID
+            and session_id      = :SID
+            and session_serial# = :SESSION_SERIAL# )
+          or
+          ( qc_instance_id         = :INST_ID
+            and qc_session_id      = :SID
+            and qc_session_serial# = :SESSION_SERIAL# ) 
+        )
+        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and delta_time > 0
+),
+ash_samp_2 as (
+    select
+        greatest(1, floor(:ELAPSED_TIME_S))
+                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
+                                    as bucket_width_s,
+        obs_end_s - delta_s         as obs_start_s,
+        obs_end_s,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp
+),
+ash_samp_3 as (
+    select
+        bucket_width_s,
+        floor(obs_start_s / bucket_width_s)                                         as obs_start_bucket, 
+        obs_start_s - floor(obs_start_s / bucket_width_s) * bucket_width_s          as obs_start_offset,
+        floor(obs_end_s / bucket_width_s)                                           as obs_end_bucket,
+        obs_end_s - floor(obs_end_s / bucket_width_s) * bucket_width_s              as obs_end_offset,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp_2
+),
+ash_samp_4 as (
+    select
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket,
+        case
+            when obs_start_bucket < obs_end_bucket
+            then (bucket_width_s - obs_start_offset) / delta_s   
+            else 1
+        end                                                 as start_bucket_weight,
+        case
+            when obs_start_bucket + 1 < obs_end_bucket
+            then bucket_width_s / delta_s
+            else 0
+        end                                                 as inner_bucket_weight,
+        case
+            when obs_start_bucket < obs_end_bucket
+            then obs_end_offset / delta_s
+            else 0
+        end                                                 as end_bucket_weight,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp_3
+),
+ash_bucket_grp as (
+    select
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket,
+        obs_end_bucket - obs_start_bucket + 1                   as obs_spanned_buckets,
+        --
+        sum(delta_read_io_requests * start_bucket_weight)       as delta_read_io_req_start,
+        sum(delta_read_io_requests * inner_bucket_weight)       as delta_read_io_req_inner,
+        sum(delta_read_io_requests * end_bucket_weight)         as delta_read_io_req_end,
+        --
+        sum(delta_write_io_requests * start_bucket_weight)      as delta_write_io_req_start, 
+        sum(delta_write_io_requests * inner_bucket_weight)      as delta_write_io_req_inner, 
+        sum(delta_write_io_requests * end_bucket_weight)        as delta_write_io_req_end, 
+        --
+        sum(delta_read_io_bytes * start_bucket_weight)          as delta_read_io_bytes_start, 
+        sum(delta_read_io_bytes * inner_bucket_weight)          as delta_read_io_bytes_inner, 
+        sum(delta_read_io_bytes * end_bucket_weight)            as delta_read_io_bytes_end, 
+        --
+        sum(delta_write_io_bytes * start_bucket_weight)         as delta_write_io_bytes_start,
+        sum(delta_write_io_bytes * inner_bucket_weight)         as delta_write_io_bytes_inner,
+        sum(delta_write_io_bytes * end_bucket_weight)           as delta_write_io_bytes_end,
+        --
+        sum(delta_interconnect_io_bytes * start_bucket_weight)  as delta_interco_io_bytes_start, 
+        sum(delta_interconnect_io_bytes * inner_bucket_weight)  as delta_interco_io_bytes_inner, 
+        sum(delta_interconnect_io_bytes * end_bucket_weight)    as delta_interco_io_bytes_end, 
+        --
+        sum(pga_allocated * delta_s * start_bucket_weight)      as pga_allocated_start, 
+        sum(pga_allocated * delta_s * inner_bucket_weight)      as pga_allocated_inner, 
+        sum(pga_allocated * delta_s * end_bucket_weight)        as pga_allocated_end, 
+        --
+        sum(temp_space_allocated * delta_s * start_bucket_weight)   as temp_space_allocated_start,
+        sum(temp_space_allocated * delta_s * inner_bucket_weight)   as temp_space_allocated_inner,
+        sum(temp_space_allocated * delta_s * end_bucket_weight)     as temp_space_allocated_end
+    from
+        ash_samp_4
+    group by
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket
+),
+ash_all_bucket_grp as (
+    select
+        a.bucket_width_s,
+        b.column_value as bucket_num,
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_read_io_req_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_read_io_req_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_read_io_req_inner
+            end)                                                    as delta_read_io_req,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_write_io_req_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_write_io_req_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_write_io_req_inner
+            end)                                                    as delta_write_io_req,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_read_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_read_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_read_io_bytes_inner
+            end)                                                    as delta_read_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_write_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_write_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_write_io_bytes_inner
+            end)                                                    as delta_write_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_interco_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_interco_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_interco_io_bytes_inner
+            end)                                                    as delta_interco_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.pga_allocated_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.pga_allocated_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.pga_allocated_inner
+            end)                                                    as pga_allocated,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.temp_space_allocated_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.temp_space_allocated_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.temp_space_allocated_inner
+            end)                                                    as temp_space_allocated
+    from
+        ash_bucket_grp a,
+        table(cast(multiset(
+                select a.obs_start_bucket + (level - 1)  as bucket_num
+                from dual
+                connect by level <= 1 + (a.obs_end_bucket - a.obs_start_bucket)
+            ) as sys.odcinumberlist)) b
+    group by
+        a.bucket_width_s,
+        b.column_value
+    having
+        b.column_value >= 0
+)
+select 
+    cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+            + numtodsinterval(bucket_num * bucket_width_s, 'SECOND')        as bucket_ts,
+    round( delta_read_io_req  / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_read_io_req  / bucket_width_s ), 0), 1)))) )  as read_iops,
+    round( delta_write_io_req / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_write_io_req / bucket_width_s ), 0), 1)))) )  as write_iops,
+    round( delta_read_io_bytes    / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_read_io_bytes    / bucket_width_s / power(2,20) ), 0), 1)))) )  as read_mbps,
+    round( delta_write_io_bytes   / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_write_io_bytes   / bucket_width_s / power(2,20) ), 0), 1)))) )  as write_mbps,
+    round( delta_interco_io_bytes / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_interco_io_bytes / bucket_width_s / power(2,20) ), 0), 1)))) )  as interco_mbps,
+    round( pga_allocated          / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( pga_allocated          / bucket_width_s / power(2,20) ), 0), 1)))) )  as pga_alloc,
+    round( temp_space_allocated   / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( temp_space_allocated   / bucket_width_s / power(2,20) ), 0), 1)))) )  as temp_alloc
+from 
+    ash_all_bucket_grp 
+order by 
+    bucket_num]]></sql>
+            <binds>
+                <bind id="SQL_EXEC_START">
+                    <prompt><![CDATA[SQL_EXEC_START]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="INST_ID">
+                    <prompt><![CDATA[INST_ID]]></prompt>
+                    <tooltip><![CDATA[INST_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SID">
+                    <prompt><![CDATA[SID]]></prompt>
+                    <tooltip><![CDATA[SID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SESSION_SERIAL#">
+                    <prompt><![CDATA[SESSION_SERIAL#]]></prompt>
+                    <tooltip><![CDATA[SESSION_SERIAL#]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="ELAPSED_TIME_S">
+                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
+                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+    </display>
+    <display id="null" type="" style="Chart" enable="true">
+        <name><![CDATA[Metrics: PGA, Temp]]></name>
+        <description><![CDATA[]]></description>
+        <tooltip><![CDATA[]]></tooltip>
+        <drillclass><![CDATA[]]></drillclass>
+        <CustomValues>
+            <PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+            <Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+            <Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+            <Y2AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL><![CDATA[EUR_SYMBOL]]></Y2AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL>
+            <Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+            <PLOT_SERIES_OPTIONS_FITLINE_TYPE><![CDATA[\,NONE,NONE,NONE,NONE,NONE]]></PLOT_SERIES_OPTIONS_FITLINE_TYPE>
+            <Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+            <LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+            <PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-10079233,-16737793,-3394816,-16751002,-26368]]></PLOT_SERIES_OPTIONS_COLOR>
+            <LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+            <XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+            <DATA_MAP_COLUMNS><![CDATA[\,"BUCKET_TS","BUCKET_TS",,]]></DATA_MAP_COLUMNS>
+            <Y1AXIS_NUMBER_FORMATS.TYPE><![CDATA[NUMBER]]></Y1AXIS_NUMBER_FORMATS.TYPE>
+            <Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+            <Y2AXIS_NUMBER_FORMATS.DECIMAL_PLACES><![CDATA[1]]></Y2AXIS_NUMBER_FORMATS.DECIMAL_PLACES>
+            <XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+            <Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+            <TYPE><![CDATA[LINE_VERT_ABS_2Y]]></TYPE>
+            <GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+            <PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+            <FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+            <PLOT_SERIES_OPTIONS_LINE_TYPE><![CDATA[\,LINE,LINE,LINE,LINE,LINE]]></PLOT_SERIES_OPTIONS_LINE_TYPE>
+            <XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+            <Y1AXIS_NUMBER_FORMATS.SCALE_FACTOR><![CDATA[NONE]]></Y1AXIS_NUMBER_FORMATS.SCALE_FACTOR>
+            <Y2AXIS_NUMBER_FORMATS.TYPE><![CDATA[NUMBER]]></Y2AXIS_NUMBER_FORMATS.TYPE>
+            <Y1AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL><![CDATA[EUR_SYMBOL]]></Y1AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL>
+            <DATA_MAP_COLNAMES><![CDATA[\,"BUCKET_TS","INTERCO_MBPS","PGA_ALLOC","READ_IOPS","READ_MBPS","TEMP_ALLOC","WRITE_IOPS","WRITE_MBPS"]]></DATA_MAP_COLNAMES>
+            <DATA_MAP_SERIES><![CDATA[\,PGA allocated (Mb),Temp allocated (Mb),,]]></DATA_MAP_SERIES>
+            <Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+            <DATA_MAP_COUNT><![CDATA[4]]></DATA_MAP_COUNT>
+            <STYLE><![CDATA[Default]]></STYLE>
+            <TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+            <Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+            <Y2AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT><![CDATA[BRACKETED]]></Y2AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT>
+            <Y1AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT><![CDATA[BRACKETED]]></Y1AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT>
+            <PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THIN,THIN,THIN,THICKER,THICKER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+            <NUMBER_FORMATS.DECIMAL_PLACES><![CDATA[1]]></NUMBER_FORMATS.DECIMAL_PLACES>
+            <Y1AXIS_NUMBER_FORMATS.DECIMAL_PLACES><![CDATA[1]]></Y1AXIS_NUMBER_FORMATS.DECIMAL_PLACES>
+            <Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+            <DATA_MAP_VALUES><![CDATA[\,"PGA_ALLOC","TEMP_ALLOC",,]]></DATA_MAP_VALUES>
+            <Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_NUMBER_FORMATS.SCALE_FACTOR><![CDATA[NONE]]></Y2AXIS_NUMBER_FORMATS.SCALE_FACTOR>
+            <Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+            <PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+            <Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+            <SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+        </CustomValues>
+        <query>
+            <sql><![CDATA[with
+ash_samp as (
+    select
+        extract(second from (sample_time 
+                            - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 60 * extract(minute from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 3600 * extract(hour from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 86400 * extract(day from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+            as obs_end_s,
+        delta_time / 1000000        as delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        gv$active_session_history
+    where
+        ( ( inst_id             = :INST_ID
+            and session_id      = :SID
+            and session_serial# = :SESSION_SERIAL# )
+          or
+          ( qc_instance_id         = :INST_ID
+            and qc_session_id      = :SID
+            and qc_session_serial# = :SESSION_SERIAL# ) 
+        )
+        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and delta_time > 0
+),
+ash_samp_2 as (
+    select
+        greatest(1, floor(:ELAPSED_TIME_S))
+                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
+                                    as bucket_width_s,
+        obs_end_s - delta_s         as obs_start_s,
+        obs_end_s,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp
+),
+ash_samp_3 as (
+    select
+        bucket_width_s,
+        floor(obs_start_s / bucket_width_s)                                         as obs_start_bucket, 
+        obs_start_s - floor(obs_start_s / bucket_width_s) * bucket_width_s          as obs_start_offset,
+        floor(obs_end_s / bucket_width_s)                                           as obs_end_bucket,
+        obs_end_s - floor(obs_end_s / bucket_width_s) * bucket_width_s              as obs_end_offset,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp_2
+),
+ash_samp_4 as (
+    select
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket,
+        case
+            when obs_start_bucket < obs_end_bucket
+            then (bucket_width_s - obs_start_offset) / delta_s   
+            else 1
+        end                                                 as start_bucket_weight,
+        case
+            when obs_start_bucket + 1 < obs_end_bucket
+            then bucket_width_s / delta_s
+            else 0
+        end                                                 as inner_bucket_weight,
+        case
+            when obs_start_bucket < obs_end_bucket
+            then obs_end_offset / delta_s
+            else 0
+        end                                                 as end_bucket_weight,
+        delta_s,
+        delta_read_io_requests,
+        delta_write_io_requests, 
+        delta_read_io_bytes, 
+        delta_write_io_bytes,
+        delta_interconnect_io_bytes, 
+        pga_allocated, 
+        temp_space_allocated
+    from
+        ash_samp_3
+),
+ash_bucket_grp as (
+    select
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket,
+        obs_end_bucket - obs_start_bucket + 1                   as obs_spanned_buckets,
+        --
+        sum(delta_read_io_requests * start_bucket_weight)       as delta_read_io_req_start,
+        sum(delta_read_io_requests * inner_bucket_weight)       as delta_read_io_req_inner,
+        sum(delta_read_io_requests * end_bucket_weight)         as delta_read_io_req_end,
+        --
+        sum(delta_write_io_requests * start_bucket_weight)      as delta_write_io_req_start, 
+        sum(delta_write_io_requests * inner_bucket_weight)      as delta_write_io_req_inner, 
+        sum(delta_write_io_requests * end_bucket_weight)        as delta_write_io_req_end, 
+        --
+        sum(delta_read_io_bytes * start_bucket_weight)          as delta_read_io_bytes_start, 
+        sum(delta_read_io_bytes * inner_bucket_weight)          as delta_read_io_bytes_inner, 
+        sum(delta_read_io_bytes * end_bucket_weight)            as delta_read_io_bytes_end, 
+        --
+        sum(delta_write_io_bytes * start_bucket_weight)         as delta_write_io_bytes_start,
+        sum(delta_write_io_bytes * inner_bucket_weight)         as delta_write_io_bytes_inner,
+        sum(delta_write_io_bytes * end_bucket_weight)           as delta_write_io_bytes_end,
+        --
+        sum(delta_interconnect_io_bytes * start_bucket_weight)  as delta_interco_io_bytes_start, 
+        sum(delta_interconnect_io_bytes * inner_bucket_weight)  as delta_interco_io_bytes_inner, 
+        sum(delta_interconnect_io_bytes * end_bucket_weight)    as delta_interco_io_bytes_end, 
+        --
+        sum(pga_allocated * delta_s * start_bucket_weight)      as pga_allocated_start, 
+        sum(pga_allocated * delta_s * inner_bucket_weight)      as pga_allocated_inner, 
+        sum(pga_allocated * delta_s * end_bucket_weight)        as pga_allocated_end, 
+        --
+        sum(temp_space_allocated * delta_s * start_bucket_weight)   as temp_space_allocated_start,
+        sum(temp_space_allocated * delta_s * inner_bucket_weight)   as temp_space_allocated_inner,
+        sum(temp_space_allocated * delta_s * end_bucket_weight)     as temp_space_allocated_end
+    from
+        ash_samp_4
+    group by
+        bucket_width_s,
+        obs_start_bucket, 
+        obs_end_bucket
+),
+ash_all_bucket_grp as (
+    select
+        a.bucket_width_s,
+        b.column_value as bucket_num,
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_read_io_req_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_read_io_req_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_read_io_req_inner
+            end)                                                    as delta_read_io_req,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_write_io_req_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_write_io_req_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_write_io_req_inner
+            end)                                                    as delta_write_io_req,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_read_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_read_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_read_io_bytes_inner
+            end)                                                    as delta_read_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_write_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_write_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_write_io_bytes_inner
+            end)                                                    as delta_write_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.delta_interco_io_bytes_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.delta_interco_io_bytes_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.delta_interco_io_bytes_inner
+            end)                                                    as delta_interco_io_bytes,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.pga_allocated_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.pga_allocated_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.pga_allocated_inner
+            end)                                                    as pga_allocated,
+        --
+        sum(case
+                when b.column_value = a.obs_start_bucket    then a.temp_space_allocated_start
+                when obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket   then a.temp_space_allocated_end
+                when obs_spanned_buckets >= 3 
+                    and b.column_value > a.obs_start_bucket
+                    and b.column_value < a.obs_end_bucket   then a.temp_space_allocated_inner
+            end)                                                    as temp_space_allocated
+    from
+        ash_bucket_grp a,
+        table(cast(multiset(
+                select a.obs_start_bucket + (level - 1)  as bucket_num
+                from dual
+                connect by level <= 1 + (a.obs_end_bucket - a.obs_start_bucket)
+            ) as sys.odcinumberlist)) b
+    group by
+        a.bucket_width_s,
+        b.column_value
+    having
+        b.column_value >= 0
+)
+select 
+    cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+            + numtodsinterval(bucket_num * bucket_width_s, 'SECOND')        as bucket_ts,
+    round( delta_read_io_req  / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_read_io_req  / bucket_width_s ), 0), 1)))) )  as read_iops,
+    round( delta_write_io_req / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_write_io_req / bucket_width_s ), 0), 1)))) )  as write_iops,
+    round( delta_read_io_bytes    / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_read_io_bytes    / bucket_width_s / power(2,20) ), 0), 1)))) )  as read_mbps,
+    round( delta_write_io_bytes   / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_write_io_bytes   / bucket_width_s / power(2,20) ), 0), 1)))) )  as write_mbps,
+    round( delta_interco_io_bytes / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( delta_interco_io_bytes / bucket_width_s / power(2,20) ), 0), 1)))) )  as interco_mbps,
+    round( pga_allocated          / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( pga_allocated          / bucket_width_s / power(2,20) ), 0), 1)))) )  as pga_alloc,
+    round( temp_space_allocated   / bucket_width_s / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( temp_space_allocated   / bucket_width_s / power(2,20) ), 0), 1)))) )  as temp_alloc
+from 
+    ash_all_bucket_grp 
+order by 
+    bucket_num]]></sql>
+            <binds>
+                <bind id="SQL_EXEC_START">
+                    <prompt><![CDATA[SQL_EXEC_START]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="INST_ID">
+                    <prompt><![CDATA[INST_ID]]></prompt>
+                    <tooltip><![CDATA[INST_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SID">
+                    <prompt><![CDATA[SID]]></prompt>
+                    <tooltip><![CDATA[SID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SESSION_SERIAL#">
+                    <prompt><![CDATA[SESSION_SERIAL#]]></prompt>
+                    <tooltip><![CDATA[SESSION_SERIAL#]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="ELAPSED_TIME_S">
+                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
+                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+    </display>
+    <display id="null" type="" style="Chart" enable="true">
+        <name><![CDATA[Metrics: CPU/DB time]]></name>
+        <description><![CDATA[]]></description>
+        <tooltip><![CDATA[]]></tooltip>
+        <drillclass><![CDATA[]]></drillclass>
+        <CustomValues>
+            <PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+            <Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+            <Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+            <Y2AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL><![CDATA[EUR_SYMBOL]]></Y2AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL>
+            <Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+            <PLOT_SERIES_OPTIONS_FITLINE_TYPE><![CDATA[\,NONE,NONE,NONE,NONE,NONE]]></PLOT_SERIES_OPTIONS_FITLINE_TYPE>
+            <Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+            <LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+            <PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-16737997,-10066330,-3394816,-16751002,-26368]]></PLOT_SERIES_OPTIONS_COLOR>
+            <LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+            <XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+            <DATA_MAP_COLUMNS><![CDATA[\,"BUCKET_TS","BUCKET_TS",]]></DATA_MAP_COLUMNS>
+            <Y1AXIS_NUMBER_FORMATS.TYPE><![CDATA[NUMBER]]></Y1AXIS_NUMBER_FORMATS.TYPE>
+            <Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+            <Y2AXIS_NUMBER_FORMATS.DECIMAL_PLACES><![CDATA[1]]></Y2AXIS_NUMBER_FORMATS.DECIMAL_PLACES>
+            <XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+            <Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+            <TYPE><![CDATA[LINE_VERT_ABS]]></TYPE>
+            <GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+            <PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+            <FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+            <PLOT_SERIES_OPTIONS_LINE_TYPE><![CDATA[\,LINE,LINE,LINE,LINE,LINE]]></PLOT_SERIES_OPTIONS_LINE_TYPE>
+            <XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+            <Y1AXIS_NUMBER_FORMATS.SCALE_FACTOR><![CDATA[NONE]]></Y1AXIS_NUMBER_FORMATS.SCALE_FACTOR>
+            <Y2AXIS_NUMBER_FORMATS.TYPE><![CDATA[NUMBER]]></Y2AXIS_NUMBER_FORMATS.TYPE>
+            <Y1AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL><![CDATA[EUR_SYMBOL]]></Y1AXIS_NUMBER_FORMATS.CURRENCY_SYMBOL>
+            <DATA_MAP_COLNAMES><![CDATA[\,"BUCKET_TS","CPU_PS","DBTIME_PS"]]></DATA_MAP_COLNAMES>
+            <DATA_MAP_SERIES><![CDATA[\,CPU time (s),DB time (s),]]></DATA_MAP_SERIES>
+            <Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+            <DATA_MAP_COUNT><![CDATA[3]]></DATA_MAP_COUNT>
+            <STYLE><![CDATA[Default]]></STYLE>
+            <TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+            <Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+            <Y2AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT><![CDATA[BRACKETED]]></Y2AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT>
+            <Y1AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT><![CDATA[BRACKETED]]></Y1AXIS_NUMBER_FORMATS.NEGATIVE_NUMBER_FORMAT>
+            <PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THIN,THINNER,THIN,THICKER,THICKER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+            <NUMBER_FORMATS.DECIMAL_PLACES><![CDATA[2]]></NUMBER_FORMATS.DECIMAL_PLACES>
+            <Y1AXIS_NUMBER_FORMATS.DECIMAL_PLACES><![CDATA[1]]></Y1AXIS_NUMBER_FORMATS.DECIMAL_PLACES>
+            <Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+            <DATA_MAP_VALUES><![CDATA[\,"CPU_PS","DBTIME_PS",]]></DATA_MAP_VALUES>
+            <Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_NUMBER_FORMATS.SCALE_FACTOR><![CDATA[NONE]]></Y2AXIS_NUMBER_FORMATS.SCALE_FACTOR>
+            <Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+            <PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+            <Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+            <SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+        </CustomValues>
+        <query>
+            <sql><![CDATA[with
+ash_samp as (
+    select
+        extract(second from (sample_time 
+                            - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 60 * extract(minute from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 3600 * extract(hour from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+                + 86400 * extract(day from (sample_time 
+                                    - cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)))
+            as obs_end_s,
+        tm_delta_time / 1000000     as tm_delta_s,
+        tm_delta_cpu_time,
+        tm_delta_db_time
+    from
+        gv$active_session_history
+    where
+        ( ( inst_id             = :INST_ID
+            and session_id      = :SID
+            and session_serial# = :SESSION_SERIAL# )
+          or
+          ( qc_instance_id         = :INST_ID
+            and qc_session_id      = :SID
+            and qc_session_serial# = :SESSION_SERIAL# ) 
+        )
+        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and tm_delta_time > 0
+),
+ash_samp_2 as (
+    select
+        greatest(1, floor(:ELAPSED_TIME_S))
+                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
+                                    as bucket_width_s,
+        obs_end_s - tm_delta_s      as tm_obs_start_s,
+        obs_end_s,
+        tm_delta_s,
+        tm_delta_cpu_time,
+        tm_delta_db_time
+    from
+        ash_samp
+),
+ash_samp_3 as (
+    select
+        bucket_width_s,
+        floor(tm_obs_start_s / bucket_width_s)                                      as tm_obs_start_bucket, 
+        tm_obs_start_s - floor(tm_obs_start_s / bucket_width_s) * bucket_width_s    as tm_obs_start_offset, 
+        floor(obs_end_s / bucket_width_s)                                           as obs_end_bucket,
+        obs_end_s - floor(obs_end_s / bucket_width_s) * bucket_width_s              as obs_end_offset,
+        tm_delta_s,
+        tm_delta_cpu_time,
+        tm_delta_db_time
+    from
+        ash_samp_2
+),
+ash_samp_4 as (
+    select
+        bucket_width_s,
+        tm_obs_start_bucket, 
+        obs_end_bucket,
+        case
+            when tm_obs_start_bucket < obs_end_bucket
+            then (bucket_width_s - tm_obs_start_offset) / tm_delta_s   
+            else 1
+        end                                                 as tm_start_bucket_weight,
+        case
+            when tm_obs_start_bucket + 1 < obs_end_bucket
+            then bucket_width_s / tm_delta_s
+            else 0
+        end                                                 as tm_inner_bucket_weight,
+        case
+            when tm_obs_start_bucket < obs_end_bucket
+            then obs_end_offset / tm_delta_s   
+            else 0
+        end                                                 as tm_end_bucket_weight,
+        tm_delta_cpu_time,
+        tm_delta_db_time
+    from
+        ash_samp_3
+),
+ash_bucket_grp as (
+    select
+        bucket_width_s,
+        tm_obs_start_bucket, 
+        obs_end_bucket,
+        obs_end_bucket - tm_obs_start_bucket + 1                as tm_obs_spanned_buckets,
+        --
+        sum(tm_delta_cpu_time * tm_start_bucket_weight)         as tm_delta_cpu_time_start,
+        sum(tm_delta_cpu_time * tm_inner_bucket_weight)         as tm_delta_cpu_time_inner,
+        sum(tm_delta_cpu_time * tm_end_bucket_weight)           as tm_delta_cpu_time_end,
+        --
+        sum(tm_delta_db_time * tm_start_bucket_weight)          as tm_delta_db_time_start,
+        sum(tm_delta_db_time * tm_inner_bucket_weight)          as tm_delta_db_time_inner,
+        sum(tm_delta_db_time * tm_end_bucket_weight)            as tm_delta_db_time_end
+    from
+        ash_samp_4
+    group by
+        bucket_width_s,
+        tm_obs_start_bucket, 
+        obs_end_bucket
+),
+ash_all_bucket_grp as (
+    select
+        a.bucket_width_s,
+        b.column_value as bucket_num,
+        sum(case
+                when b.column_value = a.tm_obs_start_bucket     then a.tm_delta_cpu_time_start
+                when tm_obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket       then a.tm_delta_cpu_time_end
+                when tm_obs_spanned_buckets >= 3 
+                    and b.column_value > a.tm_obs_start_bucket
+                    and b.column_value < a.obs_end_bucket       then a.tm_delta_cpu_time_inner
+            end)                                                    as tm_delta_cpu_time,
+        --
+        sum(case
+                when b.column_value = a.tm_obs_start_bucket     then a.tm_delta_db_time_start
+                when tm_obs_spanned_buckets >= 2
+                    and b.column_value = a.obs_end_bucket       then a.tm_delta_db_time_end
+                when tm_obs_spanned_buckets >= 3 
+                    and b.column_value > a.tm_obs_start_bucket
+                    and b.column_value < a.obs_end_bucket       then a.tm_delta_db_time_inner
+            end)                                                    as tm_delta_db_time
+    from
+        ash_bucket_grp a,
+        table(cast(multiset(
+                select a.tm_obs_start_bucket + (level - 1)  as bucket_num
+                from dual
+                connect by level <= 1 + (a.obs_end_bucket - a.tm_obs_start_bucket)
+            ) as sys.odcinumberlist)) b
+    group by
+        a.bucket_width_s,
+        b.column_value
+    having
+        b.column_value >= 0
+)
+select 
+    cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+            + numtodsinterval(bucket_num * bucket_width_s, 'SECOND')        as bucket_ts,
+    round( tm_delta_cpu_time / power(10, 6) / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( tm_delta_cpu_time / power(10, 6) / bucket_width_s ), 0), 1)))) )  as cpu_ps,
+    round( tm_delta_db_time  / power(10, 6) / bucket_width_s , greatest(0, 2 - floor(log(10, nvl(nullif(abs( tm_delta_db_time  / power(10, 6) / bucket_width_s ), 0), 1)))) )  as dbtime_ps
+from 
+    ash_all_bucket_grp 
+order by 
+    bucket_num]]></sql>
+            <binds>
+                <bind id="SQL_EXEC_START">
+                    <prompt><![CDATA[SQL_EXEC_START]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_START]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="INST_ID">
+                    <prompt><![CDATA[INST_ID]]></prompt>
+                    <tooltip><![CDATA[INST_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SID">
+                    <prompt><![CDATA[SID]]></prompt>
+                    <tooltip><![CDATA[SID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SESSION_SERIAL#">
+                    <prompt><![CDATA[SESSION_SERIAL#]]></prompt>
+                    <tooltip><![CDATA[SESSION_SERIAL#]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="ELAPSED_TIME_S">
+                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
+                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+    </display>
 </display>
 </folder>
 </displays>

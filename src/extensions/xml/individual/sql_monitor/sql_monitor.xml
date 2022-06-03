@@ -1160,16 +1160,35 @@ ash_samp as (
             and qc_session_id      = :SID
             and qc_session_serial# = :SESSION_SERIAL# ) 
         )
-        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and sample_time between 
+                cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                and (select
+                        cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') 
+                                as timestamp)
+                        + numtodsinterval(max(gm.elapsed_time) / power(10,6),
+                                'SECOND')
+                    from
+                        gv$sql_monitor gm
+                    where
+                        (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+                        and gm.sql_id = :SQL_ID
+                        and gm.sql_exec_id = :SQL_EXEC_ID
+                        and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'))
         and delta_time > 0
 ),
 ash_samp_2 as (
     select
-        greatest(1, floor(:ELAPSED_TIME_S))
-                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
-                                    as bucket_width_s,
+        (select
+            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
+                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+        from
+            gv$sql_monitor gm
+        where
+            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            and gm.sql_id = :SQL_ID
+            and gm.sql_exec_id = :SQL_EXEC_ID
+            and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
+        )                           as bucket_width_s,
         obs_end_s - delta_s         as obs_start_s,
         obs_end_s,
         delta_s,
@@ -1391,9 +1410,15 @@ order by
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
-                <bind id="ELAPSED_TIME_S">
-                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
-                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                <bind id="SQL_ID">
+                    <prompt><![CDATA[SQL_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SQL_EXEC_ID">
+                    <prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
@@ -1476,16 +1501,35 @@ ash_samp as (
             and qc_session_id      = :SID
             and qc_session_serial# = :SESSION_SERIAL# ) 
         )
-        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and sample_time between 
+                cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                and (select
+                        cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') 
+                                as timestamp)
+                        + numtodsinterval(max(gm.elapsed_time) / power(10,6),
+                                'SECOND')
+                    from
+                        gv$sql_monitor gm
+                    where
+                        (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+                        and gm.sql_id = :SQL_ID
+                        and gm.sql_exec_id = :SQL_EXEC_ID
+                        and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'))
         and delta_time > 0
 ),
 ash_samp_2 as (
     select
-        greatest(1, floor(:ELAPSED_TIME_S))
-                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
-                                    as bucket_width_s,
+        (select
+            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
+                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+        from
+            gv$sql_monitor gm
+        where
+            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            and gm.sql_id = :SQL_ID
+            and gm.sql_exec_id = :SQL_EXEC_ID
+            and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
+        )                           as bucket_width_s,
         obs_end_s - delta_s         as obs_start_s,
         obs_end_s,
         delta_s,
@@ -1707,9 +1751,15 @@ order by
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
-                <bind id="ELAPSED_TIME_S">
-                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
-                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                <bind id="SQL_ID">
+                    <prompt><![CDATA[SQL_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SQL_EXEC_ID">
+                    <prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
@@ -1803,16 +1853,35 @@ ash_samp as (
             and qc_session_id      = :SID
             and qc_session_serial# = :SESSION_SERIAL# ) 
         )
-        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and sample_time between 
+                cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                and (select
+                        cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') 
+                                as timestamp)
+                        + numtodsinterval(max(gm.elapsed_time) / power(10,6),
+                                'SECOND')
+                    from
+                        gv$sql_monitor gm
+                    where
+                        (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+                        and gm.sql_id = :SQL_ID
+                        and gm.sql_exec_id = :SQL_EXEC_ID
+                        and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'))
         and delta_time > 0
 ),
 ash_samp_2 as (
     select
-        greatest(1, floor(:ELAPSED_TIME_S))
-                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
-                                    as bucket_width_s,
+        (select
+            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
+                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+        from
+            gv$sql_monitor gm
+        where
+            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            and gm.sql_id = :SQL_ID
+            and gm.sql_exec_id = :SQL_EXEC_ID
+            and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
+        )                           as bucket_width_s,
         obs_end_s - delta_s         as obs_start_s,
         obs_end_s,
         delta_s,
@@ -2034,9 +2103,15 @@ order by
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
-                <bind id="ELAPSED_TIME_S">
-                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
-                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                <bind id="SQL_ID">
+                    <prompt><![CDATA[SQL_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SQL_EXEC_ID">
+                    <prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
@@ -2125,16 +2200,35 @@ ash_samp as (
             and qc_session_id      = :SID
             and qc_session_serial# = :SESSION_SERIAL# ) 
         )
-        and sample_time between cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                            and cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
-                                + numtodsinterval(:ELAPSED_TIME_S, 'SECOND')
+        and sample_time between 
+                cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') as timestamp)
+                and (select
+                        cast(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS') 
+                                as timestamp)
+                        + numtodsinterval(max(gm.elapsed_time) / power(10,6),
+                                'SECOND')
+                    from
+                        gv$sql_monitor gm
+                    where
+                        (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+                        and gm.sql_id = :SQL_ID
+                        and gm.sql_exec_id = :SQL_EXEC_ID
+                        and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'))
         and tm_delta_time > 0
 ),
 ash_samp_2 as (
     select
-        greatest(1, floor(:ELAPSED_TIME_S))
-                / least(150, greatest(1, floor(:ELAPSED_TIME_S)))
-                                    as bucket_width_s,
+        (select
+            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
+                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+        from
+            gv$sql_monitor gm
+        where
+            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            and gm.sql_id = :SQL_ID
+            and gm.sql_exec_id = :SQL_EXEC_ID
+            and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
+        )                           as bucket_width_s,
         obs_end_s - tm_delta_s      as tm_obs_start_s,
         obs_end_s,
         tm_delta_s,
@@ -2270,9 +2364,15 @@ order by
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
-                <bind id="ELAPSED_TIME_S">
-                    <prompt><![CDATA[ELAPSED_TIME_S]]></prompt>
-                    <tooltip><![CDATA[ELAPSED_TIME_S]]></tooltip>
+                <bind id="SQL_ID">
+                    <prompt><![CDATA[SQL_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SQL_EXEC_ID">
+                    <prompt><![CDATA[SQL_EXEC_ID]]></prompt>
+                    <tooltip><![CDATA[SQL_EXEC_ID]]></tooltip>
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>

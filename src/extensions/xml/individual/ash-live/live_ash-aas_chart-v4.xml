@@ -64,6 +64,7 @@ unadjusted_time_span as (
         case when :TIME_SPAN_HR is null 
             then nvl(cast(to_timestamp(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
                      cast((select oldest_sample_time from v$ash_info) as timestamp(3)))
+                 - numtodsinterval(1, 'SECOND')
             else end_time - numtodsinterval(:TIME_SPAN_HR, 'HOUR') 
         end  as start_time,
         end_time
@@ -72,38 +73,35 @@ unadjusted_time_span as (
 ),
 time_span as (
     select /*+ inline */
-        slot_duration_s, 
-        gen_factor,
-        start_time, 
-        end_time + numtodsinterval(slot_duration_s - 1, 'SECOND')  as end_time
+        slot_duration_s,
+        ceil(sqrt(ceil(time_span_s / slot_duration_s))) + 1  as gen_factor,
+        start_time,
+        end_time
     from
         (select
-            slot_duration_s,
-            ceil(sqrt(ceil(time_span_s / slot_duration_s))) + 1  as gen_factor,
-            start_time,
-            end_time
+            greatest(case when :SAMPLE_TIME_S is not null then to_number(:SAMPLE_TIME_S)
+                    else ceil(time_span_s / 300) end, 1)  as slot_duration_s,
+            start_time, 
+            end_time,
+            time_span_s
         from
             (select
-                greatest(case when :SAMPLE_TIME_S is not null then to_number(:SAMPLE_TIME_S)
-                        else ceil(time_span_s / 300) end, 1)  as slot_duration_s,
                 start_time, 
                 end_time,
-                time_span_s
+                (cast(end_time as date) - cast(start_time as date)) * 86400  
+                        as time_span_s
             from
-                (select
-                    start_time, 
-                    end_time,
-                    (cast(end_time as date) - cast(start_time as date)) * 86400  
-                            as time_span_s
-                from
-                    unadjusted_time_span
-                )
+                unadjusted_time_span
             )
         )
 ),
 ash_data as (
     select
-        min(sample_time - numtodsinterval(mod(sample_id, slot_duration_s), 'SECOND')) as sample_time,
+        floor( ( extract(second from end_time - sample_time)
+                    + 60 * extract(minute from end_time - sample_time)
+                    + 3600 * extract(hour from end_time - sample_time)
+                    + 86400 * extract(day from end_time - sample_time) ) 
+               / slot_duration_s )  as slot_id,
         case when session_state is null then null
             when session_state = 'ON CPU' then session_state
             else wait_class end as wait_class,
@@ -111,6 +109,7 @@ ash_data as (
     from
         (select
             (select slot_duration_s from time_span) as slot_duration_s,
+            (select end_time from time_span) as end_time,
             sample_time,
             sample_id,
             session_type,
@@ -120,21 +119,26 @@ ash_data as (
             v$active_session_history
         )
     where
-        sample_time >= /* time_span.start_time */ 
+        sample_time > /* time_span.start_time */ 
             case 
                 when :TIME_SPAN_HR is null 
                 then nvl(cast(to_timestamp(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
                          cast((select oldest_sample_time from v$ash_info) as timestamp(3)))
+                     - numtodsinterval(1, 'SECOND')
                 else nvl(cast(to_timestamp(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
                          cast(systimestamp as timestamp(3))) 
                         - numtodsinterval(:TIME_SPAN_HR, 'HOUR') 
             end
-        and sample_time <= /* time_stamp.end_time */
+        and sample_time <= /* time_span.end_time */
             nvl(cast(to_timestamp(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
                 cast(systimestamp as timestamp(3)))
         and (lnnvl(upper(:EXCLUDE_BACKGROUND) = 'Y') or session_type = 'FOREGROUND')
     group by
-        floor(sample_id / slot_duration_s),
+        floor( ( extract(second from end_time - sample_time)
+                    + 60 * extract(minute from end_time - sample_time)
+                    + 3600 * extract(hour from end_time - sample_time)
+                    + 86400 * extract(day from end_time - sample_time) ) 
+               / slot_duration_s ),
         case when session_state is null then null
             when session_state = 'ON CPU' then session_state
             else wait_class end
@@ -154,6 +158,7 @@ gen_2500 as (
 ),
 time_slots as (
     select /*+ no_merge(a) no_merge(b) leading(a b) */
+        b.n as slot_id,
         a.slot_duration_s,
         a.end_time - numtodsinterval((b.n + 1) * a.slot_duration_s, 'SECOND')
             as start_time,
@@ -170,14 +175,14 @@ time_slot_wt_aas as (
     select
         /*+ no_merge(b) leading(a b) use_merge(b) */
         a.slot_duration_s,
-        a.start_time as sample_time,
+        a.end_time as sample_time,
         b.wait_class,
         b.aas
     from 
-        time_slots a
-        left outer join
-        ash_data b on
-            b.sample_time >= a.start_time and b.sample_time < a.end_time
+        time_slots a,
+        ash_data b 
+    where
+         a.slot_id = b.slot_id (+)
 ),
 pivoted_time_slots_wt_aas as (
     select

@@ -112,6 +112,231 @@ order by
 			</bind>
 		</binds>
 	</query>
+    <item reload="true" reloadparent="false" removeFromParent="false">
+        <title>Gather Stats...</title>
+        <help><![CDATA[This gathers statistics on specified table.
+
+BEWARE: this may take a while!]]></help>
+        <prompt type="confirm">
+            <label>Confirm gather stats on #"OWNER"#.#"TABLE_NAME"# ?</label>
+        </prompt>
+        <prompt type="text/combo" required="true">  <!-- index: 1 -->
+            <label>Scope:</label>
+            <default><![CDATA[STATIC:TABLE]]></default>
+            <value><![CDATA[select 'TABLE' from dual union all
+select 'PARTITION' from dba_part_tables where owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#' union all
+select 'SUBPARTITION' from dba_part_tables where owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#' and subpartitioning_type <> 'NONE']]></value>
+        </prompt>
+        <prompt reload="true:1" type="text/combo" required="false"> <!-- index: 2 -->
+            <label>Partition / subpartition:</label>
+            <value><![CDATA[select pname from
+(select partition_name as pname, partition_position as ppos, null as sppos
+from dba_tab_partitions
+where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#' and :1 = 'PARTITION'
+union all
+select a.subpartition_name as pname, b.partition_position as ppos, a.subpartition_position as sppos
+from dba_tab_subpartitions a, dba_tab_partitions b
+where b.table_owner = q'#"OWNER"#' and b.table_name = q'#"TABLE_NAME"#' and :1 = 'SUBPARTITION'
+  and a.table_owner = b.table_owner and a.table_name = b.table_name and a.partition_name = b.partition_name
+)
+order by ppos, sppos, pname]]></value>
+        </prompt>
+        <prompt reload="true:1" type="text/combo" required="true">  <!-- index: 3 -->
+            <label>Granularity:</label>
+            <default><![CDATA[select decode(:1, 'PARTITION', 'PARTITION', 'SUBPARTITION', 'SUBPARTITION', 'AUTO') from dual]]></default>
+            <value><![CDATA[select 'AUTO' from dual union all
+select 'GLOBAL' from dual where '#PARTITIONED#' = 'YES' union all
+select 'GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
+select 'APPROX_GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
+select 'PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
+select 'SUBPARTITION' from dual where '#PARTITIONED#' = 'YES']]></value>
+        </prompt>
+        <prompt type="radio" required="true">   <!-- index: 4 -->
+            <label>Degree:</label>
+            <default><![CDATA[STATIC:1]]></default>
+            <value><![CDATA[STATIC:1:2:4:8:16]]></value>
+        </prompt>
+        <prompt type="check">                   <!-- index: 5 -->
+            <label>Invalidate cursors:</label>
+            <default>Y</default>
+            <value>Y</value>
+        </prompt>
+        <prompt type="check">                   <!-- index: 6 -->
+            <label>Cascade:</label>
+            <default>Y</default>
+            <value>Y</value>
+        </prompt>
+        <sql><![CDATA[begin
+    dbms_stats.gather_table_stats(
+        ownname       => q'#"OWNER"#'
+      , tabname       => q'#"TABLE_NAME"#'
+      , partname      => q'#"2"#'
+      , granularity   => '#3#'
+      , degree        => #4#
+      , no_invalidate => (nvl('#5#', 'N') = 'N')
+      , cascade       => (nvl('#6#', 'N') = 'Y')
+    );
+end;]]></sql>
+        <confirmation>
+            <title>Statistics gathered</title>
+            <sql><![CDATA[select
+    to_char(max(last_analyzed), 'YYYY-MM-DD HH24:MI:SS')  as dte_last_analyzed
+  , lower(max(object_type)
+        keep (dense_rank first order by
+            last_analyzed desc nulls last,
+            decode(object_type, 'TABLE', 1, 'PARTITION', 2, 'SUBPARTITION', 3),
+            partition_position desc, subpartition_position desc))  as last_object_type
+  , max(decode(object_type, 'TABLE', table_name, 'PARTITION', partition_name, 'SUBPARTITION', subpartition_name))
+        keep (dense_rank first order by
+            last_analyzed desc nulls last,
+            decode(object_type, 'TABLE', 1, 'PARTITION', 2, 'SUBPARTITION', 3),
+            partition_position desc, subpartition_position desc)  as last_object_name
+from dba_tab_statistics
+where owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#']]></sql>
+            <prompt><![CDATA[Statistics on #"OWNER"#.#"TABLE_NAME"# gathered. Last analyzed: #0.LAST_OBJECT_NAME#
+(type: #0.LAST_OBJECT_TYPE#) on #0.DTE_LAST_ANALYZED#]]></prompt>
+        </confirmation>
+    </item>
+    <item reload="true" reloadparent="false" removeFromParent="false">
+        <title>Gather Stats in Job...</title>
+        <help><![CDATA[This will start a DBMS_SCHEDULER job for gathering statistics on the specified table.]]></help>
+        <prompt type="confirm">
+            <label>Confirm stats job for #"OWNER"#.#"TABLE_NAME"# ?</label>
+        </prompt>
+        <prompt type="text/combo" required="true">  <!-- index: 1 -->
+            <label>Scope:</label>
+            <default><![CDATA[STATIC:TABLE]]></default>
+            <value><![CDATA[select 'TABLE' from dual union all
+select 'PARTITION' from dba_part_tables where owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#' union all
+select 'SUBPARTITION' from dba_part_tables where owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#' and subpartitioning_type <> 'NONE']]></value>
+        </prompt>
+        <prompt reload="true:1" type="text/combo" required="false"> <!-- index: 2 -->
+            <label>Partition / subpartition:</label>
+            <value><![CDATA[select pname from
+(select partition_name as pname, partition_position as ppos, null as sppos
+from dba_tab_partitions
+where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#' and :1 = 'PARTITION'
+union all
+select a.subpartition_name as pname, b.partition_position as ppos, a.subpartition_position as sppos
+from dba_tab_subpartitions a, dba_tab_partitions b
+where b.table_owner = q'#"OWNER"#' and b.table_name = q'#"TABLE_NAME"#' and :1 = 'SUBPARTITION'
+  and a.table_owner = b.table_owner and a.table_name = b.table_name and a.partition_name = b.partition_name
+)
+order by ppos, sppos, pname]]></value>
+        </prompt>
+        <prompt reload="true:1" type="text/combo" required="true">  <!-- index: 3 -->
+            <label>Granularity:</label>
+            <default><![CDATA[select decode(:1, 'PARTITION', 'PARTITION', 'SUBPARTITION', 'SUBPARTITION', 'AUTO') from dual]]></default>
+            <value><![CDATA[select 'AUTO' from dual union all
+select 'GLOBAL' from dual where '#PARTITIONED#' = 'YES' union all
+select 'GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
+select 'APPROX_GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
+select 'PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
+select 'SUBPARTITION' from dual where '#PARTITIONED#' = 'YES']]></value>
+        </prompt>
+        <prompt type="radio" required="true">   <!-- index: 4 -->
+            <label>Degree:</label>
+            <default><![CDATA[STATIC:1]]></default>
+            <value><![CDATA[STATIC:1:2:4:8:16]]></value>
+        </prompt>
+        <prompt type="check">                   <!-- index: 5 -->
+            <label>Invalidate cursors:</label>
+            <default>Y</default>
+            <value>Y</value>
+        </prompt>
+        <prompt type="check">                   <!-- index: 6 -->
+            <label>Cascade:</label>
+            <default>Y</default>
+            <value>Y</value>
+        </prompt>
+        <prompt type="text/combo">              <!-- index: 7 -->
+            <label>Job Class:</label>
+            <default><![CDATA[STATIC:DEFAULT_JOB_CLASS]]></default>
+            <value><![CDATA[select job_class_name from dba_scheduler_job_classes
+ where not regexp_like(job_class_name, '^(ORA\$)')
+   and job_class_name not in ('SCHED$_LOG_ON_ERRORS_CLASS', 'XMLDB_NFS_JOBCLASS', 'DBMS_JOB$', 'AQ$_PROPAGATION_JOB_CLASS')
+ order by job_class_name]]></value>
+        </prompt>
+        <sql><![CDATA[declare
+    l_job_name user_scheduler_jobs.job_name%type :=
+            dbms_scheduler.generate_job_name('"sqldev_stats_$"');
+begin
+    dbms_scheduler.create_job(
+        job_name   => '#"OWNER"#."' || l_job_name || '"'
+      , job_type   => 'PLSQL_BLOCK'
+      , enabled    => false
+      , comments   => 'Statistics gathering job on #"OWNER"#.#"TABLE_NAME"#'
+      , job_class  => q'#"7"#'
+      , job_action => q'{begin
+            dbms_stats.gather_table_stats(
+                ownname       => q'#"OWNER"#'
+              , tabname       => q'#"TABLE_NAME"#'
+              , partname      => q'#"2"#'
+              , granularity   => '#3#'
+              , degree        => #4#
+              , no_invalidate => (nvl('#5#', 'N') = 'N')
+              , cascade       => (nvl('#6#', 'N') = 'Y')
+            );
+        end;}'
+    );
+    dbms_scheduler.set_attribute(
+        name   => '#"OWNER"#."' || l_job_name || '"'
+      , attribute => 'logging_level'
+      , value    => dbms_scheduler.logging_full
+    );
+    dbms_scheduler.enable(
+        name   => '#"OWNER"#."' || l_job_name || '"'
+    );
+end;]]></sql>
+        <confirmation>
+            <title>Statistics job created</title>
+            <sql><![CDATA[with latest_enabled_job as (
+    select owner, job_name, log_date
+      from (select owner, job_name, log_date
+              from dba_scheduler_job_log
+             where owner = q'#"OWNER"#'
+               and regexp_like(job_name, '^sqldev_stats_\$\d+$')
+               and user_name = sys_context('USERENV', 'SESSION_USER')
+               and operation = 'ENABLE'
+               and log_date >= current_timestamp - numtodsinterval(5, 'SECOND')
+             union all
+            select null, null, null from dual
+             order by log_date desc nulls last
+           )
+     where rownum = 1
+),
+latest_job_info as (
+    select a.owner
+         , a.job_name
+         , case
+               when c.status is not null
+               then c.status || ', date: ' || to_char(c.log_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null and b.last_start_date is not null
+               then b.state || ', start date: ' || to_char(b.last_start_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null and b.next_run_date is not null
+               then b.state || ', run date: ' || to_char(b.next_run_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null
+               then b.state || ', enabled on: ' || to_char(a.log_date, 'YYYY-MM-DD HH24:MI:SS')
+               else 'ENABLED, date: ' || to_char(a.log_date, 'YYYY-MM-DD HH24:MI:SS')
+           end   as state_info
+      from latest_enabled_job a
+         , dba_scheduler_jobs b
+         , dba_scheduler_job_log c
+     where a.owner = b.owner (+)
+       and a.job_name = b.job_name (+)
+       and a.owner = c.owner (+)
+       and a.job_name = c.job_name (+)
+       and c.operation (+) = 'RUN'
+)
+select case
+           when job_name is null
+           then '*** Job information not found ***'
+           else 'Latest job: "' || owner || '"."' || job_name || '", status: ' || state_info
+       end  as job_state_info
+  from latest_job_info]]></sql>
+            <prompt><![CDATA[#0.JOB_STATE_INFO#]]></prompt>
+        </confirmation>
+    </item>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Table details]]></name>
 		<description><![CDATA[]]></description>

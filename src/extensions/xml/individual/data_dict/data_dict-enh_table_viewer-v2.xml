@@ -158,13 +158,13 @@ select 'SUBPARTITION' from dual where '#PARTITIONED#' = 'YES']]></value>
         </prompt>
         <prompt type="check">                   <!-- index: 5 -->
             <label>Invalidate cursors:</label>
-            <default>Y</default>
-            <value>Y</value>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
         </prompt>
         <prompt type="check">                   <!-- index: 6 -->
             <label>Cascade:</label>
-            <default>Y</default>
-            <value>Y</value>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
         </prompt>
         <sql><![CDATA[begin
     dbms_stats.gather_table_stats(
@@ -241,13 +241,13 @@ select 'SUBPARTITION' from dual where '#PARTITIONED#' = 'YES']]></value>
         </prompt>
         <prompt type="check">                   <!-- index: 5 -->
             <label>Invalidate cursors:</label>
-            <default>Y</default>
-            <value>Y</value>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
         </prompt>
         <prompt type="check">                   <!-- index: 6 -->
             <label>Cascade:</label>
-            <default>Y</default>
-            <value>Y</value>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
         </prompt>
         <prompt type="text/combo">              <!-- index: 7 -->
             <label>Job Class:</label>
@@ -336,6 +336,76 @@ select case
   from latest_job_info]]></sql>
             <prompt><![CDATA[#0.JOB_STATE_INFO#]]></prompt>
         </confirmation>
+    </item>
+    <item reload="true" reloadparent="false" removeFromParent="false">
+        <title>Rebuild Indexes...</title>
+        <help><![CDATA[This rebuilds one or more indexes of the specified table, using DBMS_INDEX_UTL.
+
+BEWARE: this may take a while!]]></help>
+        <prompt type="confirm">
+            <label>Confirm index rebuild for table #"OWNER"#.#"TABLE_NAME"# ?</label>
+        </prompt>
+        <prompt type="text/combo" required="false"> <!-- index: 1 -->
+            <label>Only this index:</label>
+            <value><![CDATA[select '"' || owner || '"."' || index_name || '"' from dba_indexes
+where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#'
+order by owner, index_name]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 2 -->
+            <label>Just unusable:</label>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="radio" required="true">       <!-- index: 3 -->
+            <label>Locality:</label>
+            <default><![CDATA[STATIC:ALL]]></default>
+            <value><![CDATA[STATIC:ALL:GLOBAL:LOCAL]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 4 -->
+            <label>Concurrent:</label>
+            <default><![CDATA[STATIC:N]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 5 -->
+            <label>Continue after error:</label>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="text/combo" required="true">  <!-- index: 6 -->
+            <label>Max slaves:</label>
+            <default><![CDATA[STATIC:1]]></default>
+            <value><![CDATA[STATIC:1:2:4:8:16:32]]></value>
+        </prompt>
+        <prompt type="text/combo" required="true">  <!-- index: 7 -->
+            <label>Forced degree:</label>
+            <default><![CDATA[STATIC:null]]></default>
+            <value><![CDATA[STATIC:null:1:2:4:8:16]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 8 -->
+            <label>Retry online:</label>
+            <default><![CDATA[STATIC:N]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="codearea" required="false">   <!-- index: 9 -->
+            <label>List of indexes:</label>
+            <default><![CDATA[select listagg('"' || owner || '"."' || index_name || '"', ', ')
+            within group (order by index_name)
+  from dba_indexes
+ where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#']]></default>
+        </prompt>
+        <sql><![CDATA[begin
+    dbms_index_utl.build_indexes (
+        list           => nvl( q'{#1#}'
+                             , q'{#9#}' )
+      , just_unusable  => (nvl('#2#', 'N') = 'Y')
+      , locality       => '#3#'
+      , concurrent     => (nvl('#4#', 'N') = 'Y')
+      , cont_after_err => (nvl('#5#', 'N') = 'Y')
+      , max_slaves     => #6#
+      , forced_degree  => #7#
+      , retry_online   => (nvl('#8#', 'N') = 'Y')
+    );
+end;]]></sql>
     </item>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Table details]]></name>

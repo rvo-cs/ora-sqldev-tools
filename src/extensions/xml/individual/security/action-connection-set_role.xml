@@ -9,23 +9,23 @@
             <default><![CDATA[STATIC:All]]></default>
             <value><![CDATA[STATIC:All:Specific:None:Default:All Except]]></value>
         </prompt>
-        <prompt reload="true:3" type="text/combo" required="false"> <!-- index: 2 -->
+        <prompt type="check" required="true">       <!-- index: 2 -->
+            <label>Show 1st-level roles only:</label>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt reload="true:2" type="text/combo" required="false"> <!-- index: 3 -->
             <label>This specific role:</label>
             <value><![CDATA[select granted_role as role
    from user_role_privs
   union
  select a.role
    from role_role_privs a
-  where nvl(:3, 'N') = 'N'
+  where nvl(:2, 'N') = 'N'
   start with a.role in (select b.granted_role 
                          from user_role_privs b)
 connect by prior a.granted_role = a.role
   order by role]]></value>
-        </prompt>
-        <prompt type="check" required="true">       <!-- index: 3 -->
-            <label>Show 1st-level roles only:</label>
-            <default><![CDATA[STATIC:Y]]></default>
-            <value><![CDATA[STATIC:Y]]></value>
         </prompt>
         <prompt type="codearea" required="true">    <!-- index: 4 -->
             <label>Default role(s):</label>
@@ -47,7 +47,7 @@ begin
     l_stmt := 'set role '
             || case
                 when '#1#' = 'All'          then 'all'
-                when '#1#' = 'Specific'     then '#"2"#'
+                when '#1#' = 'Specific'     then '#"3"#'
                 when '#1#' = 'None'         then 'none'
                 when '#1#' = 'Default'      then q'{
     #4#}'

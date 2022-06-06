@@ -114,7 +114,7 @@ order by
 	</query>
     <item reload="true" reloadparent="false" removeFromParent="false">
         <title>Gather Stats...</title>
-        <help><![CDATA[This gathers statistics on specified table.
+        <help><![CDATA[This gathers statistics on the specified table.
 
 BEWARE: this may take a while!]]></help>
         <prompt type="confirm">
@@ -144,12 +144,16 @@ order by ppos, sppos, pname]]></value>
         <prompt reload="true:1" type="text/combo" required="true">  <!-- index: 3 -->
             <label>Granularity:</label>
             <default><![CDATA[select decode(:1, 'PARTITION', 'PARTITION', 'SUBPARTITION', 'SUBPARTITION', 'AUTO') from dual]]></default>
-            <value><![CDATA[select 'AUTO' from dual union all
-select 'GLOBAL' from dual where '#PARTITIONED#' = 'YES' union all
-select 'GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
-select 'APPROX_GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
-select 'PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
-select 'SUBPARTITION' from dual where '#PARTITIONED#' = 'YES']]></value>
+            <value><![CDATA[select 'AUTO' from dual 
+ union all
+select regexp_substr(granularity_list, '([^,]+)', 1, level)
+  from (select 'ALL,GLOBAL,GLOBAL AND PARTITION,APPROX_GLOBAL AND PARTITION,PARTITION'
+               || case when subpartitioning_type <> 'NONE' then ',SUBPARTITION' end  as granularity_list
+          from dba_part_tables
+         where owner = q'#"OWNER"#'
+           and table_name = q'#"TABLE_NAME"#'
+       )
+ connect by instr(granularity_list, ',', 1, level - 1) > 0]]></value>
         </prompt>
         <prompt type="radio" required="true">   <!-- index: 4 -->
             <label>Degree:</label>
@@ -227,12 +231,16 @@ order by ppos, sppos, pname]]></value>
         <prompt reload="true:1" type="text/combo" required="true">  <!-- index: 3 -->
             <label>Granularity:</label>
             <default><![CDATA[select decode(:1, 'PARTITION', 'PARTITION', 'SUBPARTITION', 'SUBPARTITION', 'AUTO') from dual]]></default>
-            <value><![CDATA[select 'AUTO' from dual union all
-select 'GLOBAL' from dual where '#PARTITIONED#' = 'YES' union all
-select 'GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
-select 'APPROX_GLOBAL AND PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
-select 'PARTITION' from dual where '#PARTITIONED#' = 'YES' union all
-select 'SUBPARTITION' from dual where '#PARTITIONED#' = 'YES']]></value>
+            <value><![CDATA[select 'AUTO' from dual 
+ union all
+select regexp_substr(granularity_list, '([^,]+)', 1, level)
+  from (select 'ALL,GLOBAL,GLOBAL AND PARTITION,APPROX_GLOBAL AND PARTITION,PARTITION'
+               || case when subpartitioning_type <> 'NONE' then ',SUBPARTITION' end  as granularity_list
+          from dba_part_tables
+         where owner = q'#"OWNER"#'
+           and table_name = q'#"TABLE_NAME"#'
+       )
+ connect by instr(granularity_list, ',', 1, level - 1) > 0]]></value>
         </prompt>
         <prompt type="radio" required="true">   <!-- index: 4 -->
             <label>Degree:</label>
@@ -265,7 +273,7 @@ begin
         job_name   => '#"OWNER"#."' || l_job_name || '"'
       , job_type   => 'PLSQL_BLOCK'
       , enabled    => false
-      , comments   => 'Statistics gathering job on #"OWNER"#.#"TABLE_NAME"#'
+      , comments   => q'{Statistics gathering job on #"OWNER"#.#"TABLE_NAME"#}'
       , job_class  => q'#"7"#'
       , job_action => q'{begin
             dbms_stats.gather_table_stats(
@@ -393,7 +401,9 @@ order by owner, index_name]]></value>
   from dba_indexes
  where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#']]></default>
         </prompt>
-        <sql><![CDATA[begin
+        <sql><![CDATA[declare
+    l_cnt_error pls_integer;
+begin
     dbms_index_utl.build_indexes (
         list           => nvl( q'{#1#}'
                              , q'{#9#}' )
@@ -404,8 +414,166 @@ order by owner, index_name]]></value>
       , max_slaves     => #6#
       , forced_degree  => #7#
       , retry_online   => (nvl('#8#', 'N') = 'Y')
+      , num_errors     => l_cnt_error
+    );
+    if l_cnt_error > 0 then
+        raise_application_error(-20000, 'Completed with ' || to_char(l_cnt_error)
+                || ' error' || case when l_cnt_error > 1 then 's' end
+                || '--see alert.log for details.');
+    end if;
+end;]]></sql>
+    </item>
+    <item reload="true" reloadparent="false" removeFromParent="false">
+        <title>Rebuild Indexes in Job...</title>
+        <help><![CDATA[This will start a DBMS_SCHEDULER job for rebuilding 1 or more indexes of the specified table.]]></help>
+        <prompt type="confirm">
+            <label>Confirm index rebuild job for #"OWNER"#.#"TABLE_NAME"# ?</label>
+        </prompt>
+        <prompt type="text/combo" required="false"> <!-- index: 1 -->
+            <label>Only this index:</label>
+            <value><![CDATA[select '"' || owner || '"."' || index_name || '"' from dba_indexes
+where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#'
+order by owner, index_name]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 2 -->
+            <label>Just unusable:</label>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="radio" required="true">       <!-- index: 3 -->
+            <label>Locality:</label>
+            <default><![CDATA[STATIC:ALL]]></default>
+            <value><![CDATA[STATIC:ALL:GLOBAL:LOCAL]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 4 -->
+            <label>Concurrent:</label>
+            <default><![CDATA[STATIC:N]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 5 -->
+            <label>Continue after error:</label>
+            <default><![CDATA[STATIC:Y]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="text/combo" required="true">  <!-- index: 6 -->
+            <label>Max slaves:</label>
+            <default><![CDATA[STATIC:1]]></default>
+            <value><![CDATA[STATIC:1:2:4:8:16:32]]></value>
+        </prompt>
+        <prompt type="text/combo" required="true">  <!-- index: 7 -->
+            <label>Forced degree:</label>
+            <default><![CDATA[STATIC:null]]></default>
+            <value><![CDATA[STATIC:null:1:2:4:8:16]]></value>
+        </prompt>
+        <prompt type="check" required="true">       <!-- index: 8 -->
+            <label>Retry online:</label>
+            <default><![CDATA[STATIC:N]]></default>
+            <value><![CDATA[STATIC:Y]]></value>
+        </prompt>
+        <prompt type="codearea" required="false">   <!-- index: 9 -->
+            <label>List of indexes:</label>
+            <default><![CDATA[select listagg('"' || owner || '"."' || index_name || '"', ', ')
+            within group (order by index_name)
+  from dba_indexes
+ where table_owner = q'#"OWNER"#' and table_name = q'#"TABLE_NAME"#']]></default>
+        </prompt>
+        <prompt type="text/combo">                  <!-- index: 10 -->
+            <label>Job Class:</label>
+            <default><![CDATA[STATIC:DEFAULT_JOB_CLASS]]></default>
+            <value><![CDATA[select job_class_name from dba_scheduler_job_classes
+ where not regexp_like(job_class_name, '^(ORA\$)')
+   and job_class_name not in ('SCHED$_LOG_ON_ERRORS_CLASS', 'XMLDB_NFS_JOBCLASS', 'DBMS_JOB$', 'AQ$_PROPAGATION_JOB_CLASS')
+ order by job_class_name]]></value>
+        </prompt>
+        <sql><![CDATA[declare
+    l_job_name user_scheduler_jobs.job_name%type :=
+            dbms_scheduler.generate_job_name('"sqldev_idx_build_$"');
+begin
+    dbms_scheduler.create_job(
+        job_name   => '#"OWNER"#."' || l_job_name || '"'
+      , job_type   => 'PLSQL_BLOCK'
+      , enabled    => false
+      , comments   => 'Rebuild job for indexes of #"OWNER"#.#"TABLE_NAME"#'
+      , job_class  => q'#"10"#'
+      , job_action => q'{declare
+                l_cnt_error pls_integer;
+            begin
+                dbms_index_utl.build_indexes (
+                    list           => nvl( q'[#1#]'
+                                         , q'[#9#]' )
+                  , just_unusable  => (nvl('#2#', 'N') = 'Y')
+                  , locality       => '#3#'
+                  , concurrent     => (nvl('#4#', 'N') = 'Y')
+                  , cont_after_err => (nvl('#5#', 'N') = 'Y')
+                  , max_slaves     => #6#
+                  , forced_degree  => #7#
+                  , retry_online   => (nvl('#8#', 'N') = 'Y')
+                  , num_errors     => l_cnt_error
+                );
+                if l_cnt_error > 0 then
+                    raise_application_error(-20000, 'Completed with ' || to_char(l_cnt_error)
+                            || ' error' || case when l_cnt_error > 1 then 's' end
+                            || '--see alert.log for details.');
+                end if;
+            end;}'
+    );
+    dbms_scheduler.set_attribute(
+        name   => '#"OWNER"#."' || l_job_name || '"'
+      , attribute => 'logging_level'
+      , value    => dbms_scheduler.logging_full
+    );
+    dbms_scheduler.enable(
+        name   => '#"OWNER"#."' || l_job_name || '"'
     );
 end;]]></sql>
+        <confirmation>
+            <title>Index rebuild job created</title>
+            <sql><![CDATA[with latest_enabled_job as (
+    select owner, job_name, log_date
+      from (select owner, job_name, log_date
+              from dba_scheduler_job_log
+             where owner = q'#"OWNER"#'
+               and regexp_like(job_name, '^sqldev_idx_build_\$\d+$')
+               and user_name = sys_context('USERENV', 'SESSION_USER')
+               and operation = 'ENABLE'
+               and log_date >= current_timestamp - numtodsinterval(5, 'SECOND')
+             union all
+            select null, null, null from dual
+             order by log_date desc nulls last
+           )
+     where rownum = 1
+),
+latest_job_info as (
+    select a.owner
+         , a.job_name
+         , case
+               when c.status is not null
+               then c.status || ', date: ' || to_char(c.log_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null and b.last_start_date is not null
+               then b.state || ', start date: ' || to_char(b.last_start_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null and b.next_run_date is not null
+               then b.state || ', run date: ' || to_char(b.next_run_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null
+               then b.state || ', enabled on: ' || to_char(a.log_date, 'YYYY-MM-DD HH24:MI:SS')
+               else 'ENABLED, date: ' || to_char(a.log_date, 'YYYY-MM-DD HH24:MI:SS')
+           end   as state_info
+      from latest_enabled_job a
+         , dba_scheduler_jobs b
+         , dba_scheduler_job_log c
+     where a.owner = b.owner (+)
+       and a.job_name = b.job_name (+)
+       and a.owner = c.owner (+)
+       and a.job_name = c.job_name (+)
+       and c.operation (+) = 'RUN'
+)
+select case
+           when job_name is null
+           then '*** Job information not found ***'
+           else 'Latest job: "' || owner || '"."' || job_name || '", status: ' || state_info
+       end  as job_state_info
+  from latest_job_info]]></sql>
+            <prompt><![CDATA[#0.JOB_STATE_INFO#]]></prompt>
+        </confirmation>
     </item>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Table details]]></name>
@@ -1328,6 +1496,330 @@ order by
 			</binds>
 		</query>
         </queries>
+        <item reload="true" reloadparent="false" removeFromParent="false">
+            <title>Gather Index Stats...</title>
+            <help><![CDATA[This gathers statistics on the specified index.
+
+BEWARE: this may take a while!]]></help>
+            <prompt type="confirm">
+                <label>Confirm gather index stats?</label>
+            </prompt>
+            <prompt type="text/combo" required="true">  <!-- index: 1 -->
+                <label>Index:</label>
+                <default><![CDATA[select qualified_index_name
+  from ( select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"INDEX_NAME"#' <> '#'||'"INDEX_NAME"'||'#'
+            and owner = q'#"OWNER"#'    -- index_owner
+            and index_name = q'#"INDEX_NAME"#'
+          union all
+         select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"TABLE_NAME"#' <> '#'||'"TABLE_NAME"'||'#'
+            and table_owner = q'#"OWNER"#'    -- table_owner
+            and table_name = q'#"TABLE_NAME"#'
+          order by qualified_index_name
+       )
+ where rownum = 1]]></default>
+                <value><![CDATA[select qualified_index_name
+  from ( select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"INDEX_NAME"#' <> '#'||'"INDEX_NAME"'||'#'
+            and owner = q'#"OWNER"#'
+            and index_name = q'#"INDEX_NAME"#'
+          union all
+         select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"TABLE_NAME"#' <> '#'||'"TABLE_NAME"'||'#'
+            and table_owner = q'#"OWNER"#'
+            and table_name = q'#"TABLE_NAME"#'
+       )
+ order by qualified_index_name]]></value>
+            </prompt>
+            <prompt reload="true:1" type="text/combo" required="true">  <!-- index: 2 -->
+                <label>Scope:</label>
+                <default><![CDATA[STATIC:INDEX]]></default>
+                <value><![CDATA[select 'INDEX' from dual union all
+select 'PARTITION' from dba_part_indexes
+ where owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+   and index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+ union all
+select 'SUBPARTITION' from dba_part_indexes
+ where owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+   and index_name =  regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+   and subpartitioning_type <> 'NONE']]></value>
+            </prompt>
+            <prompt reload="true:1,2" type="text/combo" required="false"> <!-- index: 3 -->
+                <label>Partition / subpartition:</label>
+                <value><![CDATA[select pname from
+(select partition_name as pname, partition_position as ppos, null as sppos
+   from dba_ind_partitions
+  where index_owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+    and index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+    and :2 = 'PARTITION'
+  union all
+ select a.subpartition_name as pname, b.partition_position as ppos, a.subpartition_position as sppos
+   from dba_ind_subpartitions a, dba_ind_partitions b
+  where b.index_owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+    and b.index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+    and :2 = 'SUBPARTITION'
+    and a.index_owner = b.index_owner and a.index_name = b.index_name and a.partition_name = b.partition_name
+)
+order by ppos, sppos, pname]]></value>
+            </prompt>
+            <prompt reload="true:1,2" type="text/combo" required="true">  <!-- index: 4 -->
+                <label>Granularity:</label>
+                <default><![CDATA[select decode(:2, 'PARTITION', 'PARTITION', 'SUBPARTITION', 'SUBPARTITION', 'AUTO') from dual]]></default>
+                <value><![CDATA[select 'AUTO' from dual 
+ union all
+select regexp_substr(granularity_list, '([^,]+)', 1, level)
+  from (select 'ALL,GLOBAL,GLOBAL AND PARTITION,PARTITION'
+               || case when subpartitioning_type <> 'NONE' then ',SUBPARTITION' end  as granularity_list
+          from dba_part_indexes
+         where owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+           and index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+       )
+ connect by instr(granularity_list, ',', 1, level - 1) > 0]]></value>
+            </prompt>
+            <prompt type="radio" required="true">   <!-- index: 5 -->
+                <label>Degree:</label>
+                <default><![CDATA[STATIC:1]]></default>
+                <value><![CDATA[STATIC:1:2:4:8:16]]></value>
+            </prompt>
+            <prompt type="check">                   <!-- index: 6 -->
+                <label>Invalidate cursors:</label>
+                <default><![CDATA[STATIC:Y]]></default>
+                <value><![CDATA[STATIC:Y]]></value>
+            </prompt>
+            <sql><![CDATA[begin
+    dbms_stats.gather_index_stats(
+        ownname       => regexp_substr(q'#"1"#', '"([^"]*)"', 1, 1, null, 1)
+      , indname       => regexp_substr(q'#"1"#', '"([^"]*)"', 1, 2, null, 1)
+      , partname      => q'#"3"#'
+      , granularity   => '#4#'
+      , degree        => #5#
+      , no_invalidate => (nvl('#6#', 'N') = 'N')
+    );
+end;]]></sql>
+            <confirmation>
+                <title>Statistics gathered</title>
+                <sql><![CDATA[select
+      to_char(max(last_analyzed), 'YYYY-MM-DD HH24:MI:SS')  as dte_last_analyzed
+    , lower(max(object_type)
+          keep (dense_rank first order by
+              last_analyzed desc nulls last,
+              decode(object_type, 'INDEX', 1, 'PARTITION', 2, 'SUBPARTITION', 3),
+              partition_position desc, subpartition_position desc))  as last_object_type
+    , max(decode(object_type, 'INDEX', index_name, 'PARTITION', partition_name, 'SUBPARTITION', subpartition_name))
+          keep (dense_rank first order by
+              last_analyzed desc nulls last,
+              decode(object_type, 'INDEX', 1, 'PARTITION', 2, 'SUBPARTITION', 3),
+              partition_position desc, subpartition_position desc)  as last_object_name
+ from dba_ind_statistics
+where ( q'#"INDEX_NAME"#' <> '#'||'"INDEX_NAME"'||'#'
+        and owner = q'#"OWNER"#'    -- index_owner
+        and index_name = q'#"INDEX_NAME"#'
+      )
+   or ( q'#"TABLE_NAME"#' <> '#'||'"TABLE_NAME"'||'#'
+        and table_owner = q'#"OWNER"#'    -- table_owner
+        and table_name = q'#"TABLE_NAME"#'
+      )]]></sql>
+                <prompt><![CDATA[Statistics on #1# gathered. Last analyzed: #0.LAST_OBJECT_NAME#
+(type: #0.LAST_OBJECT_TYPE#) on #0.DTE_LAST_ANALYZED#]]></prompt>
+            </confirmation>
+        </item>
+        <item reload="true" reloadparent="false" removeFromParent="false">
+            <title>Gather Index Stats in Job...</title>
+            <help><![CDATA[This will start a DBMS_SCHEDULER job for gathering statistics on the specified index.]]></help>
+            <prompt type="confirm">
+                <label>Confirm create index stats job?</label>
+            </prompt>
+            <prompt type="text/combo" required="true">  <!-- index: 1 -->
+                <label>Index:</label>
+                <default><![CDATA[select qualified_index_name
+  from ( select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"INDEX_NAME"#' <> '#'||'"INDEX_NAME"'||'#'
+            and owner = q'#"OWNER"#'    -- index_owner
+            and index_name = q'#"INDEX_NAME"#'
+          union all
+         select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"TABLE_NAME"#' <> '#'||'"TABLE_NAME"'||'#'
+            and table_owner = q'#"OWNER"#'    -- table_owner
+            and table_name = q'#"TABLE_NAME"#'
+          order by qualified_index_name
+       )
+ where rownum = 1]]></default>
+                <value><![CDATA[select qualified_index_name
+  from ( select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"INDEX_NAME"#' <> '#'||'"INDEX_NAME"'||'#'
+            and owner = q'#"OWNER"#'
+            and index_name = q'#"INDEX_NAME"#'
+          union all
+         select '"' || owner || '"."' || index_name || '"'  as qualified_index_name
+           from dba_indexes
+          where q'#"TABLE_NAME"#' <> '#'||'"TABLE_NAME"'||'#'
+            and table_owner = q'#"OWNER"#'
+            and table_name = q'#"TABLE_NAME"#'
+       )
+ order by qualified_index_name]]></value>
+            </prompt>
+            <prompt reload="true:1" type="text/combo" required="true">  <!-- index: 2 -->
+                <label>Scope:</label>
+                <default><![CDATA[STATIC:INDEX]]></default>
+                <value><![CDATA[select 'INDEX' from dual union all
+select 'PARTITION' from dba_part_indexes
+ where owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+   and index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+ union all
+select 'SUBPARTITION' from dba_part_indexes
+ where owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+   and index_name =  regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+   and subpartitioning_type <> 'NONE']]></value>
+        </prompt>
+            <prompt reload="true:1,2" type="text/combo" required="false"> <!-- index: 3 -->
+                <label>Partition / subpartition:</label>
+                <value><![CDATA[select pname from
+(select partition_name as pname, partition_position as ppos, null as sppos
+   from dba_ind_partitions
+  where index_owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+    and index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+    and :2 = 'PARTITION'
+  union all
+ select a.subpartition_name as pname, b.partition_position as ppos, a.subpartition_position as sppos
+   from dba_ind_subpartitions a, dba_ind_partitions b
+  where b.index_owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+    and b.index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+    and :2 = 'SUBPARTITION'
+    and a.index_owner = b.index_owner and a.index_name = b.index_name and a.partition_name = b.partition_name
+)
+order by ppos, sppos, pname]]></value>
+            </prompt>
+            <prompt reload="true:1,2" type="text/combo" required="true">  <!-- index: 4 -->
+                <label>Granularity:</label>
+                <default><![CDATA[select decode(:2, 'PARTITION', 'PARTITION', 'SUBPARTITION', 'SUBPARTITION', 'AUTO') from dual]]></default>
+                <value><![CDATA[select 'AUTO' from dual 
+ union all
+select regexp_substr(granularity_list, '([^,]+)', 1, level)
+  from (select 'ALL,GLOBAL,GLOBAL AND PARTITION,PARTITION'
+               || case when subpartitioning_type <> 'NONE' then ',SUBPARTITION' end  as granularity_list
+          from dba_part_indexes
+         where owner = regexp_substr(:1, '"([^"]*)"', 1, 1, null, 1)
+           and index_name = regexp_substr(:1, '"([^"]*)"', 1, 2, null, 1)
+       )
+ connect by instr(granularity_list, ',', 1, level - 1) > 0]]></value>
+            </prompt>
+            <prompt type="radio" required="true">   <!-- index: 5 -->
+                <label>Degree:</label>
+                <default><![CDATA[STATIC:1]]></default>
+                <value><![CDATA[STATIC:1:2:4:8:16]]></value>
+            </prompt>
+            <prompt type="check">                   <!-- index: 6 -->
+                <label>Invalidate cursors:</label>
+                <default><![CDATA[STATIC:Y]]></default>
+                <value><![CDATA[STATIC:Y]]></value>
+            </prompt>
+            <prompt type="text/combo">              <!-- index: 7 -->
+                <label>Job Class:</label>
+                <default><![CDATA[STATIC:DEFAULT_JOB_CLASS]]></default>
+                <value><![CDATA[select job_class_name from dba_scheduler_job_classes
+ where not regexp_like(job_class_name, '^(ORA\$)')
+   and job_class_name not in ('SCHED$_LOG_ON_ERRORS_CLASS', 'XMLDB_NFS_JOBCLASS', 'DBMS_JOB$', 'AQ$_PROPAGATION_JOB_CLASS')
+ order by job_class_name]]></value>
+            </prompt>
+            <sql><![CDATA[declare
+    l_qual_index_name  varchar2(300);
+    l_index_owner      varchar2(130);
+    l_index_name       varchar2(130);
+    l_job_name         user_scheduler_jobs.job_name %type;
+
+    function as_vc2_lit (p_str in varchar2) return varchar2
+    is begin
+        return '''' || regexp_replace(p_str, '''', q'{''}') || '''';
+    end as_vc2_lit;
+begin
+    l_qual_index_name := q'#"1"#';
+    l_job_name        := dbms_scheduler.generate_job_name('"sqldev_idx_stats_$"');
+    l_index_owner     := regexp_substr(l_qual_index_name, '"([^"]*)"', 1, 1, null, 1);
+    l_index_name      := regexp_substr(l_qual_index_name, '"([^"]*)"', 1, 2, null, 1);
+
+    dbms_scheduler.create_job(
+        job_name   => '"' || l_index_owner || '"."' || l_job_name || '"'
+      , job_type   => 'PLSQL_BLOCK'
+      , enabled    => false
+      , comments   => 'Statistics gathering job on ' || l_qual_index_name
+      , job_class  => q'#"7"#'
+      , job_action => q'{begin
+            dbms_stats.gather_index_stats(
+                ownname       => }' || as_vc2_lit(l_index_owner) || q'{
+              , indname       => }' || as_vc2_lit(l_index_name)  || q'{
+              , partname      => q'#"3"#'
+              , granularity   => '#4#'
+              , degree        => #5#
+              , no_invalidate => (nvl('#6#', 'N') = 'N')
+            );
+        end;}'
+    );
+    dbms_scheduler.set_attribute(
+        name      => '"' || l_index_owner || '"."' || l_job_name || '"'
+      , attribute => 'logging_level'
+      , value     => dbms_scheduler.logging_full
+    );
+    dbms_scheduler.enable(
+        name  => '"' || l_index_owner || '"."' || l_job_name || '"'
+    );
+end;]]></sql>
+        <confirmation>
+            <title>Statistics job created</title>
+            <sql><![CDATA[with latest_enabled_job as (
+    select owner, job_name, log_date
+      from (select owner, job_name, log_date
+              from dba_scheduler_job_log
+             where owner = q'#"OWNER"#'
+               and regexp_like(job_name, '^sqldev_idx_stats_\$\d+$')
+               and user_name = sys_context('USERENV', 'SESSION_USER')
+               and operation = 'ENABLE'
+               and log_date >= current_timestamp - numtodsinterval(5, 'SECOND')
+             union all
+            select null, null, null from dual
+             order by log_date desc nulls last
+           )
+     where rownum = 1
+),
+latest_job_info as (
+    select a.owner
+         , a.job_name
+         , case
+               when c.status is not null
+               then c.status || ', date: ' || to_char(c.log_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null and b.last_start_date is not null
+               then b.state || ', start date: ' || to_char(b.last_start_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null and b.next_run_date is not null
+               then b.state || ', run date: ' || to_char(b.next_run_date, 'YYYY-MM-DD HH24:MI:SS')
+               when b.state is not null
+               then b.state || ', enabled on: ' || to_char(a.log_date, 'YYYY-MM-DD HH24:MI:SS')
+               else 'ENABLED, date: ' || to_char(a.log_date, 'YYYY-MM-DD HH24:MI:SS')
+           end   as state_info
+      from latest_enabled_job a
+         , dba_scheduler_jobs b
+         , dba_scheduler_job_log c
+     where a.owner = b.owner (+)
+       and a.job_name = b.job_name (+)
+       and a.owner = c.owner (+)
+       and a.job_name = c.job_name (+)
+       and c.operation (+) = 'RUN'
+)
+select case
+           when job_name is null
+           then '*** Job information not found ***'
+           else 'Latest job: "' || owner || '"."' || job_name || '", status: ' || state_info
+       end  as job_state_info
+  from latest_job_info]]></sql>
+            <prompt><![CDATA[#0.JOB_STATE_INFO#]]></prompt>
+        </confirmation>
+        </item>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Col usage]]></name>

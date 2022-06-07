@@ -17,7 +17,10 @@ declare
     procedure print_heading_comment(p_object_type in varchar2, p_filter_value in varchar2);
     procedure print_user_heading_comment (p_username in varchar2);
 
-    procedure print_ts_quotas(p_username in varchar2);
+    procedure print_ts_quotas (p_username in varchar2);
+    procedure print_rsrc_cons_group_privs (p_username in varchar2);
+
+    function as_vc2_literal (p_str in varchar2) return varchar2;
     
     
     procedure print_ddl_pieces(
@@ -32,6 +35,15 @@ declare
     begin
         l_mh := dbms_metadata.open(p_object_type);
         dbms_metadata.set_filter(l_mh, p_filter_name, p_filter_value);
+
+        if p_object_type = 'OBJECT_GRANT' then
+            /* 
+               Filter out privs on resource consumer groups: these are 
+               wrongly transformed into ordinary GRANTs, which they are not.
+               (Last tested on 19.9)
+             */  
+            dbms_metadata.set_filter(l_mh, 'CUSTOM_FILTER', 'KU$.BASE_OBJ.type_num <> 48');
+        end if;
 
         l_th := dbms_metadata.add_transform(l_mh, 'DDL');
         dbms_metadata.set_transform_param(l_th, 'SQLTERMINATOR', true);
@@ -52,6 +64,10 @@ declare
             for i in l_ddls.first .. l_ddls.last loop
                 g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
                 dbms_output.put_line(rtrim(l_ddls(i).ddltext, chr(10) || chr(32)));
+                
+                if p_object_type = 'RMGR_INITIAL_CONSUMER_GROUP' then
+                    dbms_output.put_line('/');
+                end if;
             end loop;
         end loop ddl_fetch_loop;
         
@@ -66,6 +82,9 @@ declare
 
         print_nl;
         print_ddl_pieces('PROXY', 'GRANTEE', p_username);
+        
+        print_nl;
+        print_rsrc_cons_group_privs(p_username);
         
         print_nl;
         print_ddl_pieces('RMGR_INITIAL_CONSUMER_GROUP', 'GRANTEE', p_username);
@@ -145,6 +164,36 @@ declare
     end print_ts_quotas;
 
 
+    procedure print_rsrc_cons_group_privs (p_username in varchar2)
+    is
+    begin
+        g_fetch_ddl_cnt := 0;
+
+        for c in (
+            select 
+                a.granted_group, a.grant_option 
+            from 
+                dba_rsrc_consumer_group_privs a
+            where
+                a.grantee = p_username
+        ) 
+        loop
+            if g_fetch_ddl_cnt = 0 then
+                print_heading_comment('RMGR_CONSUMER_GROUP_PRIV', p_username);
+            end if;
+            g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+            dbms_output.put_line(' BEGIN');
+            dbms_output.put_line('   DBMS_RESOURCE_MANAGER_PRIVS.GRANT_SWITCH_CONSUMER_GROUP(');
+            dbms_output.put_line('     grantee_name    => ' || as_vc2_literal(p_username) || ',');
+            dbms_output.put_line('     consumer_group  => ' || as_vc2_literal(c.granted_group) || ',');
+            dbms_output.put_line('     grant_option    => ' || case c.grant_option 
+                    when 'NO' then 'false' when 'YES' then 'true' end || ' );');
+            dbms_output.put_line(' END;');
+            dbms_output.put_line('/');
+        end loop;
+    end print_rsrc_cons_group_privs;
+
+
     procedure print_nl
     is begin
         if g_fetch_ddl_cnt > 0 then
@@ -170,13 +219,16 @@ declare
                 when 'TABLESPACE_QUOTA' then 'Tablespace quotas'
                 when 'RMGR_INITIAL_CONSUMER_GROUP'  
                                         then 'Initial resource consumer group'
+                when 'RMGR_CONSUMER_GROUP_PRIV'
+                                        then 'Resource consumer group privileges'
                 else null
             end;
         if l_head_cmt is not null then
             dbms_output.put_line(
                 case 
                     when p_object_type in ( 'ROLE_GRANT', 'DEFAULT_ROLE',
-                                            'RMGR_INITIAL_CONSUMER_GROUP' ) 
+                                            'RMGR_INITIAL_CONSUMER_GROUP',
+                                            'RMGR_CONSUMER_GROUP_PRIV' ) 
                     then ' '
                 end
                 || '/* ' || l_head_cmt || ' */'
@@ -205,6 +257,14 @@ declare
         dbms_output.put_line(' */');
         dbms_output.new_line;
     end print_user_heading_comment;
+    
+    
+    function as_vc2_literal (p_str in varchar2) 
+    return varchar2
+    is
+    begin
+        return '''' || regexp_replace(p_str, '''', q'{''}') || '''';
+    end as_vc2_literal;
     
 begin
     print_user_ddl('&&def_username_impl');

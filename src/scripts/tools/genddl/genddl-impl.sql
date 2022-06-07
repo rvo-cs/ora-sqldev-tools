@@ -778,6 +778,7 @@ declare
                 <xsl:template match="IND/INITRANS" priority="1" />
                 <xsl:template match="IND/MAXTRANS" priority="1" />
                 <xsl:template match="IND/STORAGE" priority="1" />
+                <xsl:template match="IND/DEFERRED_STG" priority="1" />
                 <xsl:template match="IND/PART_OBJ" priority="1" />
                 <xsl:template match="IND/FLAGS" priority="1" />
                 <xsl:template match="IND/TS_NAME" priority="1" />

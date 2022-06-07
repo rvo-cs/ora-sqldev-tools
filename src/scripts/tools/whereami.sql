@@ -5,6 +5,7 @@ set verify off
 define def_db_name          = ""
 define def_inst_name        = ""
 define def_inst_num         = ""
+define def_session_id       = ""
 define def_con_name         = ""
 define def_session_user     = ""
 define def_current_schema   = ""
@@ -14,6 +15,7 @@ define def_trace_file       = ""
 column db_name         noprint  new_value def_db_name
 column inst_name       noprint  new_value def_inst_name
 column inst_num        noprint  new_value def_inst_num
+column session_id      noprint  new_value def_session_id
 column con_name        noprint  new_value def_con_name
 column session_user    noprint  new_value def_session_user
 column current_schema  noprint  new_value def_current_schema
@@ -24,6 +26,7 @@ select
     sys_context('USERENV', 'DB_NAME')           as db_name,
     sys_context('USERENV', 'INSTANCE_NAME')     as inst_name,
     sys_context('USERENV', 'INSTANCE')          as inst_num,
+    sys_context('USERENV', 'SID')               as session_id,
     sys_context('USERENV', 'SESSION_USER')      as session_user,
     sys_context('USERENV', 'CURRENT_SCHEMA')    as current_schema,
     (select value
@@ -60,6 +63,7 @@ prompt
 prompt Database        : &&def_db_name
 prompt Instance        : &&def_inst_name
 prompt Inst#           : &&def_inst_num
+prompt Session id.     : &&def_session_id
 prompt PDB Name        : &&def_con_name
 prompt Session user    : &&def_session_user
 prompt Current schema  : &&def_current_schema
@@ -101,6 +105,7 @@ set verify on
 column db_name         clear
 column inst_name       clear
 column inst_num        clear
+column session_id      clear
 column con_name        clear
 column session_user    clear
 column current_schema  clear
@@ -110,6 +115,7 @@ column trace_file      clear
 undefine def_db_name
 undefine def_inst_name
 undefine def_inst_num
+undefine def_session_id
 undefine def_con_name
 undefine def_session_user
 undefine def_current_schema

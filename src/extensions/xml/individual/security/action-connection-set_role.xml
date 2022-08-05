@@ -1,13 +1,23 @@
 <items>
     <item type="CONNECTION" reloadparent="false" weight="10.0">
         <title>Set Role...</title>
+        <help><![CDATA[This action enables to set role(s) in the session.
+
+Role(s) to set:
+. ALL: enables all roles granted to the user
+. Specific: choose the role to enable from the list
+. None: disables all roles
+. Default: enables roles from the "Default role(s)" text area (edit if necessary)
+. ALL except: enables all roles except those in the "All except the following" text area (edit if necessary)
+]]>
+        </help>
         <prompt type="confirm">
             <label>Confirm set role?</label>
         </prompt>
         <prompt type="radio" required="true">       <!-- index: 1 -->
             <label>Role(s) to set:</label>
-            <default><![CDATA[STATIC:All]]></default>
-            <value><![CDATA[STATIC:All:Specific:None:Default:All Except]]></value>
+            <default><![CDATA[STATIC:ALL]]></default>
+            <value><![CDATA[STATIC:ALL:Specific:None:Default:ALL except]]></value>
         </prompt>
         <prompt type="check" required="true">       <!-- index: 2 -->
             <label>Show 1st-level roles only:</label>
@@ -46,12 +56,12 @@ connect by prior a.granted_role = a.role
 begin
     l_stmt := 'set role '
             || case
-                when '#1#' = 'All'          then 'all'
+                when '#1#' = 'ALL'          then 'all'
                 when '#1#' = 'Specific'     then '#"3"#'
                 when '#1#' = 'None'         then 'none'
                 when '#1#' = 'Default'      then q'{
     #4#}'
-                when '#1#' = 'All Except'   then q'{all except
+                when '#1#' = 'ALL except'   then q'{all except
     #5#}'
                end;
     execute immediate l_stmt;

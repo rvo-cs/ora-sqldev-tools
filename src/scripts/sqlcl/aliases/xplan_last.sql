@@ -2,8 +2,8 @@ alias nulldefaults group=rvo-cs xplan_last=q'<set pagesize 5000
 set trimout on
 set heading off
 set feedback off
-set linesize 250
-column plan_table_output format a250 wrapped
+set linesize 300
+column plan_table_output format a300 wrapped
 prompt __________________________________________________________________________________________
 select * from table(dbms_xplan.display_cursor(
         null, 

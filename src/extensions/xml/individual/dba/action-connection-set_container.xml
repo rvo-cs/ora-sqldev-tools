@@ -19,6 +19,7 @@ in order to switch to the specified container.]]>
                   union all
                   select 'CDB$ROOT' as name
                     from dual
+                   where sys_context('USERENV', 'CDB_NAME') is not null
                 ) 
           order by case
                      when name = 'CDB$ROOT' then
@@ -39,6 +40,7 @@ in order to switch to the specified container.]]>
          union all
          select 'CDB$ROOT' as name
            from dual
+          where sys_context('USERENV', 'CDB_NAME') is not null
        ) 
  order by case
             when name = 'CDB$ROOT' then
@@ -71,6 +73,7 @@ in order to switch to the specified container.]]>
            from dual
           )
        )
+ where sys_context('USERENV', 'CDB_NAME') is not null
  order by case
             when name = 'SYS$USERS' then
                1

@@ -1,0 +1,102 @@
+<items>
+    <item type="CONNECTION" reloadparent="false" weight="10.0" minversion="12.1">
+        <title>Set Container...</title>
+        <help><![CDATA[This runs the statement:
+
+alter session set container = "PDB_NAME"
+
+in order to switch to the specified container.]]>
+        </help>
+        <prompt type="confirm">                     <!-- index: 0 -->
+            <label>Confirm alter session?</label>
+        </prompt>
+        <prompt required="true">                    <!-- index: 1 -->
+            <label>To container:</label>
+            <default><![CDATA[select name 
+  from ( select name
+           from ( select name
+                    from v$pdbs
+                  union all
+                  select 'CDB$ROOT' as name
+                    from dual
+                ) 
+          order by case
+                     when name = 'CDB$ROOT' then
+                        0
+                     when name <> 'PDB$SEED' then
+                        1
+                     else
+                        2
+                  end asc,
+                name
+       )
+ where name <> sys_context('USERENV', 'CON_NAME')
+       and rownum = 1]]>
+            </default>
+            <value><![CDATA[select name
+  from ( select name
+           from v$pdbs
+         union all
+         select 'CDB$ROOT' as name
+           from dual
+       ) 
+ order by case
+            when name = 'CDB$ROOT' then
+               0
+            when name <> 'PDB$SEED' then
+               1
+            else
+               2
+         end asc,
+       name
+]]>
+            </value>
+        </prompt>
+        <prompt reload="true:1" required="false">   <!-- index: 2 -->
+            <label>Using service:</label>
+            <value><![CDATA[select case
+          when name is not null then
+             'service = "' || name || '"'
+       end  as service_clause
+  from ( select name
+           from v$services
+          where pdb is null
+             or pdb = :1
+          union 
+          ( 
+         select 'SYS$USERS' as name
+           from dual
+          union all
+         select null
+           from dual
+          )
+       )
+ order by case
+            when name = 'SYS$USERS' then
+               1
+            when name = 'SYS$BACKGROUND' then
+               2
+            else
+               0
+         end,
+       name nulls first
+]]>
+            </value>
+        </prompt>
+        <sql>
+            <![CDATA[alter session set container = #"1"#
+#2#
+]]>
+        </sql>
+        <confirmation>
+            <title>Alter session successful</title>
+            <sql><![CDATA[select sys_context('USERENV', 'CON_NAME')     as con_name,
+       sys_context('USERENV', 'SERVICE_NAME') as service_name
+  from dual
+]]>
+            </sql>
+            <prompt><![CDATA[Current container: #"0.CON_NAME"#,
+service: #"0.SERVICE_NAME"#]]></prompt>
+        </confirmation>
+    </item>
+</items>

@@ -28,14 +28,56 @@ define spool_filename
 
 column spool_directory noprint new_value spool_directory
 column spool_filename noprint new_value spool_filename
+column instance_name noprint new_value instance_name
 
 select NVL(:SPOOL_DIR, :DEFAULT_SPOOL_DIR) as spool_directory 
 from dual;
 
+select instance_name
+  from ( select instance_name, 
+                cast(startup_time as timestamp(3)) as startup_time
+           from gv$instance
+          where inst_id = nvl(:INST_ID, sys_context('USERENV', 'INSTANCE'))
+            and startup_time <=
+                   case
+                      when :DATETIME_TO is not null then
+                         to_date(:DATETIME_TO, 'YYYY-MM-DD HH24:MI:SS')
+                      else
+                         case
+                            when :DATETIME_FROM is null then
+                               sysdate
+                            else
+                               to_date(:DATETIME_FROM, 'YYYY-MM-DD HH24:MI:SS')
+                               + nvl(:TIME_SPAN_MINS, nvl(:DEFAULT_TIME_SPAN_MINS, 5)) / 1440
+                         end
+                   end
+          union all
+         select a.instance_name,
+                a.startup_time 
+           from dba_hist_database_instance a
+          where a.dbid = nvl(:DBID, (select dbid from v$database))
+            and a.instance_number = nvl(:INST_ID, sys_context('USERENV', 'INSTANCE'))
+            and a.startup_time <=
+                   case
+                      when :DATETIME_TO is not null then
+                         to_date(:DATETIME_TO, 'YYYY-MM-DD HH24:MI:SS')
+                      else
+                         case
+                            when :DATETIME_FROM is null then
+                               sysdate
+                            else
+                               to_date(:DATETIME_FROM, 'YYYY-MM-DD HH24:MI:SS')
+                               + nvl(:TIME_SPAN_MINS, nvl(:DEFAULT_TIME_SPAN_MINS, 5)) / 1440
+                         end
+                   end
+          order by startup_time desc nulls last
+       )
+ where rownum = 1;
+
 select NVL(:SPOOL_FILENAME, 
         'ASH' 
             || case when :DBID is not null then '-' || to_char(:DBID) end
-            || '-' || sys_context('USERENV', 'INSTANCE_NAME')
+            || '-' || nvl('&&instance_name', '####' || nvl(:INST_ID, sys_context('USERENV', 'INSTANCE')))
             || case when :SERVICE_HASH is not null then '-' || to_char(:SERVICE_HASH) end
             || '-' || to_char(
                         case when :DATETIME_FROM is not null 
@@ -142,13 +184,13 @@ from dual;]]></sql>
 			<bind id="DATETIME_FROM">
 				<prompt><![CDATA[From datetime?]]></prompt>
 				<tooltip><![CDATA[From datetime (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
-				<value><![CDATA[2022-01-02 21:34:00]]></value>
+				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="DATETIME_TO">
 				<prompt><![CDATA[To datetime?]]></prompt>
 				<tooltip><![CDATA[To datetime (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
-				<value><![CDATA[2022-01-02 21:50:00]]></value>
+				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="TIME_SPAN_MINS">

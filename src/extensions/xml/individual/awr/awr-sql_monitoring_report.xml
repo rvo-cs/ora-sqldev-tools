@@ -30,7 +30,8 @@ awr_sqlmonitor_summary as (
             and r.snap_id = s.snap_id
             and s.con_id = 0
             and s.dbid = nvl(:B_DBID, (select dbid from v$database))
-            and s.instance_number = nvl(:B_INST_ID, sys_context('USERENV', 'INSTANCE'))
+            and (:B_INST_ID = '*'
+                  or s.instance_number = nvl(:B_INST_ID, sys_context('USERENV', 'INSTANCE')))
             and s.begin_interval_time >= 
                     nvl(to_date(:B_FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate - 14) - 1/24
             and s.end_interval_time <=
@@ -146,6 +147,7 @@ where
     and d.user_id (+) = c.user_id
     and c.last_refresh_time >= nvl(to_date(:B_FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate - 14)
     and c.sql_exec_start <= nvl(to_date(:B_TO_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate)
+    and lnnvl(c.sql_id <> :B_SQL_ID)
     and (:B_SERVICE_LIKE is null or upper(c.service) like upper(:B_SERVICE_LIKE))
     and (:B_USERNAME_LIKE is null or upper(d.username) like upper(:B_USERNAME_LIKE))
     and (:B_USERNAME_RE is null or regexp_like(d.username, :B_USERNAME_RE, 'i'))
@@ -168,7 +170,7 @@ order by
 			</bind>
 			<bind id="B_INST_ID">
 				<prompt><![CDATA[Instance Id?]]></prompt>
-				<tooltip><![CDATA[Instance Id; null = current instance]]></tooltip>
+				<tooltip><![CDATA[Instance Id; null = current instance; * = all]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
@@ -181,6 +183,12 @@ order by
 			<bind id="B_TO_TIME">
 				<prompt><![CDATA[To time?]]></prompt>
 				<tooltip><![CDATA[To time (YYYY-MM-DD H24:MI:SS); default: sysdate]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SQL_ID">
+				<prompt><![CDATA[SQL id?]]></prompt>
+				<tooltip><![CDATA[Show reports for the specified SQL id only]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
@@ -205,7 +213,7 @@ order by
 			<bind id="B_USERNAME_NOT_LIKE">
 				<prompt><![CDATA[Username not like?]]></prompt>
 				<tooltip><![CDATA[Hide queries of matching users (LIKE pattern)]]></tooltip>
-				<value><![CDATA[NULL_VALUE]]></value>
+				<value><![CDATA[SYS]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="B_USERNAME_NOT_RE">

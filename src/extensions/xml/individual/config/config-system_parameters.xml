@@ -30,23 +30,33 @@
      , a.inst_id
   from gv$system_parameter a
      , gv$pdbs b
- where ((:INSTANCE_NUM is null and a.inst_id = sys_context('USERENV', 'INSTANCE'))
-        or :INSTANCE_NUM = '*'
-        or (regexp_like(:INSTANCE_NUM, '^\s*[0-9]+\s*$') and to_number(:INSTANCE_NUM) = a.inst_id)
-       )
+ where case
+          when :INSTANCE_NUM is null and a.inst_id = sys_context('USERENV', 'INSTANCE') then
+             'Y'
+          when :INSTANCE_NUM = '*' then
+             'Y'
+          when regexp_like(:INSTANCE_NUM, '^\s*[0-9]+\s*$')
+             and to_number(:INSTANCE_NUM) = a.inst_id
+          then
+             'Y'
+       end = 'Y'
    and (:PARAMETER_NAME is null or instr(lower(a.name), lower(:PARAMETER_NAME)) > 0)
    and substr(a.name, 1, 2) <> '__'
    and a.inst_id = b.inst_id (+)
    and a.con_id = b.con_id (+)
-   and (:PDB_NAME is null 
-        or :PDB_NAME = '*' 
-        or ( :PDB_NAME = '.' 
+   and case
+          when :PDB_NAME is null or :PDB_NAME = '*' then
+             'Y'
+          when :PDB_NAME = '.'
              and ( (sys_context('USERENV', 'CON_NAME') = 'CDB$ROOT' and b.name is null)
                    or sys_context('USERENV', 'CON_NAME') = b.name )
-           )
-        or (upper(:PDB_NAME) = 'CDB$ROOT' and b.name is null)
-        or upper(:PDB_NAME) = upper(b.name)
-       )
+          then
+             'Y'
+          when upper(:PDB_NAME) = 'CDB$ROOT' and b.name is null then
+             'Y'
+          when upper(:PDB_NAME) = upper(b.name) then
+             'Y'
+       end = 'Y'
  order by a.name
         , b.name nulls first 
         , a.inst_id]]></sql>

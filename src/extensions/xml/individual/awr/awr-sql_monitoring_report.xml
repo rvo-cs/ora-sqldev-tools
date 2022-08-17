@@ -31,7 +31,7 @@ awr_sqlmonitor_summary as (
             and s.con_id = 0
             and s.dbid = nvl(:B_DBID, (select dbid from v$database))
             and (:B_INST_ID = '*'
-                  or s.instance_number = nvl(:B_INST_ID, sys_context('USERENV', 'INSTANCE')))
+                  or s.instance_number = nvl(nullif(:B_INST_ID, '*'), sys_context('USERENV', 'INSTANCE')))
             and s.begin_interval_time >= 
                     nvl(to_date(:B_FROM_TIME, 'YYYY-MM-DD HH24:MI:SS'), sysdate - 14) - 1/24
             and s.end_interval_time <=

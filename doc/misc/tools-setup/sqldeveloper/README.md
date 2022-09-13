@@ -10,6 +10,9 @@ Add the following if necessary:
 # Force English language in UI
 AddVMOption -Duser.language=en
 
+#Directory for Java temporary files
+AddVMOption -Djava.io.tmpdir=E:\Home\xxxx\.java-temp
+
 # Work-around for spurious connection resets? 
 #AddVMOption -Doracle.net.disableOob=true
 
@@ -17,19 +20,24 @@ AddVMOption -Duser.language=en
 #AddVMOption -Dide.user.dir=C:\Users\xxxx\AppData\Local\SQL_Developer
 ```
 
-As of now (using SQL Developer 20.4) I only use the 1st of the above 3 properties.
+As of now (using SQL Developer 21.4) I only use the 1st and the 2nd of the above
+4 properties.
 
-Disabling out-of-band breaks in JDBC Thin could help in 20.2; not sure if
-that's still necessary in 20.4.
+Disabling out-of-band breaks in JDBC Thin could help in 20.2; not sure if that's
+useful anymore in recent releases.
 
-Similarly, switching from AppData\Roaming to AppData\Local was useful on sites using roaming
-profiles and small quotas. This seems out of fashion these days.
+Similarly, switching from AppData\Roaming to AppData\Local was very useful on sites
+using roaming profiles and small quotas (fortunately, that seems out of fashion 
+these days).
+
+Using a non-standard directory for Java temporary files (the default is simply `%TEMP%`)
+is not required, but makes it easier to understand how SQL Developer uses that directory.
 
 ### Heap space settings
 
 Should that be necessary, the properties for sizing the JVM heap space are in the following file:
 
-`%APPDATA%\sqldeveloper\20.4.0\product.conf`
+`%APPDATA%\sqldeveloper\21.4.3\product.conf`
 
 (with `APPDATA` = `C:\Users\xxxx\AppData\Roaming` usually.)
 
@@ -253,18 +261,33 @@ A default search path for scripts called using the `@file` syntax may be specifi
 [Database: Worksheet](#database-worksheet) Preferences tab. Multiple directories may be
 specified, separated by a semicolon (`;`) on Windows.
 
-Actually, the _complete_ search path is built by concatenating several directories:
+Actually, the complete search path is dynamic, and subject to subtle rules. 
 
-1. The "current" directory, as specified by the `CD` command (if used)
-2. The `%TEMP%` directory (on Windows) which acts as the _default_ directory
-3. Directories specified in Preferences
-4. Directories from `%SQLPATH%`, if that environment variable is set. 
+*  For new, unsaved SQL worksheets, the search path is built by concatenating several directories:
 
-SQLcl behaves similarly; both also mysteriously add a `.` entry to the search path,
-though not at the exact same position, and it doesn't seem to matter in searches.
+     1. The current working directory, as specified by the `CD` command (if used)
+     2. The `java.io.tmpdir` directory, which serves as the _initial_ current directory (\*)
+     3. Directories from the search path specified in Preferences
+     4. Directories from `%SQLPATH%`, if that environment variable is set. 
+
+*  Once the SQL worksheet is saved to disk, the `java.io.tmpdir` directory in position (ii)
+   above is replaced by the directory of the `.sql` file.
+
+The behaviour of SQLcl is similar, but simpler: there is no "search path from Preferences"
+(iii) to begin with, and the initial current directory (ii) is simply the OS working directory.
+(Of course, SQLcl does not have worksheets.)
+
+Both SQL Developer and SQLcl mysteriously add a `.` entry to the search path,
+though not at the same position; that entry doesn't seem to matter in searches.
 
 Use `show sqlpath` to display the current search path.
 
+(\*) Unfortunately the _script-generating-script_ pattern (`SPOOL temp.sql`, `CALL temp.sql`)
+appears not to work when the current directory is the same as `java.io.tmpdir`, because in that
+particular case the spool file is created in another directory (SQL Dev: `%APPDATA%\SQL Developer`,
+SQLcl: `%USERPROFILE%\.sqldeveloper`), so the `CALL` command cannot find it! :worried: 
+The solution is simple: just `CD` to another directory. This is the main reason for adding a `CD`
+command to SQL Developer's connection [startup script](login-scripts#the-sqldev-loginsql-file).
 
 ### Using the JDBC OCI/Thick driver
 

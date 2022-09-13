@@ -18,8 +18,8 @@ REM SQLcl can use that JDK, if you want it to. Otherwise, point
 REM JAVA_HOME to your preferred JDK.
 REM -------------------------------------------------------------
 
-SET JAVA_HOME=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-20.4.0.379.2205-x64\jdk\jre
-REM -- java.runtime.version=1.8.0_271-b09
+SET JAVA_HOME=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-22.2.1.234.1810-x64\jdk\jre
+REM -- java.version= 11.0.16.1
 
 REM =============================================================
 REM Set SQL_HOME folder
@@ -28,7 +28,7 @@ REM This is the root directory of the installed SQLcl product;
 REM e.g. %SQL_HOME%\bin\sql.exe is the included binary executable.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Win_7\Oracle\SQLcl\sqlcl\sqlcl-20.3.0.274.1916
+SET SQL_HOME=F:\Produits\Win_7\Oracle\SQLcl\sqlcl\sqlcl-22.2.1.201.1451
 
 REM =============================================================
 REM Set SQLPATH folder
@@ -79,6 +79,19 @@ SET STD_ARGS=%STD_ARGS% -Xms512m -Xmx1600m
 
 REM Set User language to English
 SET STD_ARGS=%STD_ARGS% -Duser.language=en
+
+REM Set java.io.tmpdir
+SET STD_ARGS=%STD_ARGS% -Djava.io.tmpdir=E:\Home\romain\.java-temp
+
+REM !!! ONLY IF USING THE JAVA 11 JDK !!!
+REM Inhibit Nashorn deprecation warning
+SET STD_ARGS=%STD_ARGS% -Dnashorn.args=--no-deprecation-warning
+
+REM Set logging configuration
+IF DEFINED LOGGING_CONFIG (
+    SET STD_ARGS=%STD_ARGS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
+)
+
 
 REM =============================================================
 REM All set, let's start SQLcl

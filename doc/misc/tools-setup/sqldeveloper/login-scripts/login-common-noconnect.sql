@@ -13,3 +13,6 @@ define tpt_dir = "E:\Home\romain\oracle\tpt-oracle"
 define rvocs_orasqldevtools_dir = "E:\Home\romain\projets\git-src\ora-sqldev-tools"
 
 @@login-common-aliases
+
+-- Must CD somewhere, otherwise the SPOOL temp.sql, CALL temp.sql pattern won't work
+cd E:\Home\romain\.sqldev-temp

@@ -37,5 +37,5 @@ REM SQLcl with jdbc:oci
 doskey sqlcl-oci=F:\Produits\Win_7\Oracle\SQLcl\sql+oci.cmd -oci $*
 
 REM SQL Developer
-doskey sqldev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-21.2.0.187.1842-x64\sqldeveloper.exe $*
-doskey sqldev-prev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-20.4.0.379.2205-x64\sqldeveloper.exe $*
+doskey sqldev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-22.2.1.234.1810-x64\sqldeveloper.exe $*
+doskey sqldev-prev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-21.4.3.063.0100-x64\sqldeveloper.exe $*

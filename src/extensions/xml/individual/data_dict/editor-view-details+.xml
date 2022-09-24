@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+	<display type="editor" style="Table" enable="true" 
+            objectType="VIEW">
+		<name><![CDATA[Details+]]></name>
+		<description><![CDATA[Same as the Details tabs, with enhancements]]></description>
+		<tooltip><![CDATA[Same as Details, with additional columns]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[vertical]]></TYPE>
+		</CustomValues>
+        <queries>
+            <query minversion="19.0">
+                <sql>
+                    <![CDATA[
+select v.owner,
+       v.view_name,
+       c.comments,
+       o.status,
+       o.object_id,
+       o.created,
+       o.last_ddl_time,
+       v.read_only,                 /* 11.1 and higher */
+       v.bequeath,                  /* 12.1 and higher */
+       v.has_sensitive_column,      /* 18.1 and higher */
+       v.text_length,
+       v.text,
+       v.text_vc,                   /* 12.1 and higher */
+       v.type_text_length,
+       v.type_text,
+       v.oid_text_length,
+       v.oid_text,
+       v.view_type_owner,
+       v.view_type,
+       v.superview_name,            /* 9.0 and higher */
+       v.editioning_view,           /* 11.1 and higher */
+       v.container_data,            /* 12.1 and higher */
+       v.containers_default,        /* 12.2 and higher */
+       v.container_map,             /* 12.2 and higher */
+       v.extended_data_link,        /* 12.2 and higher */
+       v.extended_data_link_map,    /* 12.2 and higher */
+       v.admit_null,                /* 19.1 and higher */
+       v.pdb_local_only,            /* 19.1 and higher */
+       v.default_collation,         /* 12.2 and higher */
+       o.duplicated,                /* 12.2 and higher */
+       o.sharded,                   /* 12.2 and higher */
+       o.editionable,               /* 12.1 and higher */
+       o.edition_name,              /* 11.1 and higher */
+       v.origin_con_id              /* 12.1 and higher */
+  from (
+          select object_id,
+                 owner,
+                 object_name,
+                 status,
+                 created,
+                 last_ddl_time,
+                 edition_name,          /* 11.1 and higher */
+                 editionable,           /* 12.1 and higher */
+                 duplicated,            /* 12.2 and higher */
+                 sharded                /* 12.2 and higher */
+            from sys.all_objects
+           where object_name = :OBJECT_NAME
+             and owner = :OBJECT_OWNER
+       ) o,
+       (
+          select owner,
+                 view_name,
+                 text_length,
+                 text,
+                 text_vc,                   /* 12.1 and higher */
+                 type_text_length,
+                 type_text,
+                 oid_text_length,
+                 oid_text,
+                 view_type_owner,
+                 view_type,
+                 superview_name,            /* 9.0 and higher */
+                 editioning_view,           /* 11.1 and higher */
+                 read_only,                 /* 11.1 and higher */
+                 container_data,            /* 12.1 and higher */
+                 bequeath,                  /* 12.1 and higher */
+                 origin_con_id,             /* 12.1 and higher */
+                 default_collation,         /* 12.2 and higher */
+                 containers_default,        /* 12.2 and higher */
+                 container_map,             /* 12.2 and higher */
+                 extended_data_link,        /* 12.2 and higher */
+                 extended_data_link_map,    /* 12.2 and higher */
+                 has_sensitive_column,      /* 18.1 and higher */
+                 admit_null,                /* 19.1 and higher */
+                 pdb_local_only             /* 19.1 and higher */
+            from sys.all_views
+           where owner = :OBJECT_OWNER
+             and view_name = :OBJECT_NAME
+       ) v,
+       (
+          select owner,
+                 table_name,
+                 comments
+            from sys.all_tab_comments
+           where owner = :OBJECT_OWNER
+             and table_name = :OBJECT_NAME
+             and table_type = 'VIEW'
+       ) c
+ where o.owner = v.owner
+   and v.view_name = o.object_name
+   and v.owner = c.owner (+)
+   and v.view_name = c.table_name (+)
+]]>
+                </sql>
+            </query>
+            <query minversion="18.0">
+                <sql>
+                    <![CDATA[
+select v.owner,
+       v.view_name,
+       c.comments,
+       o.status,
+       o.object_id,
+       o.created,
+       o.last_ddl_time,
+       v.read_only,                 /* 11.1 and higher */
+       v.bequeath,                  /* 12.1 and higher */
+       v.has_sensitive_column,      /* 18.1 and higher */
+       v.text_length,
+       v.text,
+       v.text_vc,                   /* 12.1 and higher */
+       v.type_text_length,
+       v.type_text,
+       v.oid_text_length,
+       v.oid_text,
+       v.view_type_owner,
+       v.view_type,
+       v.superview_name,            /* 9.0 and higher */
+       v.editioning_view,           /* 11.1 and higher */
+       v.container_data,            /* 12.1 and higher */
+       v.containers_default,        /* 12.2 and higher */
+       v.container_map,             /* 12.2 and higher */
+       v.extended_data_link,        /* 12.2 and higher */
+       v.extended_data_link_map,    /* 12.2 and higher */
+       v.default_collation,         /* 12.2 and higher */
+       o.duplicated,                /* 12.2 and higher */
+       o.sharded,                   /* 12.2 and higher */
+       o.editionable,               /* 12.1 and higher */
+       o.edition_name,              /* 11.1 and higher */
+       v.origin_con_id              /* 12.1 and higher */
+  from (
+          select object_id,
+                 owner,
+                 object_name,
+                 status,
+                 created,
+                 last_ddl_time,
+                 edition_name,          /* 11.1 and higher */
+                 editionable,           /* 12.1 and higher */
+                 duplicated,            /* 12.2 and higher */
+                 sharded                /* 12.2 and higher */
+            from sys.all_objects
+           where object_name = :OBJECT_NAME
+             and owner = :OBJECT_OWNER
+       ) o,
+       (
+          select owner,
+                 view_name,
+                 text_length,
+                 text,
+                 text_vc,                   /* 12.1 and higher */
+                 type_text_length,
+                 type_text,
+                 oid_text_length,
+                 oid_text,
+                 view_type_owner,
+                 view_type,
+                 superview_name,            /* 9.0 and higher */
+                 editioning_view,           /* 11.1 and higher */
+                 read_only,                 /* 11.1 and higher */
+                 container_data,            /* 12.1 and higher */
+                 bequeath,                  /* 12.1 and higher */
+                 origin_con_id,             /* 12.1 and higher */
+                 default_collation,         /* 12.2 and higher */
+                 containers_default,        /* 12.2 and higher */
+                 container_map,             /* 12.2 and higher */
+                 extended_data_link,        /* 12.2 and higher */
+                 extended_data_link_map,    /* 12.2 and higher */
+                 has_sensitive_column       /* 18.1 and higher */
+            from sys.all_views
+           where owner = :OBJECT_OWNER
+             and view_name = :OBJECT_NAME
+       ) v,
+       (
+          select owner,
+                 table_name,
+                 comments
+            from sys.all_tab_comments
+           where owner = :OBJECT_OWNER
+             and table_name = :OBJECT_NAME
+             and table_type = 'VIEW'
+       ) c
+ where o.owner = v.owner
+   and v.view_name = o.object_name
+   and v.owner = c.owner (+)
+   and v.view_name = c.table_name (+)
+]]>
+                </sql>
+            </query>
+            <query minversion="12.2">
+                <sql>
+                    <![CDATA[
+select v.owner,
+       v.view_name,
+       c.comments,
+       o.status,
+       o.object_id,
+       o.created,
+       o.last_ddl_time,
+       v.read_only,                 /* 11.1 and higher */
+       v.bequeath,                  /* 12.1 and higher */
+       v.text_length,
+       v.text,
+       v.text_vc,                   /* 12.1 and higher */
+       v.type_text_length,
+       v.type_text,
+       v.oid_text_length,
+       v.oid_text,
+       v.view_type_owner,
+       v.view_type,
+       v.superview_name,            /* 9.0 and higher */
+       v.editioning_view,           /* 11.1 and higher */
+       v.container_data,            /* 12.1 and higher */
+       v.containers_default,        /* 12.2 and higher */
+       v.container_map,             /* 12.2 and higher */
+       v.extended_data_link,        /* 12.2 and higher */
+       v.extended_data_link_map,    /* 12.2 and higher */
+       v.default_collation,         /* 12.2 and higher */
+       o.duplicated,                /* 12.2 and higher */
+       o.sharded,                   /* 12.2 and higher */
+       o.editionable,               /* 12.1 and higher */
+       o.edition_name,              /* 11.1 and higher */
+       v.origin_con_id              /* 12.1 and higher */
+  from (
+          select object_id,
+                 owner,
+                 object_name,
+                 status,
+                 created,
+                 last_ddl_time,
+                 edition_name,          /* 11.1 and higher */
+                 editionable,           /* 12.1 and higher */
+                 duplicated,            /* 12.2 and higher */
+                 sharded                /* 12.2 and higher */
+            from sys.all_objects
+           where object_name = :OBJECT_NAME
+             and owner = :OBJECT_OWNER
+       ) o,
+       (
+          select owner,
+                 view_name,
+                 text_length,
+                 text,
+                 text_vc,                   /* 12.1 and higher */
+                 type_text_length,
+                 type_text,
+                 oid_text_length,
+                 oid_text,
+                 view_type_owner,
+                 view_type,
+                 superview_name,            /* 9.0 and higher */
+                 editioning_view,           /* 11.1 and higher */
+                 read_only,                 /* 11.1 and higher */
+                 container_data,            /* 12.1 and higher */
+                 bequeath,                  /* 12.1 and higher */
+                 origin_con_id,             /* 12.1 and higher */
+                 default_collation,         /* 12.2 and higher */
+                 containers_default,        /* 12.2 and higher */
+                 container_map,             /* 12.2 and higher */
+                 extended_data_link,        /* 12.2 and higher */
+                 extended_data_link_map     /* 12.2 and higher */
+            from sys.all_views
+           where owner = :OBJECT_OWNER
+             and view_name = :OBJECT_NAME
+       ) v,
+       (
+          select owner,
+                 table_name,
+                 comments
+            from sys.all_tab_comments
+           where owner = :OBJECT_OWNER
+             and table_name = :OBJECT_NAME
+             and table_type = 'VIEW'
+       ) c
+ where o.owner = v.owner
+   and v.view_name = o.object_name
+   and v.owner = c.owner (+)
+   and v.view_name = c.table_name (+)
+]]>
+                </sql>
+            </query>
+            <query minversion="12.1">
+                <sql>
+                    <![CDATA[
+select v.owner,
+       v.view_name,
+       c.comments,
+       o.status,
+       o.object_id,
+       o.created,
+       o.last_ddl_time,
+       v.read_only,                 /* 11.1 and higher */
+       v.bequeath,                  /* 12.1 and higher */
+       v.text_length,
+       v.text,
+       v.text_vc,                   /* 12.1 and higher */
+       v.type_text_length,
+       v.type_text,
+       v.oid_text_length,
+       v.oid_text,
+       v.view_type_owner,
+       v.view_type,
+       v.superview_name,            /* 9.0 and higher */
+       v.editioning_view,           /* 11.1 and higher */
+       v.container_data,            /* 12.1 and higher */
+       o.editionable,               /* 12.1 and higher */
+       o.edition_name,              /* 11.1 and higher */
+       v.origin_con_id              /* 12.1 and higher */
+  from (
+          select object_id,
+                 owner,
+                 object_name,
+                 status,
+                 created,
+                 last_ddl_time,
+                 edition_name,          /* 11.1 and higher */
+                 editionable            /* 12.1 and higher */
+            from sys.all_objects
+           where object_name = :OBJECT_NAME
+             and owner = :OBJECT_OWNER
+       ) o,
+       (
+          select owner,
+                 view_name,
+                 text_length,
+                 text,
+                 text_vc,                   /* 12.1 and higher */
+                 type_text_length,
+                 type_text,
+                 oid_text_length,
+                 oid_text,
+                 view_type_owner,
+                 view_type,
+                 superview_name,            /* 9.0 and higher */
+                 editioning_view,           /* 11.1 and higher */
+                 read_only,                 /* 11.1 and higher */
+                 container_data,            /* 12.1 and higher */
+                 bequeath,                  /* 12.1 and higher */
+                 origin_con_id              /* 12.1 and higher */
+            from sys.all_views
+           where owner = :OBJECT_OWNER
+             and view_name = :OBJECT_NAME
+       ) v,
+       (
+          select owner,
+                 table_name,
+                 comments
+            from sys.all_tab_comments
+           where owner = :OBJECT_OWNER
+             and table_name = :OBJECT_NAME
+             and table_type = 'VIEW'
+       ) c
+ where o.owner = v.owner
+   and v.view_name = o.object_name
+   and v.owner = c.owner (+)
+   and v.view_name = c.table_name (+)
+]]>
+                </sql>
+            </query>
+            <query minversion="11.1">
+                <sql>
+                    <![CDATA[
+select v.owner,
+       v.view_name,
+       c.comments,
+       o.status,
+       o.object_id,
+       o.created,
+       o.last_ddl_time,
+       v.read_only,                 /* 11.1 and higher */
+       v.text_length,
+       v.text,
+       v.type_text_length,
+       v.type_text,
+       v.oid_text_length,
+       v.oid_text,
+       v.view_type_owner,
+       v.view_type,
+       v.superview_name,            /* 9.0 and higher */
+       v.editioning_view,           /* 11.1 and higher */
+       o.edition_name               /* 11.1 and higher */
+  from (
+          select object_id,
+                 owner,
+                 object_name,
+                 status,
+                 created,
+                 last_ddl_time,
+                 edition_name           /* 11.1 and higher */
+            from sys.all_objects
+           where object_name = :OBJECT_NAME
+             and owner = :OBJECT_OWNER
+       ) o,
+       (
+          select owner,
+                 view_name,
+                 text_length,
+                 text,
+                 type_text_length,
+                 type_text,
+                 oid_text_length,
+                 oid_text,
+                 view_type_owner,
+                 view_type,
+                 superview_name,            /* 9.0 and higher */
+                 editioning_view,           /* 11.1 and higher */
+                 read_only                  /* 11.1 and higher */
+            from sys.all_views
+           where owner = :OBJECT_OWNER
+             and view_name = :OBJECT_NAME
+       ) v,
+       (
+          select owner,
+                 table_name,
+                 comments
+            from sys.all_tab_comments
+           where owner = :OBJECT_OWNER
+             and table_name = :OBJECT_NAME
+             and table_type = 'VIEW'
+       ) c
+ where o.owner = v.owner
+   and v.view_name = o.object_name
+   and v.owner = c.owner (+)
+   and v.view_name = c.table_name (+)
+]]>
+                </sql>
+            </query>
+            <query minversion="9.0">
+                <sql>
+                    <![CDATA[
+select v.owner,
+       v.view_name,
+       c.comments,
+       o.status,
+       o.object_id,
+       o.created,
+       o.last_ddl_time,
+       v.text_length,
+       v.text,
+       v.type_text_length,
+       v.type_text,
+       v.oid_text_length,
+       v.oid_text,
+       v.view_type_owner,
+       v.view_type,
+       v.superview_name             /* 9.0 and higher */
+  from (
+          select object_id,
+                 owner,
+                 object_name,
+                 status,
+                 created,
+                 last_ddl_time
+            from sys.all_objects
+           where object_name = :OBJECT_NAME
+             and owner = :OBJECT_OWNER
+       ) o,
+       (
+          select owner,
+                 view_name,
+                 text_length,
+                 text,
+                 type_text_length,
+                 type_text,
+                 oid_text_length,
+                 oid_text,
+                 view_type_owner,
+                 view_type,
+                 superview_name             /* 9.0 and higher */
+            from sys.all_views
+           where owner = :OBJECT_OWNER
+             and view_name = :OBJECT_NAME
+       ) v,
+       (
+          select owner,
+                 table_name,
+                 comments
+            from sys.all_tab_comments
+           where owner = :OBJECT_OWNER
+             and table_name = :OBJECT_NAME
+             and table_type = 'VIEW'
+       ) c
+ where o.owner = v.owner
+   and v.view_name = o.object_name
+   and v.owner = c.owner (+)
+   and v.view_name = c.table_name (+)
+]]>
+                </sql>
+            </query>
+        </queries>
+	</display>
+</displays>

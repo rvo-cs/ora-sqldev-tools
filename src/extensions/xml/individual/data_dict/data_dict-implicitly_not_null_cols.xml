@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Data Dictionary]]></name>
+<display id="ba5996c0-0184-1000-8001-c0a8010af8c9" type="" style="Table" enable="true">
+	<name><![CDATA[Data Dict - Implicitly not null columns]]></name>
+	<description><![CDATA[This report shows columns which participate in a primary key constraint, yet are not explicitly declared as NOT NULL in the table declaration. Such columns appear as not nullable in DBA_TAB_COLUMNS (NULLABLE = 'N'), yet they become nullable again as soon as the primary key constraint is dropped or disabled.]]></description>
+	<tooltip><![CDATA[Data Dict - Implicitly not null columns  ** DBA privileges required **]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with
+    table_like_in as (
+        select
+            :TABLE_LIKE_LIST as str,
+            '\s* ( ( [^"[:space:]] "? )+ | " ( [^"] )* " ) \s*' as rex
+        from
+            dual
+    ),
+    table_pattrn_raw as (
+        select
+            regexp_substr(a.str, a.rex, 1, level, 'x') as tok
+        from
+            table_like_in a
+        connect by
+            regexp_instr(a.str, a.rex, 1, level, 0, 'x') > 0
+    ),
+    table_pattrn_trimmed as (
+        select
+            regexp_replace(regexp_replace(b.tok, '^\s*'), '\s*$') as tok
+        from
+            table_pattrn_raw b
+    ),
+    table_pattrn_dequoted as (
+        select
+            regexp_replace(c.tok, '^" (.*) "$', '\1', 1, 1, 'nx') as tok
+        from
+            table_pattrn_trimmed c
+    ),
+    table_like_list as (
+        select /*+ materialize */
+            d.tok as table_like
+        from
+            table_pattrn_dequoted d
+        where
+            d.tok is not null
+    ),
+    matching_tables as (
+        select
+            listagg(b.table_like, ' | ') within group (order by b.table_like)
+                as matching_patterns,
+            a.owner,
+            a.table_name
+        from
+            dba_all_tables a,
+            table_like_list b
+        where
+            (:OWNER_LIKE is null or upper(a.owner) like upper(:OWNER_LIKE) escape '\')
+            and (:OWNER_RE is null or regexp_like(a.owner, :OWNER_RE, 'i'))
+            and upper(a.table_name) like upper(b.table_like) escape '\'
+        group by
+            a.owner,
+            a.table_name
+    ),
+    primary_key_columns as (
+        select
+            cons.owner,
+            cons.table_name,
+            ccol.column_name,
+            cons.constraint_name,
+            cons.status,
+            cons.validated,
+            cons.deferrable,
+            cons.deferred,
+            cons.last_change
+        from
+            dba_constraints cons,
+            dba_cons_columns ccol,
+            matching_tables tab
+        where
+            cons.constraint_type = 'P'
+            and cons.owner = tab.owner
+            and cons.table_name = tab.table_name
+            and cons.owner = ccol.owner
+            and cons.constraint_name = ccol.constraint_name
+    ),
+    not_null_columns as (
+        select
+            usr.name                       as owner,
+            obj.name                       as table_name,
+            nvl(attrcol$.name, col$.name)  as column_name,
+            con$.name                      as constraint_name,
+            cdef$.condition                as search_condition,
+            decode(cdef$.enabled, null, 'DISABLED', 'ENABLED')                 as status,
+            decode(bitand(cdef$.defer, 4), 4, 'VALIDATED', 'NOT VALIDATED')    as validated,
+            decode(bitand(cdef$.defer, 1), 1, 'DEFERRABLE', 'NOT DEFERRABLE')  as deferrable,
+            decode(bitand(cdef$.defer, 2), 2, 'DEFERRED', 'IMMEDIATE')         as deferred,
+            cdef$.mtime                                                        as last_change
+        from
+            sys.con$,
+            sys."_BASE_USER" usr,
+            sys."_CURRENT_EDITION_OBJ" obj,
+            sys.cdef$,
+            sys.ccol$,
+            sys.col$,
+            sys.attrcol$,
+            matching_tables tab
+        where
+            con$.owner# = usr.user#
+            and con$.con# = cdef$.con#
+            and cdef$.obj# = obj.obj#
+            and cdef$.type# = 7
+            and cdef$.con# = ccol$.con#
+            and ccol$.obj# = col$.obj#
+            and ccol$.intcol# = col$.intcol#
+            and col$.obj# = attrcol$.obj# (+)
+            and col$.intcol# = attrcol$.intcol# (+)
+            and usr.name = tab.owner
+            and obj.name = tab.table_name
+            and obj.type# = 2
+    ),
+    pk_columns_wt_matching_nn as (
+        select
+            pkcol.owner,
+            pkcol.table_name,
+            pkcol.column_name,
+            pkcol.constraint_name  as pk_constraint,
+            pkcol.status           as pk_status,
+            pkcol.validated        as pk_validated,
+            pkcol.deferrable       as pk_deferrable,
+            pkcol.deferred         as pk_deferred,
+            pkcol.last_change      as pk_mtime,
+            nncol.constraint_name  as nn_constraint,
+            nncol.search_condition as nn_search_cond,
+            nncol.status           as nn_status,
+            nncol.validated        as nn_validate,
+            nncol.deferrable       as nn_deferrable,
+            nncol.deferred         as nn_deferred,
+            nncol.last_change      as nn_mtime,
+            case
+                when pkcol.status = 'ENABLED'
+                    and (nncol.constraint_name is null
+                        or nncol.status <> 'ENABLED')
+                then
+                    'YES'
+            end  as implicit_not_null,
+            case
+                when max(case
+                             when pkcol.status <> 'ENABLED'
+                                 or pkcol.validated <> 'VALIDATED'
+                             then
+                                 1
+                             when nncol.constraint_name is null
+                                 or nncol.status <> 'ENABLED'
+                                 or nncol.validated <> 'VALIDATED'
+                             then
+                                 1
+                         end) over (partition by pkcol.owner, pkcol.table_name)
+                    is not null
+                then
+                    'YES'
+            end  as table_warning_flag
+        from
+            primary_key_columns pkcol,
+            not_null_columns nncol
+        where
+            pkcol.owner = nncol.owner (+)
+            and pkcol.table_name = nncol.table_name (+)
+            and pkcol.column_name = nncol.column_name (+)
+    )
+select
+    col.owner,
+    col.table_name,
+    col.column_name,
+    col.pk_constraint,
+    col.pk_status,
+    col.pk_validated,
+    col.pk_deferrable,
+    col.pk_deferred,
+    col.pk_mtime,
+    col.nn_constraint,
+    col.nn_search_cond,
+    col.nn_status,
+    col.nn_validate,
+    col.nn_deferrable,
+    col.nn_deferred,
+    col.nn_mtime,
+    col.implicit_not_null,
+    col.table_warning_flag as table_warning
+from
+    pk_columns_wt_matching_nn col
+where
+    upper(trim(:B_ALL_PK_COLS)) = 'Y'
+    or (col.table_warning_flag is not null
+        and lnnvl(upper(trim(:B_IMPLICIT_NULLS_ONLY)) = 'Y'))
+    or (col.implicit_not_null = 'YES')
+order by
+    col.owner,
+    col.table_name,
+    col.column_name]]></sql>
+		<binds>
+			<bind id="TABLE_LIKE_LIST">
+				<prompt><![CDATA[Table like?]]></prompt>
+				<tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by blanks]]></tooltip>
+				<value><![CDATA[%]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="OWNER_LIKE">
+				<prompt><![CDATA[Owner like?]]></prompt>
+				<tooltip><![CDATA[LIKE pattern for matching the name of the table owner]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="OWNER_RE">
+				<prompt><![CDATA[Owner regexp?]]></prompt>
+				<tooltip><![CDATA[Regular expression for matching the name of the table owner]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_ALL_PK_COLS">
+				<prompt><![CDATA[Show all columns from PK constraints?]]></prompt>
+				<tooltip><![CDATA[If Y, all columns which oarticipate in PK constraints from matching tables are shown]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_IMPLICIT_NULLS_ONLY">
+				<prompt><![CDATA[Show only implicity NOT NULL columns?]]></prompt>
+				<tooltip><![CDATA[If Y, only implicitly NOT NULL columns are shown]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+</display>
+</folder>
+</displays>

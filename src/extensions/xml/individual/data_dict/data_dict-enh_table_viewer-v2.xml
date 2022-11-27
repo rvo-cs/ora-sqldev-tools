@@ -106,7 +106,7 @@ order by
 			</bind>
 			<bind id="OWNER_RE">
 				<prompt><![CDATA[Owner regexp?]]></prompt>
-				<tooltip><![CDATA[OWNER_RE]]></tooltip>
+				<tooltip><![CDATA[Regular expression for matching the name of the table owner]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>

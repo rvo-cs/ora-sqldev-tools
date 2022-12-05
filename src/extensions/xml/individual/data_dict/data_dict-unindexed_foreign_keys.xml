@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Data Dictionary]]></name>
+<display id="e3309bbb-0184-1000-8001-c0a8010a3705" type="" style="Table" enable="true">
+	<name><![CDATA[Data Dict - Unindexed foreign keys]]></name>
+	<description><![CDATA[This reports lists foreigns keys without a suitable index for avoiding performance/locking issues when deleting keys from parent tables.]]></description>
+	<tooltip><![CDATA[Data Dict - Unindexed foreign keys]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[with
+    table_like_in as (
+        select
+            :TABLE_LIKE_LIST as str,
+            '\s* ( ( [^"[:space:]] "? )+ | " ( [^"] )* " ) \s*' as rex
+        from
+            dual
+    ),
+    table_pattrn_raw as (
+        select
+            regexp_substr(a.str, a.rex, 1, level, 'x') as tok
+        from
+            table_like_in a
+        connect by
+            regexp_instr(a.str, a.rex, 1, level, 0, 'x') > 0
+    ),
+    table_pattrn_trimmed as (
+        select
+            regexp_replace(regexp_replace(b.tok, '^\s*'), '\s*$') as tok
+        from
+            table_pattrn_raw b
+    ),
+    table_pattrn_dequoted as (
+        select
+            regexp_replace(c.tok, '^" (.*) "$', '\1', 1, 1, 'nx') as tok
+        from
+            table_pattrn_trimmed c
+    ),
+    table_like_list as (
+        select /*+ materialize */
+            d.tok as table_like
+        from
+            table_pattrn_dequoted d
+        where
+            d.tok is not null
+    ),
+    matching_tables as (
+        select
+            listagg(b.table_like, ' | ') within group (order by b.table_like)
+                as matching_patterns,
+            a.owner,
+            a.table_name
+        from
+            dba_all_tables a,
+            table_like_list b
+        where
+            (:OWNER_LIKE is null or upper(a.owner) like upper(:OWNER_LIKE) escape '\')
+            and (:OWNER_RE is null or regexp_like(a.owner, :OWNER_RE, 'i'))
+            and upper(a.table_name) like upper(b.table_like) escape '\'
+        group by
+            a.owner,
+            a.table_name
+    ),
+    fk_cons_columns as (
+        select
+            cons.owner,
+            cons.table_name,
+            cons.constraint_name,
+            ccol.position  as pos_in_constraint,
+            ccol.column_name,
+            count(*) over (
+                    partition by cons.owner, cons.table_name, cons.constraint_name
+                )  as cons_column_cnt
+        from
+            matching_tables tab,
+            dba_constraints cons,
+            dba_cons_columns ccol
+        where
+            cons.owner = tab.owner
+            and cons.table_name = tab.table_name
+            and cons.constraint_type = 'R'
+            and ccol.owner = cons.owner
+            and ccol.table_name = cons.table_name
+            and ccol.constraint_name = cons.constraint_name
+    ),
+    ind_columns as (
+        select
+            indx.table_owner,
+            indx.table_name,
+            indx.index_name,
+            icol.column_name,
+            icol.column_position    as pos_in_index
+        from
+            matching_tables tab,
+            dba_indexes indx,
+            dba_ind_columns icol
+        where
+            indx.table_owner = tab.owner
+            and indx.table_name = tab.table_name
+            -- Note: bitmap indexes are not suitable for indexing foreign keys
+            and indx.index_type in ('NORMAL', 'NORMAL/REV', 'IOT - TOP')
+            and icol.index_owner = indx.owner
+            and icol.index_name = indx.index_name
+    ),
+    fk_constr_vs_index_match as (
+        select
+            owner,
+            table_name,
+            constraint_name,
+            index_name,
+            case
+                when sum(index_prefix_seq_chk) = cons_column_cnt then
+                    'YES'
+                else
+                    'NO'
+            end as is_fk_indexed
+        from
+            (select
+                ccol.owner,
+                ccol.table_name,
+                ccol.constraint_name,
+                ccol.column_name,
+                inco.index_name,
+                inco.pos_in_index,
+                ccol.cons_column_cnt,
+                case
+                    when inco.pos_in_index = 1 
+                    then
+                        1
+                    when inco.pos_in_index = lag(inco.pos_in_index + 1) over (
+                            partition by
+                                ccol.owner, ccol.table_name, ccol.constraint_name,
+                                inco.index_name
+                            order by
+                                inco.pos_in_index
+                        )
+                    then
+                        1
+                    else
+                        0
+                end as index_prefix_seq_chk
+            from
+                fk_cons_columns ccol,
+                ind_columns inco
+            where
+                ccol.owner = inco.table_owner (+)
+                and ccol.table_name = inco.table_name (+)
+                and ccol.column_name = inco.column_name (+)
+            )
+        group by
+            owner,
+            table_name,
+            constraint_name,
+            cons_column_cnt,
+            index_name
+    )
+select
+    owner,
+    table_name,
+    constraint_name  as fk_constraint_name,
+    is_fk_indexed,
+    matching_indexes,
+    non_matching_indexes
+from
+    (select
+        owner, 
+        table_name,
+        constraint_name,
+        nvl(max(nullif(is_fk_indexed, 'NO')), 'NO') as is_fk_indexed,
+        listagg(
+            case
+                when is_fk_indexed = 'YES' then
+                    index_name
+            end,
+            ', ') within group (order by index_name)  as matching_indexes,
+        listagg(
+            case
+                when is_fk_indexed = 'NO' then
+                    index_name
+            end,
+            ', ') within group (order by index_name)  as non_matching_indexes
+    from
+        fk_constr_vs_index_match
+    group by
+        owner, 
+        table_name,
+        constraint_name
+    )
+where
+    is_fk_indexed = 'NO'
+    or not lnnvl(upper(:B_SHOW_ALL_FKS) = 'Y') 
+order by
+    owner, 
+    table_name, 
+    constraint_name]]></sql>
+		<binds>
+			<bind id="TABLE_LIKE_LIST">
+				<prompt><![CDATA[Table like?]]></prompt>
+				<tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by blanks]]></tooltip>
+				<value><![CDATA[%]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="OWNER_LIKE">
+				<prompt><![CDATA[Owner like?]]></prompt>
+				<tooltip><![CDATA[LIKE pattern for matching the name of the table owner]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="OWNER_RE">
+				<prompt><![CDATA[Owner regexp?]]></prompt>
+				<tooltip><![CDATA[Regular expression for matching the name of the table owner]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="B_SHOW_ALL_FKS">
+				<prompt><![CDATA[Show all FKs?]]></prompt>
+				<tooltip><![CDATA[Show all foreign keys of matching tables if Y; otherwise only unindexed FKs are shown]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+</display>
+</folder>
+</displays>

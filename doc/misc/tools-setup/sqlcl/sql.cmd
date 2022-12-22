@@ -28,7 +28,7 @@ REM This is the root directory of the installed SQLcl product;
 REM e.g. %SQL_HOME%\bin\sql.exe is the included binary executable.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Win_7\Oracle\SQLcl\sqlcl\sqlcl-22.2.1.201.1451
+SET SQL_HOME=F:\Produits\Win_7\Oracle\SQLcl\sqlcl\sqlcl-22.4.0.342.1212
 
 REM =============================================================
 REM Set SQLPATH folder
@@ -66,7 +66,10 @@ REM add all SQLcl libraries to classpath
 SET CPFILE=%SQL_HOME%\lib\dbtools-sqlcl.jar;%SQL_HOME%\lib\*;%SQL_HOME%\lib\ext\*
 
 REM Set JVM arguments
-SET STD_ARGS=-Djava.awt.headless=true -Dfile.encoding=UTF-8 -Xss10M
+SET STD_ARGS=-Djava.awt.headless=true -Dfile.encoding=UTF-8
+SET STD_ARGS=%STD_ARGS% -Xss100m
+SET STD_ARGS=%STD_ARGS% -XX:+IgnoreUnrecognizedVMOptions
+REM SET STD_ARGS=%STD_ARGS% -XX:+PrintFlagsFinal
 
 REM Java heap size min/max
 SET STD_ARGS=%STD_ARGS% -Xms512m -Xmx1600m
@@ -77,9 +80,14 @@ SET STD_ARGS=%STD_ARGS% -Duser.language=en
 REM Set java.io.tmpdir
 SET STD_ARGS=%STD_ARGS% -Djava.io.tmpdir=E:\Home\romain\.java-temp
 
+REM cover up windows read registry warning
+SET STD_ARGS=%STD_ARGS% --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED
+
 REM !!! ONLY IF USING THE JAVA 11 JDK !!!
 REM Inhibit Nashorn deprecation warning
 SET STD_ARGS=%STD_ARGS% -Dnashorn.args=--no-deprecation-warning
+REM enable graal scripts
+SET STD_ARGS=%STD_ARGS% -Dpolyglot.js.nashorn-compat=true
 
 REM Set logging configuration
 IF DEFINED LOGGING_CONFIG (

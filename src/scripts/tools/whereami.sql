@@ -3,6 +3,7 @@ set termout off
 set verify off
 
 define def_db_name          = ""
+define def_db_info          = ""
 define def_inst_name        = ""
 define def_inst_num         = ""
 define def_session_id       = ""
@@ -13,6 +14,7 @@ define def_diag_trace       = ""
 define def_trace_file       = ""
 
 column db_name         noprint  new_value def_db_name
+column db_info         noprint  new_value def_db_info
 column inst_name       noprint  new_value def_inst_name
 column inst_num        noprint  new_value def_inst_num
 column session_id      noprint  new_value def_session_id
@@ -40,31 +42,101 @@ select
 from 
     dual;
 
-variable CON_NAME varchar2(128 byte);
+variable CON_NAME   varchar2(128 byte)
+variable CON_ID     varchar2(128 byte)
+variable DB_VERSION varchar2(10 byte)
 
 declare
+    e_invalid_identifier    exception;
     e_invalid_userenv_param exception;
-    pragma exception_init(e_invalid_userenv_param, -2003);
+    pragma exception_init(e_invalid_identifier    , -904);
+    pragma exception_init(e_invalid_userenv_param , -2003);
+
+    l_version_string varchar2(20 byte);
 begin
-    select sys_context('USERENV', 'CON_NAME') into :CON_NAME from dual;
-exception
-    when e_invalid_userenv_param then
-        null;
+    <<get_version_post_18c>>
+    begin
+        -- version_full is available beginning with 18.1
+        execute immediate
+            q'{select 
+                  regexp_substr(v.version_full, '^(\d+\.\d+)')
+              from
+                  product_component_version v
+              where
+                  v.product like 'Oracle Database%'
+              }'
+            into l_version_string;
+    exception
+        when e_invalid_identifier then
+            null;
+    end get_version_post_18c;
+
+    if l_version_string is null then
+        <<get_version_pre_18c>>
+        begin
+            execute immediate
+                q'{select 
+                      regexp_substr(v.version, '^(\d+(\.\d+){3})')
+                  from
+                      product_component_version v
+                  where
+                      v.product like 'Oracle Database%'
+                  }'
+                into l_version_string;
+        exception
+            when others then
+                null;
+        end get_version_pre_18c;
+    end if;
+    
+    :DB_VERSION := l_version_string;
+
+    <<get_container_info>>
+    begin
+        select
+            sys_context('USERENV', 'CON_NAME')  as con_name,
+            sys_context('USERENV', 'CON_ID')    as con_id
+        into
+            :CON_NAME,
+            :CON_ID
+        from
+            dual;
+    exception
+        when e_invalid_userenv_param then
+            null;
+    end get_container_info;
 end;
 /
 
 select nvl(:CON_NAME, '--N/A--')  as con_name from dual;
+
+select 
+    case
+        when :DB_VERSION is not null then
+            '(version: ' || :DB_VERSION 
+            || case
+                   when to_number(:CON_ID) = 0 then 
+                       '; non-CDB'
+                   when to_number(:CON_ID) = 1 then 
+                       '; CDB'
+                   when to_number(:CON_ID) > 1 then
+                       '; PDB'
+               end
+            || ')'
+    end as db_info
+from
+    dual;
 
 set termout on
 
 prompt
 prompt __You are HERE__  [ &&_DATE ]
 prompt
-prompt Database        : &&def_db_name
+prompt Database        : &&def_db_name  &&def_db_info
 prompt Instance        : &&def_inst_name
 prompt Inst#           : &&def_inst_num
 prompt Session id.     : &&def_session_id
-prompt PDB Name        : &&def_con_name
+prompt Container Name  : &&def_con_name
 prompt Session user    : &&def_session_user
 prompt Current schema  : &&def_current_schema
 prompt Deft trace file : &&def_trace_file
@@ -103,6 +175,7 @@ prompt
 set verify on
 
 column db_name         clear
+column db_info         clear
 column inst_name       clear
 column inst_num        clear
 column session_id      clear
@@ -113,6 +186,7 @@ column diag_trace      clear
 column trace_file      clear
 
 undefine def_db_name
+undefine def_db_info
 undefine def_inst_name
 undefine def_inst_num
 undefine def_session_id

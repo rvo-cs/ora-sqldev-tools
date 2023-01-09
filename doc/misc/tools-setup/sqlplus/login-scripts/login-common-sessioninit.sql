@@ -30,3 +30,10 @@ alter session set plsql_debug = false;
 alter session set plsql_warnings = 'ENABLE:ALL,DISABLE:6009';
 --alter session set plsql_warnings = 'ENABLE:ALL,DISABLE:6009,DISABLE:5018';
 
+
+/*----------------*/
+/* Other settings */
+/*----------------*/
+
+@@disable_px_on_cdb_views
+

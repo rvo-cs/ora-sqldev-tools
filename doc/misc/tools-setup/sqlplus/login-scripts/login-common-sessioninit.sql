@@ -35,5 +35,6 @@ alter session set plsql_warnings = 'ENABLE:ALL,DISABLE:6009';
 /* Other settings */
 /*----------------*/
 
+@@plscope_settings_all
 @@disable_px_on_cdb_views
 

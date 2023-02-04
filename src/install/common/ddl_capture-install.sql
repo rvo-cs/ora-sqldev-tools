@@ -31,6 +31,7 @@ whenever sqlerror exit failure rollback
 
 set verify on
 create role &&def_read_captured_ddl_role;
+revoke &&def_read_captured_ddl_role from "&&_USER";
 set verify off
 
 alter session set current_schema = "&&def_ddl_capture_user";

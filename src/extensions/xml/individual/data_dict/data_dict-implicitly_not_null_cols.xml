@@ -221,7 +221,7 @@ order by
 			</bind>
 			<bind id="B_ALL_PK_COLS">
 				<prompt><![CDATA[Show all columns from PK constraints?]]></prompt>
-				<tooltip><![CDATA[If Y, all columns which oarticipate in PK constraints from matching tables are shown]]></tooltip>
+				<tooltip><![CDATA[If Y, all columns which participate in PK constraints from matching tables are shown]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>

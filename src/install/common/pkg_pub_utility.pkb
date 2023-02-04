@@ -12,7 +12,9 @@ create or replace package body pkg_pub_utility as
     return number
     deterministic
     is begin
-       $IF dbms_db_version.ver_le_11 $THEN
+       $IF dbms_db_version.ver_le_10 $THEN
+        return dbms_db_version.release;
+       $ELSIF dbms_db_version.ver_le_11 $THEN
         return dbms_db_version.release;
        $ELSIF dbms_db_version.ver_le_12 $THEN
         return dbms_db_version.release;

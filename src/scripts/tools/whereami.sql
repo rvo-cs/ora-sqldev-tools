@@ -32,6 +32,7 @@ column current_schema  noprint  new_value def_current_schema
 column skip_diag_info  noprint  new_value def_skip_diag_info
 column diag_trace      noprint  new_value def_diag_trace
 column trace_file      noprint  new_value def_trace_file
+column unused_col      noprint
 
 select
     sys_context('USERENV', 'DB_NAME')           as db_name,
@@ -210,6 +211,7 @@ column current_schema  clear
 column skip_diag_info  clear
 column diag_trace      clear
 column trace_file      clear
+column unused_col      clear
 
 undefine def_db_name
 undefine def_db_info

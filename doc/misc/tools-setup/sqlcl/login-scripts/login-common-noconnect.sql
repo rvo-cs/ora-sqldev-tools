@@ -18,7 +18,7 @@ set sqlprompt "@|bg_black,fg_green,bold SQL>|@ "
 
 -- Root dir. of the local clone of Tanel Poder's tpt-oracle Git repository
 -- (git clone https://github.com/tanelpoder/tpt-oracle.git)
-define tpt_dir = "E:\Home\romain\oracle\tpt-oracle"
+define tpt_dir = "F:\Products\Contrib\git-src\tpt-oracle"
 
 -- Root dir. of my own local Git repository for SQL Developer-related tools
 define rvocs_orasqldevtools_dir = "E:\Home\romain\projets\git-src\ora-sqldev-tools"

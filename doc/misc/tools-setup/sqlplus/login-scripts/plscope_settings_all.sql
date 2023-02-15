@@ -4,7 +4,7 @@ declare
    e_invalid_param_value exception;
    e_invalid_option      exception;
    pragma exception_init(e_invalid_param_value, -96);
-   pragma exception_init(e_invalid_option     , -2048);
+   pragma exception_init(e_invalid_option     , -2248);
 
    function is_oracle_maintained (in_schema_name in varchar2) return boolean
    is
@@ -71,7 +71,7 @@ begin
          'alter session set plscope_settings = "IDENTIFIERS:ALL, STATEMENTS:ALL"';
       return;
    exception
-      when e_invalid_param_value then
+      when e_invalid_option or e_invalid_param_value then
          null;
    end plscope_settings_12_2;
 

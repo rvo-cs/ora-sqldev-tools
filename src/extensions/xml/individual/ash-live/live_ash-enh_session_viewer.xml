@@ -19,6 +19,7 @@
     :USERNAME_LIKE                       as "Username_like",
     :USERNAME_RE                         as "Username_RE",
     :LIVE_SESSIONS_ONLY                  as "Live_sessions_only",
+    :SESSION_INACTIVITY_THRES            as "Inactive_thres",
     :SHOW_BACKGROUND                     as "Show_background",
     :SHOW_IDLE_BACKGROUND                as "Show_idle_background",
     :DISPLAY_PLAN_OPTS                   as "Plan_display_opts",
@@ -75,6 +76,18 @@ from
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
+                <bind id="LIVE_SESSIONS_ONLY">
+                    <prompt><![CDATA[Live sessions only?]]></prompt>
+                    <tooltip><![CDATA[Exclude ended sessions iff 'Y']]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SESSION_INACTIVITY_THRES">
+                    <prompt><![CDATA[Inactivity threshold?]]></prompt>
+                    <tooltip><![CDATA[Hide sessions if inactive for more than the specified amount of time; unit: s; 0 or null = unlimited]]></tooltip>
+                    <value><![CDATA[60]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
                 <bind id="SHOW_BACKGROUND">
                     <prompt><![CDATA[Include background?]]></prompt>
                     <tooltip><![CDATA[Show background processes iff 'Y']]></tooltip>
@@ -84,12 +97,6 @@ from
                 <bind id="SHOW_IDLE_BACKGROUND">
                     <prompt><![CDATA[Show idle background?]]></prompt>
                     <tooltip><![CDATA[Show idle background processes iff 'Y']]></tooltip>
-                    <value><![CDATA[NULL_VALUE]]></value>
-                    <bracket><![CDATA[null]]></bracket>
-                </bind>
-                <bind id="LIVE_SESSIONS_ONLY">
-                    <prompt><![CDATA[Live sessions only?]]></prompt>
-                    <tooltip><![CDATA[Exclude past sessions iff 'Y']]></tooltip>
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
@@ -150,6 +157,7 @@ from
     :USERNAME_LIKE                       as "Username_like",
     :USERNAME_RE                         as "Username_RE",
     :LIVE_SESSIONS_ONLY                  as "Live_sessions_only",
+    :SESSION_INACTIVITY_THRES            as "Inactive_thres",
     :SHOW_BACKGROUND                     as "Show_background",
     :SHOW_IDLE_BACKGROUND                as "Show_idle_background",
     :DISPLAY_PLAN_OPTS                   as "Plan_display_opts",
@@ -200,6 +208,18 @@ from
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
+                <bind id="LIVE_SESSIONS_ONLY">
+                    <prompt><![CDATA[Live sessions only?]]></prompt>
+                    <tooltip><![CDATA[Exclude ended sessions iff 'Y']]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="SESSION_INACTIVITY_THRES">
+                    <prompt><![CDATA[Inactivity threshold?]]></prompt>
+                    <tooltip><![CDATA[Hide sessions if inactive for more than the specified amount of time; unit: s; 0 or null = unlimited]]></tooltip>
+                    <value><![CDATA[60]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
                 <bind id="SHOW_BACKGROUND">
                     <prompt><![CDATA[Include background?]]></prompt>
                     <tooltip><![CDATA[Show background processes iff 'Y']]></tooltip>
@@ -209,12 +229,6 @@ from
                 <bind id="SHOW_IDLE_BACKGROUND">
                     <prompt><![CDATA[Show idle background?]]></prompt>
                     <tooltip><![CDATA[Show idle background processes iff 'Y']]></tooltip>
-                    <value><![CDATA[NULL_VALUE]]></value>
-                    <bracket><![CDATA[null]]></bracket>
-                </bind>
-                <bind id="LIVE_SESSIONS_ONLY">
-                    <prompt><![CDATA[Live sessions only?]]></prompt>
-                    <tooltip><![CDATA[Exclude past sessions iff 'Y']]></tooltip>
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
@@ -706,6 +720,7 @@ ash_sessions_last_20s as (
             and ash.service_hash = svc.name_hash (+)
             and ash.sql_opcode = cmd.command_type (+)
             and ash.consumer_group_id = rcg.consumer_group_id (+)
+            and rcg.status (+) is null  -- ignore PENDING changes to consumer groups
         )
 ),
 live_and_recent_sessions as (
@@ -999,6 +1014,22 @@ where
                     1
             end)
     and 1 = (case
+                when :Inactive_thres is null or :Inactive_thres = 0 then
+                    1
+                when status = 'ENDED'
+                    and localtimestamp > sample_time + numtodsinterval(:Inactive_thres, 'SECOND')
+                then
+                    0
+                when src = 'LIVE'
+                    and state = 'WAITING'
+                    and wait_class = 'Idle'
+                    and last_call_et > :Inactive_thres
+                then
+                    0
+                else
+                    1
+            end)
+    and 1 = (case
                 when lnnvl(upper(:Show_background) = 'Y') then
                     case type
                         when 'USER' then
@@ -1063,6 +1094,12 @@ order by
                     <bind id="Live_sessions_only">
                         <prompt><![CDATA[Live_sessions_only]]></prompt>
                         <tooltip><![CDATA[Live_sessions_only]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Inactive_thres">
+                        <prompt><![CDATA[Inactive_thres]]></prompt>
+                        <tooltip><![CDATA[Inactive_thres]]></tooltip>
                         <value><![CDATA[NULL_VALUE]]></value>
                         <bracket><![CDATA[null]]></bracket>
                     </bind>
@@ -1539,6 +1576,7 @@ ash_sessions_last_20s as (
             and ash.service_hash = svc.name_hash (+)
             and ash.sql_opcode = cmd.command_type (+)
             and ash.consumer_group_id = rcg.consumer_group_id (+)
+            and rcg.status (+) is null  -- ignore PENDING changes to consumer groups
         )
 ),
 live_and_recent_sessions as (
@@ -1815,6 +1853,22 @@ where
                     1
             end)
     and 1 = (case
+                when :Inactive_thres is null or :Inactive_thres = 0 then
+                    1
+                when status = 'ENDED'
+                    and localtimestamp > sample_time + numtodsinterval(:Inactive_thres, 'SECOND')
+                then
+                    0
+                when src = 'LIVE'
+                    and state = 'WAITING'
+                    and wait_class = 'Idle'
+                    and last_call_et > :Inactive_thres
+                then
+                    0
+                else
+                    1
+            end)
+    and 1 = (case
                 when lnnvl(upper(:Show_background) = 'Y') then
                     case type
                         when 'USER' then
@@ -1869,6 +1923,12 @@ order by
                     <bind id="Live_sessions_only">
                         <prompt><![CDATA[Live_sessions_only]]></prompt>
                         <tooltip><![CDATA[Live_sessions_only]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Inactive_thres">
+                        <prompt><![CDATA[Inactive_thres]]></prompt>
+                        <tooltip><![CDATA[Inactive_thres]]></tooltip>
                         <value><![CDATA[NULL_VALUE]]></value>
                         <bracket><![CDATA[null]]></bracket>
                     </bind>

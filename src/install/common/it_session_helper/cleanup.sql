@@ -1,0 +1,22 @@
+--
+-- undefine substitution variables
+--
+undefine def_it_sess_helper_user
+undefine def_it_sess_helper_tabspc
+undefine def_it_sess_helper_temp_tabspc
+undefine def_it_sess_helper_log_table
+undefine def_it_role_end_session_self
+undefine def_it_role_end_session_prefix
+undefine def_it_sess_helper_create_pubsyn
+undefine def_it_sess_helper_pubsyn_prefix
+undefine def_purge_job_name
+undefine def_purge_retention_weeks
+undefine def_purge_retention_days
+undefine def_purge_repeat_interval 
+undefine def_drop_it_sess_helper_user
+undefine def_db_version_ge_12
+undefine def_db_version_lt_12
+undefine def_db_version_ge_18
+undefine def_db_version_lt_18
+undefine def_echo
+

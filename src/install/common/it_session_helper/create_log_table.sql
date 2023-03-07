@@ -10,6 +10,7 @@ create table &&def_it_sess_helper_log_table (
   , target_session_username     varchar2(128 byte)
   , target_session_module       varchar2(64 byte)
   , target_session_action       varchar2(64 byte)
+  , post_transaction            varchar2(1 byte)
   , session_id                  number
         default to_number(sys_context('USERENV', 'SID'))                    not null
   , session_user                varchar2(128 byte)  
@@ -45,6 +46,7 @@ comment on column &&def_it_sess_helper_log_table..target_session_userid     is '
 comment on column &&def_it_sess_helper_log_table..target_session_username   is 'Target session info: username';
 comment on column &&def_it_sess_helper_log_table..target_session_module     is 'Target session info: module (if set)';
 comment on column &&def_it_sess_helper_log_table..target_session_action     is 'Target session info: action (if set)';
+comment on column &&def_it_sess_helper_log_table..post_transaction          is '''Y'' if event_type = ''KILL SESSION'' and the POST_TRANSACTION setting was used; NULL otherwise';
 comment on column &&def_it_sess_helper_log_table..session_id                is 'Calling session info: session id';
 comment on column &&def_it_sess_helper_log_table..session_user              is 'Calling session info: session user';
 comment on column &&def_it_sess_helper_log_table..client_host               is 'Calling session info: client hostname';

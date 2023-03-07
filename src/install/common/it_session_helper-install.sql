@@ -41,7 +41,10 @@ prompt Creating the main package
 prompt --------------------------
 
 @@it_session_helper/pkg_session_helper.pks
+show errors
+
 @@it_session_helper/pkg_session_helper.pkb
+show errors
 
 grant execute on "&&def_it_sess_helper_user"."PKG_SESSION_HELPER" to public;
 
@@ -66,7 +69,11 @@ prompt Creating the weekly purge job
 prompt -----------------------------
 
 @@it_session_helper/pkg_purge_itsesshlplog.pks
+show errors
+
 @@it_session_helper/pkg_purge_itsesshlplog.pkb
+show errors
+
 @@it_session_helper/weekly_purge_job
 
 

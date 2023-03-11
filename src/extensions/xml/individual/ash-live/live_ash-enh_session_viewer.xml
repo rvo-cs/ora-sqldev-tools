@@ -2107,7 +2107,71 @@ Remark: this only works for sessions in the local instance.
                 <default><![CDATA[STATIC:IMMEDIATE]]></default>
                 <value><![CDATA[STATIC:IMMEDIATE:Post_transaction]]></value>
             </prompt>
-<prompt type="confirm">
+            <prompt type="text/combo" required="true">  <!-- index: 2 -->
+                <label>Method:</label>
+                <default><![CDATA[select
+    method
+from
+    (select
+        1 as rn, 'Call ' || lower(pub.tname) as method
+    from
+        sys.publicsyn pub
+    where
+        pub.sname = 'C##PKG_SESSION_HELPER'
+        and pub.tname = 'PKG_SESSION_HELPER'
+        and pub.database = 'LOCAL'
+        and pub.tabtype = 'PACKAGE'
+    union all
+    select
+        2 as rn, 'Alter system statement' as method
+    from
+        sys.session_privs
+    where
+        privilege = 'ALTER SYSTEM'
+    order by rn
+    )
+where
+    rownum <= 1]]></default>
+                <value><![CDATA[select
+    method
+from
+    (select
+        1 as rn, 'Call ' || lower(pub.tname) as method
+    from
+        sys.publicsyn pub
+    where
+        pub.sname = 'C##PKG_SESSION_HELPER'
+        and pub.tname = 'PKG_SESSION_HELPER'
+        and pub.database = 'LOCAL'
+        and pub.tabtype = 'PACKAGE'
+    union all
+    select
+        2 as rn, 'Alter system statement' as method
+    from
+        sys.session_privs
+    where
+        privilege = 'ALTER SYSTEM'
+    )
+order by
+    rn asc]]></value>
+            </prompt>
+            <prompt type="codearea" required="false">   <!-- index: 3 -->
+                <label>Reason:</label>
+                <default><![CDATA[select
+    '--Unused if using ALTER SYSTEM--' as reason
+from
+    dual
+where
+    :2 = 'Alter system statement'
+union all
+select
+    '-- You don''t have enough' || chr(10) || '-- privileges for this action' as reason
+from
+    dual
+where
+    :2 is null]]></default>
+            </prompt>
+            <prompt type="confirm">
                 <label>Confirm KILL session?</label>
             </prompt>
             <sql><![CDATA[declare
@@ -2115,6 +2179,10 @@ Remark: this only works for sessions in the local instance.
     l_session_serial    number        := #Serial##;
     l_session_instance  number        := #Inst_id#;
     l_disconnect_mode   varchar2(20)  := '#1#';
+    l_method_used       varchar2(40)  := '#2#';
+
+    l_action_reason     varchar2(4000 byte) :=
+            substrb(q'{#3#}', 1, 4000);
 
     e_sess_marked_for_kill exception;
     pragma exception_init(e_sess_marked_for_kill, -31);
@@ -2123,13 +2191,38 @@ begin
         raise_application_error(-20000, 'This session is not in the local instance');
     end if;
 
-    execute immediate 'alter system disconnect session ''' 
-            || to_char(l_session_id) || ',' || to_char(l_session_serial)
-            || ''' ' || lower(l_disconnect_mode);
+    if l_method_used = 'Alter system statement' then
+        execute immediate 'alter system disconnect session ''' 
+                || to_char(l_session_id) || ',' || to_char(l_session_serial)
+                || ''' ' || lower(l_disconnect_mode);
+    else
+        declare
+            l_stmt varchar2(500);
+        begin
+            l_stmt := q'{begin
+                c##pkg_session_helper.disconnect_session(
+                    p_session_id       => :session_id,
+                    p_session_serial#  => :session_serial,
+                    p_reason           => :reason,
+                    p_post_transaction => }'
+                || case l_disconnect_mode
+                       when 'Post_transaction' then
+                           'true'
+                       else /* IMMEDIATE */
+                           'false'
+                   end
+                || q'{);
+            end;}';
+            execute immediate l_stmt using l_session_id,
+                                           l_session_serial,
+                                           l_action_reason;
+        end;
+    end if;
 exception
     when e_sess_marked_for_kill then
         null;
-end;]]></sql>
+end;
+]]></sql>
             <confirmation>
                 <title>Session killed</title>
                 <sql><![CDATA[

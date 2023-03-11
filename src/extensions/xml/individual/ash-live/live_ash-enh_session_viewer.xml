@@ -1000,9 +1000,10 @@ from
         end  as con_name
     from
         live_and_recent_sessions s,
-        v$pdbs pdb
+        gv$pdbs pdb
     where
-        s.con_id = pdb.con_id (+)
+        s.inst_id = pdb.inst_id (+)
+        and s.con_id = pdb.con_id (+)
     )
 where
     1 = 1
@@ -2737,12 +2738,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = nvl(:SQL_ID, :PREV_SQL_ID)
 order by
     case a.child_number
@@ -2754,6 +2756,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="SQL_ID">
                             <prompt><![CDATA[SQL_ID]]></prompt>
                             <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -2868,12 +2876,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = nvl(:SQL_ID, :PREV_SQL_ID)
 order by
     case a.child_number
@@ -2885,6 +2894,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="SQL_ID">
                             <prompt><![CDATA[SQL_ID]]></prompt>
                             <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -2998,12 +3013,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = nvl(:SQL_ID, :PREV_SQL_ID)
 order by
     case a.child_number
@@ -3015,6 +3031,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="SQL_ID">
                             <prompt><![CDATA[SQL_ID]]></prompt>
                             <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -3124,12 +3146,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = nvl(:SQL_ID, :PREV_SQL_ID)
 order by
     case a.child_number
@@ -3141,6 +3164,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="SQL_ID">
                             <prompt><![CDATA[SQL_ID]]></prompt>
                             <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -3243,12 +3272,13 @@ order by
     a.serializable_aborts,
     sqltype
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = nvl(:SQL_ID, :PREV_SQL_ID)
 order by
     case a.child_number
@@ -3260,6 +3290,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="SQL_ID">
                             <prompt><![CDATA[SQL_ID]]></prompt>
                             <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -3387,12 +3423,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = :PREV_SQL_ID
 order by
     case a.child_number
@@ -3404,6 +3441,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="PREV_SQL_ID">
                             <prompt><![CDATA[PREV_SQL_ID]]></prompt>
                             <tooltip><![CDATA[PREV_SQL_ID]]></tooltip>
@@ -3506,12 +3549,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = :PREV_SQL_ID
 order by
     case a.child_number
@@ -3523,6 +3567,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="PREV_SQL_ID">
                             <prompt><![CDATA[PREV_SQL_ID]]></prompt>
                             <tooltip><![CDATA[PREV_SQL_ID]]></tooltip>
@@ -3624,12 +3674,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = :PREV_SQL_ID
 order by
     case a.child_number
@@ -3641,6 +3692,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="PREV_SQL_ID">
                             <prompt><![CDATA[PREV_SQL_ID]]></prompt>
                             <tooltip><![CDATA[PREV_SQL_ID]]></tooltip>
@@ -3738,12 +3795,13 @@ order by
     sqltype,
     a.con_id                            -- 12.1 and higher
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = :PREV_SQL_ID
 order by
     case a.child_number
@@ -3755,6 +3813,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="PREV_SQL_ID">
                             <prompt><![CDATA[PREV_SQL_ID]]></prompt>
                             <tooltip><![CDATA[PREV_SQL_ID]]></tooltip>
@@ -3845,12 +3909,13 @@ order by
     a.serializable_aborts,
     sqltype
 from
-    v$sql a,
+    gv$sql a,
     v$sqlcommand b,
     all_users c 
 where
     a.command_type = b.command_type (+)
     and a.parsing_user_id = c.user_id (+)
+    and a.inst_id = :Inst_id
     and a.sql_id = :PREV_SQL_ID
 order by
     case a.child_number
@@ -3862,6 +3927,12 @@ order by
     a.last_active_time desc,
     a.child_number asc]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="PREV_SQL_ID">
                             <prompt><![CDATA[PREV_SQL_ID]]></prompt>
                             <tooltip><![CDATA[PREV_SQL_ID]]></tooltip>
@@ -3908,7 +3979,7 @@ bind_values as (
 ),
 display_plan_options as (
     select
-        'Advanced -projection '
+        'Advanced -outline -projection '
             || case
                    when lev.version >= 12 then
                        '+adaptive '
@@ -3926,26 +3997,47 @@ display_plan_options as (
 ),
 target_cursor_plus as (
     select
-        nvl(:SQL_ID, :PREV_SQL_ID)              as sql_id,
-        nvl2(:SQL_ID,
-             cast(:SQL_CHILD# as number),
-             cast(:PREV_CHILD# as number))      as sql_child#,
+        'inst_id = ' || to_char(inst_id)
+            || ' and sql_id = ''' || sql_id || ''''
+            || ' and child_number = ' || to_char(sql_child#)             as filter_preds,
+        'SQL_ID ' || sql_id || ', child number ' || to_char(sql_child#)  as label,
         plan_options
     from
-        display_plan_options
-    where
-        :SQL_ID is not null
-        or :PREV_SQL_ID is not null
+        (select
+            cast(:Inst_id as number)                as inst_id,
+            nvl(:SQL_ID, :PREV_SQL_ID)              as sql_id,
+            nvl2(:SQL_ID,
+                 cast(:SQL_CHILD# as number),
+                 cast(:PREV_CHILD# as number))      as sql_child#,
+            plan_options
+        from
+            display_plan_options
+        where
+            :SQL_ID is not null
+            or :PREV_SQL_ID is not null
+        )
 )
+select
+    cast(a.label as varchar2(300)) as plan_table_output
+from
+    target_cursor_plus a
+union all
 select b.*
 from 
     target_cursor_plus a,
-    table(dbms_xplan.display_cursor(
-            sql_id => a.sql_id,
-            cursor_child_no => a.sql_child#,
-            format => a.plan_options
+    table(dbms_xplan.display(
+            table_name   => 'GV$SQL_PLAN_STATISTICS_ALL',
+            statement_id => null,
+            format       => a.plan_options,
+            filter_preds => a.filter_preds
     )) b]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="SQL_ID">
                             <prompt><![CDATA[SQL_ID]]></prompt>
                             <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -4010,7 +4102,7 @@ bind_values as (
 ),
 display_plan_options as (
     select
-        'Advanced -projection '
+        'Advanced -outline -projection '
             || case
                    when lev.version >= 12 then
                        '+adaptive '
@@ -4028,23 +4120,44 @@ display_plan_options as (
 ),
 target_cursor_plus as (
     select
-        :PREV_SQL_ID                    as sql_id,
-        cast(:PREV_CHILD# as number)    as sql_child#,
+        'inst_id = ' || to_char(inst_id)
+            || ' and sql_id = ''' || sql_id || ''''
+            || ' and child_number = ' || to_char(sql_child#)             as filter_preds,
+        'SQL_ID ' || sql_id || ', child number ' || to_char(sql_child#)  as label,
         plan_options
     from
-        display_plan_options
-    where
-        :PREV_SQL_ID is not null
+        (select
+            cast(:Inst_id as number)        as inst_id,
+            :PREV_SQL_ID                    as sql_id,
+            cast(:PREV_CHILD# as number)    as sql_child#,
+            plan_options
+        from
+            display_plan_options
+        where
+            :PREV_SQL_ID is not null
+        )
 )
+select
+    cast(a.label as varchar2(300)) as plan_table_output
+from
+    target_cursor_plus a
+union all
 select b.*
 from 
     target_cursor_plus a,
-    table(dbms_xplan.display_cursor(
-            sql_id => a.sql_id,
-            cursor_child_no => a.sql_child#,
-            format => a.plan_options
+    table(dbms_xplan.display(
+            table_name   => 'GV$SQL_PLAN_STATISTICS_ALL',
+            statement_id => null,
+            format       => a.plan_options,
+            filter_preds => a.filter_preds
     )) b]]></sql>
                     <binds>
+                        <bind id="Inst_id">
+                            <prompt><![CDATA[Inst_id]]></prompt>
+                            <tooltip><![CDATA[Inst_id]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
                         <bind id="PREV_SQL_ID">
                             <prompt><![CDATA[PREV_SQL_ID]]></prompt>
                             <tooltip><![CDATA[PREV_SQL_ID]]></tooltip>

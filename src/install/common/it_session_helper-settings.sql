@@ -7,6 +7,15 @@ define def_it_sess_helper_tabspc = "USERS"
 -- Temporary tablespace of the owner user
 define def_it_sess_helper_temp_tabspc = "TEMP"
 
+-- Name of the role enabling to view details about one's own sessions
+define def_it_role_view_session_self = "IT_VIEW_SESS_SELF"
+
+-- Prefix of the role enabling to view details about sessions of a given
+-- user; the complete role name is formed by appending the username to that
+-- prefix, separated by a colon.
+--
+define def_it_role_view_session_prfx = "IT_vIEW_SESS"
+
 -- Name of the role enabling to terminate one's own sessions
 define def_it_role_end_session_self = "IT_END_SESS_SELF"
 
@@ -22,10 +31,10 @@ define def_it_sess_helper_log_table  = "ITSESSHLPLOG"
 -- Create public synonyms?
 -- Use "" to create public synonyms, "--" to skip that step
 --
-define def_it_sess_helper_create_pubsyn = ""
+define def_it_sess_helper_with_pubsyn = ""
 
 -- Prefix to use for public synonym names
-define def_it_sess_helper_pubsyn_prefix = "C##"
+define def_it_sess_helper_pubsyn_prfx = "C##"
 
 
 ------------------------------------------------------------------------------------------

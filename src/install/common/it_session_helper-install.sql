@@ -53,6 +53,9 @@ prompt ======
 prompt Roles
 prompt ------
 
+create role "&&def_it_role_view_session_self";
+revoke "&&def_it_role_view_session_self" from "&&_USER";
+
 create role "&&def_it_role_end_session_self";
 revoke "&&def_it_role_end_session_self" from "&&_USER";
 
@@ -61,7 +64,7 @@ prompt ================
 prompt Public synonyms
 prompt ----------------
 
-@@it_session_helper/create_pubsyn&&def_it_sess_helper_create_pubsyn
+@@it_session_helper/create_pubsyn&&def_it_sess_helper_with_pubsyn
 
 prompt
 prompt =============================

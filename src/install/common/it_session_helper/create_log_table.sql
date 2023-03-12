@@ -24,9 +24,11 @@ create table &&def_it_sess_helper_log_table (
   , session_auditing_id         number  
         default to_number(sys_context('USERENV', 'SESSIONID'))              not null
   , role_used                   varchar2(128 byte)                          not null
+  , sqlcode                     number                                      null
   , reason                      varchar2(4000 byte)                         null
 )
 segment creation deferred
+pctfree 10
 storage (initial 64k next 64k pctincrease 0)
 partition by range (log_time) interval (numtodsinterval(7,'DAY')) (
     partition p0 values less than (timestamp '1970-01-01 00:00:00')
@@ -54,5 +56,6 @@ comment on column &&def_it_sess_helper_log_table..client_ip_addr            is '
 comment on column &&def_it_sess_helper_log_table..client_osuser             is 'Calling session info: client OS user';
 comment on column &&def_it_sess_helper_log_table..session_auditing_id       is 'Calling session info: session auditing id';
 comment on column &&def_it_sess_helper_log_table..role_used                 is 'Role used to authorize the action';
+comment on column &&def_it_sess_helper_log_table..sqlcode                   is 'SQLCODE returned by the action';
 comment on column &&def_it_sess_helper_log_table..reason                    is 'Reason for performing the action';
 

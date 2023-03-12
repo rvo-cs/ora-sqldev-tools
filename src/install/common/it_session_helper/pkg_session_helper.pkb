@@ -50,18 +50,19 @@ create or replace package body pkg_session_helper as
     
 
     procedure log_action(
-        p_event_type        in varchar2,
-        p_session_info      in t_rec_session_info,
-        p_using_role        in t_role_name,
-        p_reason            in varchar2,
-        p_post_transaction  in boolean
+        p_event_type        in  varchar2,
+        p_session_info      in  t_rec_session_info,
+        p_using_role        in  t_role_name,
+        p_reason            in  varchar2,
+        p_post_transaction  in  boolean,
+        p_out_rowid         out rowid
     )
     is
         pragma autonomous_transaction;
         l_post_transaction varchar2(1);
     begin
         l_post_transaction := case when p_post_transaction then 'Y' end;
-        insert into &&def_it_sess_helper_log_table (
+        insert into &&def_it_sess_helper_log_table log (
             seq_num,
             event_type,
             target_session_id,
@@ -88,7 +89,8 @@ create or replace package body pkg_session_helper as
             l_post_transaction,
             p_using_role,
             p_reason
-        );
+        )
+        returning log.rowid into p_out_rowid;
         commit work;
     exception
         when others then
@@ -97,6 +99,40 @@ create or replace package body pkg_session_helper as
             end if;
             raise;
     end log_action;
+
+    
+    procedure log_action_result(
+        p_rowid    in rowid,
+        p_sqlcode  in number
+    )
+    is
+        pragma autonomous_transaction;
+
+        cursor c_action_row (p_rowid in rowid) is
+            select
+                log.sqlcode
+            from
+                &&def_it_sess_helper_log_table log
+            where
+                log.rowid = p_rowid
+            for update nowait;
+        
+        l_dummy number;
+    begin
+        open c_action_row(p_rowid);
+        fetch c_action_row into l_dummy;
+        update &&def_it_sess_helper_log_table log set
+            log.sqlcode = p_sqlcode
+        where current of c_action_row;
+        close c_action_row;
+        commit;
+    exception
+        when others then
+            if dbms_transaction.local_transaction_id is not null then
+                rollback;
+            end if;
+            raise;
+    end log_action_result;
 
 
     function is_role_enabled (p_role_name in varchar2) return boolean
@@ -133,6 +169,7 @@ create or replace package body pkg_session_helper as
     is
         l_rec_sessinfo    t_rec_session_info;
         l_using_role_name t_role_name;
+        l_log_rowid       rowid;
 
         function has_end_session_for_user_role return boolean
         is
@@ -185,10 +222,13 @@ create or replace package body pkg_session_helper as
                        when is_role_enabled(l_role_end_session_for_user)
                        then
                            l_role_end_session_for_user
+                       when sys_context('USERENV', 'SESSION_USER') = 'SYS' then
+                           'SYSDBA'
                    end;
         end can_terminate_session;
     begin
         if not is_role_enabled(gc_role_dba)
+            and sys_context('USERENV', 'SESSION_USER') <> 'SYS'
             and not is_role_enabled(gc_role_end_session_self)
             and not has_end_session_for_user_role
         then
@@ -207,22 +247,43 @@ create or replace package body pkg_session_helper as
             p_session_info      => l_rec_sessinfo, 
             p_using_role        => l_using_role_name, 
             p_reason            => p_reason,
-            p_post_transaction  => p_post_transaction
+            p_post_transaction  => p_post_transaction,
+            p_out_rowid         => l_log_rowid
         );
         
-        wrap_dyn_exec(
-            'alter system disconnect session ''' 
-                || to_char(l_rec_sessinfo.sid)
-                || ','
-                || to_char(l_rec_sessinfo.serial#)
-                || ''' '
-                || case
-                       when p_post_transaction then
-                           'post_transaction'
-                       else
-                           'immediate'
-                   end
-        );
+        <<dyn_exec_block>>
+        begin
+            wrap_dyn_exec(
+                'alter system disconnect session ''' 
+                    || to_char(l_rec_sessinfo.sid)
+                    || ','
+                    || to_char(l_rec_sessinfo.serial#)
+                    || ''' '
+                    || case
+                           when p_post_transaction then
+                               'post_transaction'
+                           else
+                               'immediate'
+                       end
+            );
+            <<log_success_no_raise>>
+            begin
+                log_action_result(l_log_rowid, 0);
+            exception
+                when others then
+                    null;   -- NOSONAR: G-5040
+            end log_success_no_raise;
+        exception
+            when others then
+                <<log_exception_no_raise>>
+                begin
+                    log_action_result(l_log_rowid, sqlcode);
+                exception
+                    when others then
+                        null;   -- NOSONAR: G-5040
+                end log_exception_no_raise;
+                raise;
+        end dyn_exec_block;
     end disconnect_session;
 
 end pkg_session_helper;

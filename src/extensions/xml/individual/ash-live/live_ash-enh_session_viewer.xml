@@ -2002,40 +2002,77 @@ Remark: this only works for sessions in the local instance.
                 <default><![CDATA[STATIC:All execs]]></default>
                 <value><![CDATA[STATIC:All execs:First exec:Never]]></value>
             </prompt>
+            <prompt type="check">                       <!-- index: 4 -->
+                <label>Trace process?</label>
+                <value><![CDATA[STATIC:Y]]></value>
+                <default><![CDATA[STATIC:]]></default>
+            </prompt>
             <prompt type="confirm">
                 <label>Confirm start tracing?</label>
             </prompt>
             <sql><![CDATA[declare
-    l_session_id       number := #Sid#;
-    l_session_serial   number := #Serial##;
-    l_session_instance number := #Inst_id#;
+    l_session_id       number       := #Sid#;
+    l_session_serial   number       := #Serial##;
+    l_session_instance number       := #Inst_id#;
+    l_trace_process    varchar2(1)  := '#4#';
+    l_alter_system_sql varchar2(200);  /* alter system statement, used if tracing the process */
+    l_session_ospid    number;         /* process number of the target session */
 begin
     if sys_context('USERENV', 'INSTANCE') != l_session_instance then
         raise_application_error(-20000, 'This session is not in the local instance');
     end if;
 
-    dbms_monitor.session_trace_enable(
-        session_id => l_session_id,
-        serial_num => l_session_serial,
-        binds      => #1#,
-        waits      => #2#,
-        plan_stat  => case '#3#'
-                          when 'All execs'  then 'ALL_EXECUTIONS'
-                          when 'First exec' then 'FIRST_EXECUTION'
-                          when 'Never'      then 'NEVER'
-                      end
-    );
+    if l_trace_process is null then
+        dbms_monitor.session_trace_enable(
+            session_id => l_session_id,
+            serial_num => l_session_serial,
+            binds      => #1#,
+            waits      => #2#,
+            plan_stat  => case '#3#'
+                              when 'All execs'  then 'ALL_EXECUTIONS'
+                              when 'First exec' then 'FIRST_EXECUTION'
+                              when 'Never'      then 'NEVER'
+                          end
+        );
+    else
+        <<lookup_ospid>>
+        begin
+            select pro.spid into l_session_ospid
+              from v$session ses,
+                   v$process pro
+             where ses.sid = l_session_id
+               and ses.serial# = l_session_serial
+               and pro.addr = ses.paddr;
+        exception
+            when no_data_found then
+                raise_application_error(-20000, 'Session not found anymore');
+        end lookup_ospid;
+        l_alter_system_sql := 'alter system set events ''sql_trace '
+                || '{process: ' || to_char(l_session_ospid) || '} '
+                || 'plan_stat=' || case '#3#'
+                                       when 'All execs'  then 'all_executions'
+                                       when 'First exec' then 'first_execution'
+                                       when 'Never'      then 'never'
+                                   end
+                || ',wait=' || lower('#2#') || ',bind=' || lower('#1#') || '''';
+        execute immediate l_alter_system_sql;
+    end if;
 end;]]></sql>
             <confirmation>
                 <title>SQL tracing enabled</title>
                 <sql><![CDATA[
 select
     nvl((select
-            'Tracing in session ' || to_char(ses.sid) || ',' || to_char(ses.serial#)
+            case ses.sql_trace
+                when 'DISABLED' then
+                    'Trace event successfully set — note that tracing at process-level is not reflected in v$session'
+                else
+                    'Tracing in session ' || to_char(ses.sid) || ',' || to_char(ses.serial#)
                     || '(' || sys_context('USERENV', 'INSTANCE') || ') is now ' || ses.sql_trace
                     || ', with binds: ' || lower(ses.sql_trace_binds)
                     || ', waits: ' || lower(ses.sql_trace_waits)
                     || ', plan stats: ' || ses.sql_trace_plan_stats
+            end
         from
             v$session ses
         where
@@ -2057,22 +2094,48 @@ Remark: this only works for sessions in the local instance.
             <prompt type="confirm">
                 <label>Session: #Sid#, #Serial## (#Inst_id#)    Username: #"Username"#</label>
             </prompt>
+            <prompt type="check">                       <!-- index: 1 -->
+                <label>Process-level trace?</label>
+                <value><![CDATA[STATIC:Y]]></value>
+                <default><![CDATA[STATIC:]]></default>
+            </prompt>
             <prompt type="confirm">
                 <label>Confirm stop tracing?</label>
             </prompt>
             <sql><![CDATA[declare
-    l_session_id       number := #Sid#;
-    l_session_serial   number := #Serial##;
-    l_session_instance number := #Inst_id#;
+    l_session_id       number       := #Sid#;
+    l_session_serial   number       := #Serial##;
+    l_session_instance number       := #Inst_id#;
+    l_trace_process    varchar2(1)  := '#1#';
+    l_alter_system_sql varchar2(200);  /* alter system statement, used if tracing the process */
+    l_session_ospid    number;         /* process number of the target session */
 begin
     if sys_context('USERENV', 'INSTANCE') != l_session_instance then
         raise_application_error(-20000, 'This session is not in the local instance');
     end if;
 
-    dbms_monitor.session_trace_disable(
-        session_id => l_session_id,
-        serial_num => l_session_serial
-    );
+    if l_trace_process is null then
+        dbms_monitor.session_trace_disable(
+            session_id => l_session_id,
+            serial_num => l_session_serial
+        );
+    else
+        <<lookup_ospid>>
+        begin
+            select pro.spid into l_session_ospid
+              from v$session ses,
+                   v$process pro
+             where ses.sid = l_session_id
+               and ses.serial# = l_session_serial
+               and pro.addr = ses.paddr;
+        exception
+            when no_data_found then
+                raise_application_error(-20000, 'Session not found anymore');
+        end lookup_ospid;
+        l_alter_system_sql := 'alter system set events ''sql_trace '
+                || '{process: ' || to_char(l_session_ospid) || '} off''';
+        execute immediate l_alter_system_sql;
+    end if;
 end;]]></sql>
             <confirmation>
                 <title>SQL tracing disabled</title>

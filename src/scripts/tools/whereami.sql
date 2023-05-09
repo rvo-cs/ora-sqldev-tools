@@ -63,6 +63,7 @@ begin
                   product_component_version v
               where
                   v.product like 'Oracle Database%'
+                  and rownum = 1
               }'
             into l_version_string;
     exception

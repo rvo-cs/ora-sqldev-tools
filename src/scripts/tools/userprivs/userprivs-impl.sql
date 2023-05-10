@@ -549,6 +549,7 @@ prompt All object privileges
 prompt ---------------------
 
 @@userprivs-note-oraobj&&def_hide_ora_obj
+@@userprivs-note-puboraobj&&def_hide_public_ora_obj
 @@userprivs-note-public&&def_hide_grants_to_public
 
 column grantee                  format a30 wrapped
@@ -656,15 +657,21 @@ object_grant_grouped_priv as (
         &&def_hide_ora_obj and owner not in ( 'ANONYMOUS'
         &&def_hide_ora_obj                  , 'APPQOSSYS'
         &&def_hide_ora_obj                  , 'AUDSYS'
+        &&def_hide_ora_obj                  , 'CTXSYS'
         &&def_hide_ora_obj                  , 'DBSFWUSER'
         &&def_hide_ora_obj                  , 'DBSNMP'
         &&def_hide_ora_obj                  , 'DIP'
+        &&def_hide_ora_obj                  , 'DVF'
+        &&def_hide_ora_obj                  , 'DVSYS'
         &&def_hide_ora_obj                  , 'GGSYS'
         &&def_hide_ora_obj                  , 'GSMADMIN_INTERNAL'
         &&def_hide_ora_obj                  , 'GSMCATUSER'
         &&def_hide_ora_obj                  , 'GSMUSER'
         &&def_hide_ora_obj                  , 'LBACSYS'
+        &&def_hide_ora_obj                  , 'MDSYS'
+        &&def_hide_ora_obj                  , 'OLAPSYS'
         &&def_hide_ora_obj                  , 'ORACLE_OCM'
+        &&def_hide_ora_obj                  , 'ORDS_METADATA'
         &&def_hide_ora_obj                  , 'OUTLN'
         &&def_hide_ora_obj                  , 'REMOTE_SCHEDULER_AGENT'
         &&def_hide_ora_obj                  , 'SYS'
@@ -678,6 +685,7 @@ object_grant_grouped_priv as (
         &&def_hide_ora_obj                  , 'XDB'
         &&def_hide_ora_obj                  , 'XS$NULL' 
         &&def_hide_ora_obj                  )    
+        &&def_hide_ora_obj and not regexp_like(owner, '^APEX_\d+$')
     group by
         owner, object_type,
         object_name, column_name,
@@ -707,7 +715,45 @@ direct_grant as (
         and a.grantee in ( '&&def_username_impl'
                          &&def_hide_grants_to_public , 'PUBLIC'
                          )
-        and a.grantee <> a.owner    /* Exclude direct grants to self */
+        and /* Exclude direct self grants */
+            a.grantee <> a.owner
+        and /* Exclude direct grants from self to PUBLIC */
+            a.owner <> '&&def_username_impl'
+        &&def_hide_public_ora_obj and not (a.grantee = 'PUBLIC'
+        &&def_hide_public_ora_obj          and (a.owner in ( 'ANONYMOUS'
+        &&def_hide_public_ora_obj                          , 'APPQOSSYS'
+        &&def_hide_public_ora_obj                          , 'AUDSYS'
+        &&def_hide_public_ora_obj                          , 'CTXSYS'
+        &&def_hide_public_ora_obj                          , 'DBSFWUSER'
+        &&def_hide_public_ora_obj                          , 'DBSNMP'
+        &&def_hide_public_ora_obj                          , 'DIP'
+        &&def_hide_public_ora_obj                          , 'DVF'
+        &&def_hide_public_ora_obj                          , 'DVSYS'
+        &&def_hide_public_ora_obj                          , 'GGSYS'
+        &&def_hide_public_ora_obj                          , 'GSMADMIN_INTERNAL'
+        &&def_hide_public_ora_obj                          , 'GSMCATUSER'
+        &&def_hide_public_ora_obj                          , 'GSMUSER'
+        &&def_hide_public_ora_obj                          , 'LBACSYS'
+        &&def_hide_public_ora_obj                          , 'MDSYS'
+        &&def_hide_public_ora_obj                          , 'OLAPSYS'
+        &&def_hide_public_ora_obj                          , 'ORACLE_OCM'
+        &&def_hide_public_ora_obj                          , 'ORDS_METADATA'
+        &&def_hide_public_ora_obj                          , 'OUTLN'
+        &&def_hide_public_ora_obj                          , 'REMOTE_SCHEDULER_AGENT'
+        &&def_hide_public_ora_obj                          , 'SYS'
+        &&def_hide_public_ora_obj                          , 'SYSBACKUP'
+        &&def_hide_public_ora_obj                          , 'SYSDG'
+        &&def_hide_public_ora_obj                          , 'SYSKM'
+        &&def_hide_public_ora_obj                          , 'SYSRAC'
+        &&def_hide_public_ora_obj                          , 'SYSTEM'
+        &&def_hide_public_ora_obj                          , 'SYS$UMF'
+        &&def_hide_public_ora_obj                          , 'WMSYS'
+        &&def_hide_public_ora_obj                          , 'XDB'
+        &&def_hide_public_ora_obj                          , 'XS$NULL'
+        &&def_hide_public_ora_obj                          )
+        &&def_hide_public_ora_obj               or regexp_like(a.owner, '^APEX_\d+$')
+        &&def_hide_public_ora_obj              )
+        &&def_hide_public_ora_obj         )
 ),
 grant_through_roles as (
     select /*+ merge(@subr) no_merge(a) no_merge(b) no_merge(c)
@@ -741,7 +787,45 @@ grant_through_roles as (
         and c.grantee in ( '&&def_username_impl'
                          &&def_hide_grants_to_public , 'PUBLIC'
                          )
-        and c.grantee <> a.owner                /* Exclude indirect grants to self */
+        and /* Exclude indirect self grants */
+            c.grantee <> a.owner
+        and /* Exclude indirect grants from self to PUBLIC */
+            a.owner <> '&&def_username_impl'
+        &&def_hide_public_ora_obj and not (c.grantee = 'PUBLIC'
+        &&def_hide_public_ora_obj          and (a.owner in ( 'ANONYMOUS'
+        &&def_hide_public_ora_obj                          , 'APPQOSSYS'
+        &&def_hide_public_ora_obj                          , 'AUDSYS'
+        &&def_hide_public_ora_obj                          , 'CTXSYS'
+        &&def_hide_public_ora_obj                          , 'DBSFWUSER'
+        &&def_hide_public_ora_obj                          , 'DBSNMP'
+        &&def_hide_public_ora_obj                          , 'DIP'
+        &&def_hide_public_ora_obj                          , 'DVF'
+        &&def_hide_public_ora_obj                          , 'DVSYS'
+        &&def_hide_public_ora_obj                          , 'GGSYS'
+        &&def_hide_public_ora_obj                          , 'GSMADMIN_INTERNAL'
+        &&def_hide_public_ora_obj                          , 'GSMCATUSER'
+        &&def_hide_public_ora_obj                          , 'GSMUSER'
+        &&def_hide_public_ora_obj                          , 'LBACSYS'
+        &&def_hide_public_ora_obj                          , 'MDSYS'
+        &&def_hide_public_ora_obj                          , 'OLAPSYS'
+        &&def_hide_public_ora_obj                          , 'ORACLE_OCM'
+        &&def_hide_public_ora_obj                          , 'ORDS_METADATA'
+        &&def_hide_public_ora_obj                          , 'OUTLN'
+        &&def_hide_public_ora_obj                          , 'REMOTE_SCHEDULER_AGENT'
+        &&def_hide_public_ora_obj                          , 'SYS'
+        &&def_hide_public_ora_obj                          , 'SYSBACKUP'
+        &&def_hide_public_ora_obj                          , 'SYSDG'
+        &&def_hide_public_ora_obj                          , 'SYSKM'
+        &&def_hide_public_ora_obj                          , 'SYSRAC'
+        &&def_hide_public_ora_obj                          , 'SYSTEM'
+        &&def_hide_public_ora_obj                          , 'SYS$UMF'
+        &&def_hide_public_ora_obj                          , 'WMSYS'
+        &&def_hide_public_ora_obj                          , 'XDB'
+        &&def_hide_public_ora_obj                          , 'XS$NULL'
+        &&def_hide_public_ora_obj                          )
+        &&def_hide_public_ora_obj               or regexp_like(a.owner, '^APEX_\d+$')
+        &&def_hide_public_ora_obj              )
+        &&def_hide_public_ora_obj         )
 )
 select
     grantee, object_privs

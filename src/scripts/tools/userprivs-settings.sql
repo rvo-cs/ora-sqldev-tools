@@ -22,17 +22,23 @@ define def_hide_column_inherited = "--"
 define def_hide_grants_to_public = ""
 --define def_hide_grants_to_public = "--"
 
--- Include database links in the readout?
--- Use "on" to list database links, "off" to skip them.
+-- Include grants to PUBLIC on Oracle-owned objects in the "All object
+-- privileges" section? Use "--" to include these grants, "" to omit them.
 --
-define def_show_db_links = "on"
---define def_show_db_links = "off"
+define def_hide_public_ora_obj = ""
+--define def_hide_public_ora_obj = "--"
 
 -- Include grants on Oracle-owned objects in the "All object privileges"
 -- section? Use "--" to include Oracle-owned objects, "" to omit them.
 --
 define def_hide_ora_obj = "--"
 --define def_hide_ora_obj = ""
+
+-- Include database links in the readout?
+-- Use "on" to list database links, "off" to skip them.
+--
+define def_show_db_links = "on"
+--define def_show_db_links = "off"
 
 -- Execute with TERMOUT ON or OFF?
 --

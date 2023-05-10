@@ -1,0 +1,1 @@
+-- Grants to PUBLIC on Oracle-owned objects are shown in the readout

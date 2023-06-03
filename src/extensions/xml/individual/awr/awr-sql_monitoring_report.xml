@@ -123,17 +123,17 @@ select /*+ no_parallel */
     c.sql_text, 
     --c.session_id, c.session_serial#, 
     c.last_refresh_time, c.refresh_count,
-    c##pkg_pub_utility.prec_round ( c.duration )                    as duration, 
-    c##pkg_pub_utility.prec_round ( c.elapsed_time / power(10,6) )  as elapsed_time_s, 
-    c##pkg_pub_utility.prec_round ( c.cpu_time     / power(10,6) )  as cpu_time_s, 
+    round( c.duration                   , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.duration ), 0), 1)))) )                    as duration, 
+    round( c.elapsed_time / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.elapsed_time / power(10,6) ), 0), 1)))) )  as elapsed_time_s, 
+    round( c.cpu_time     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.cpu_time     / power(10,6) ), 0), 1)))) )  as cpu_time_s, 
     c.plan_hash,
     c.user_fetch_count,
     c.buffer_gets, 
     c.read_reqs, 
-    c##pkg_pub_utility.prec_round ( c.read_bytes            / power(2,20) )  as read_mbytes,
-    c##pkg_pub_utility.prec_round ( c.user_io_wait_time     / power(10,6) )  as user_io_wait_time_s, 
-    c##pkg_pub_utility.prec_round ( c.concurrency_wait_time / power(10,6) )  as concurrency_wait_time_s, 
-    c##pkg_pub_utility.prec_round ( c.other_wait_time       / power(10,6) )  as other_wait_time_s,
+    round( c.read_bytes            / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.read_bytes            / power(2,20) ), 0), 1)))) )  as read_mbytes,
+    round( c.user_io_wait_time     / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.user_io_wait_time     / power(10,6) ), 0), 1)))) )  as user_io_wait_time_s, 
+    round( c.concurrency_wait_time / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.concurrency_wait_time / power(10,6) ), 0), 1)))) )  as concurrency_wait_time_s, 
+    round( c.other_wait_time       / power(10,6) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( c.other_wait_time       / power(10,6) ), 0), 1)))) )  as other_wait_time_s,
     c.dop, c.px_servers_requested, c.px_servers_allocated, 
     c.is_cross_instance, c.instances, 
     c.program, c.module, c.action,
@@ -280,8 +280,9 @@ order by
 		<CustomValues>
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
-		<query>
-			<sql><![CDATA[with child_cursor as (
+        <queries>
+            <query minversion="19.0">
+                <sql><![CDATA[with child_cursor as (
     select 
         sql_id, child_number
     from 
@@ -300,31 +301,73 @@ from
     table(dbms_xplan.display_cursor(
             sql_id => a.sql_id,
             cursor_child_no => a.child_number,
-            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection'
-                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end
-                    || ' +allstats last')
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection -qbregistry +allstats last')
     )) b]]></sql>
-			<binds>
-				<bind id="SQL_ID">
-					<prompt><![CDATA[SQL_ID]]></prompt>
-					<tooltip><![CDATA[SQL_ID]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-				<bind id="PLAN_HASH">
-					<prompt><![CDATA[PLAN_HASH]]></prompt>
-					<tooltip><![CDATA[PLAN_HASH]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-				<bind id="PLAN_DISPLAY_FMT">
-					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
-					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-			</binds>
-		</query>
+                <binds>
+                    <bind id="SQL_ID">
+                        <prompt><![CDATA[SQL_ID]]></prompt>
+                        <tooltip><![CDATA[SQL_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_HASH">
+                        <prompt><![CDATA[PLAN_HASH]]></prompt>
+                        <tooltip><![CDATA[PLAN_HASH]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_DISPLAY_FMT">
+                        <prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+                        <tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+            <query minversion="12.1">
+                <sql><![CDATA[with child_cursor as (
+    select 
+        sql_id, child_number
+    from 
+        v$sql
+    where
+        sql_id = :SQL_ID
+        and lnnvl(plan_hash_value <> :PLAN_HASH)
+        and lnnvl(plan_hash_value = 0)
+    order by
+        last_active_time desc
+    fetch first 1 row only
+)
+select b.* 
+from 
+    child_cursor a,
+    table(dbms_xplan.display_cursor(
+            sql_id => a.sql_id,
+            cursor_child_no => a.child_number,
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection +allstats last')
+    )) b]]></sql>
+                <binds>
+                    <bind id="SQL_ID">
+                        <prompt><![CDATA[SQL_ID]]></prompt>
+                        <tooltip><![CDATA[SQL_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_HASH">
+                        <prompt><![CDATA[PLAN_HASH]]></prompt>
+                        <tooltip><![CDATA[PLAN_HASH]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_DISPLAY_FMT">
+                        <prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+                        <tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        </queries>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[SQL Plan (AWR)]]></name>
@@ -334,8 +377,9 @@ from
 		<CustomValues>
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
-		<query>
-			<sql><![CDATA[with hist_plan as (
+        <queries>
+            <query minversion="19.0">
+                <sql><![CDATA[with hist_plan as (
     select 
         dbid, sql_id, plan_hash_value
     from 
@@ -351,30 +395,70 @@ from
     table(dbms_xplan.display_awr(
             sql_id => a.sql_id,
             plan_hash_value => a.plan_hash_value,
-            format => nvl( :PLAN_DISPLAY_FMT, 'Advanced +adaptive'
-                    || case when c##pkg_pub_utility.db_version >= 19 then ' -qbregistry' end )
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -qbregistry')
     )) b]]></sql>
-			<binds>
-				<bind id="SQL_ID">
-					<prompt><![CDATA[SQL_ID]]></prompt>
-					<tooltip><![CDATA[SQL_ID]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-				<bind id="PLAN_HASH">
-					<prompt><![CDATA[PLAN_HASH]]></prompt>
-					<tooltip><![CDATA[PLAN_HASH]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-				<bind id="PLAN_DISPLAY_FMT">
-					<prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
-					<tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-			</binds>
-		</query>
+                <binds>
+                    <bind id="SQL_ID">
+                        <prompt><![CDATA[SQL_ID]]></prompt>
+                        <tooltip><![CDATA[SQL_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_HASH">
+                        <prompt><![CDATA[PLAN_HASH]]></prompt>
+                        <tooltip><![CDATA[PLAN_HASH]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_DISPLAY_FMT">
+                        <prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+                        <tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+            <query minversion="12.1">
+                <sql><![CDATA[with hist_plan as (
+    select 
+        dbid, sql_id, plan_hash_value
+    from 
+        dba_hist_sql_plan
+    where
+        sql_id = :SQL_ID
+        and plan_hash_value = :PLAN_HASH
+        and rownum <= 1
+)
+select b.* 
+from 
+    hist_plan a,
+    table(dbms_xplan.display_awr(
+            sql_id => a.sql_id,
+            plan_hash_value => a.plan_hash_value,
+            format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive')
+    )) b]]></sql>
+                <binds>
+                    <bind id="SQL_ID">
+                        <prompt><![CDATA[SQL_ID]]></prompt>
+                        <tooltip><![CDATA[SQL_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_HASH">
+                        <prompt><![CDATA[PLAN_HASH]]></prompt>
+                        <tooltip><![CDATA[PLAN_HASH]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="PLAN_DISPLAY_FMT">
+                        <prompt><![CDATA[PLAN_DISPLAY_FMT]]></prompt>
+                        <tooltip><![CDATA[PLAN_DISPLAY_FMT]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        </queries>
 	</display>
 	<display id="null" type="" style="Script" enable="true">
 		<name><![CDATA[SQL Monitoring Report (text)]]></name>

@@ -35,6 +35,8 @@ declare
     gc_strip_segment_attrs          constant boolean := &&def_strip_segment_attrs;
     gc_sort_table_grants            constant boolean := &&def_sort_table_grants;
 
+    function rdbms_version return number;
+
     procedure create_table_sxml_xslt (p_clob in out nocopy clob);
     procedure create_index_sxml_xslt (p_clob in out nocopy clob, p_object_owner in varchar2);
     procedure create_synonym_sxml_xslt (p_clob in out nocopy clob, p_object_owner in varchar2);
@@ -111,6 +113,9 @@ declare
         dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES' , not(gc_strip_segment_attrs));  
         dbms_metadata.set_transform_param(l_th, 'STORAGE'            , false);
         dbms_metadata.set_transform_param(l_th, 'TABLESPACE', not(gc_strip_tablespace_clause));  
+        if rdbms_version >= 12.2 then
+            dbms_metadata.set_transform_param(l_th, 'COLLATION_CLAUSE', 'NON_DEFAULT');
+        end if;
         /* 
            Remark: the SIZE_BYTE_KEYWORD transform param is not supported in
            the SXMLDDL transform, which is a pity: the results will only be
@@ -186,6 +191,63 @@ declare
     end print_index_ddl;
 
 
+    /* Alternate DDL generator for synonyms */
+    procedure print_synonym_ddl_alt (
+        p_synonym_owner  in varchar2,
+        p_synonym_name   in varchar2,
+        p_object_owner   in varchar2
+    )
+    is
+        l_table_owner dba_synonyms.table_owner %type;
+        l_table_name  dba_synonyms.table_name  %type;
+    begin
+        select
+            syn.table_owner,
+            syn.table_name
+        into
+            l_table_owner,
+            l_table_name
+        from
+            dba_synonyms syn
+        where
+            syn.owner = p_synonym_owner
+            and syn.synonym_name = p_synonym_name;
+
+        print_vc2(
+            'CREATE OR REPLACE '
+            || case
+                   when p_synonym_owner = 'PUBLIC' then
+                       'PUBLIC '
+               end
+            || 'SYNONYM '
+            || case
+                   when p_synonym_owner = 'PUBLIC'
+                      or (gc_strip_object_schema and p_synonym_owner = p_object_owner)
+                   then
+                      null
+                   else
+                      dbms_assert.enquote_name(p_synonym_owner, false) || '.'
+               end
+            || dbms_assert.enquote_name(p_synonym_name, false)
+            || ' FOR '
+            || case
+                   when gc_strip_object_schema and l_table_owner = p_object_owner
+                   then
+                      null
+                   else
+                      dbms_assert.enquote_name(l_table_owner, false) || '.'
+               end
+            || dbms_assert.enquote_name(l_table_name, false)
+            || gc_sql_terminator
+        );
+
+        g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+    exception
+        when no_data_found then
+            null;
+    end print_synonym_ddl_alt;
+
+
     procedure print_synonym_ddl (
         p_synonym_owner  in varchar2,
         p_synonym_name   in varchar2,
@@ -210,32 +272,44 @@ declare
         l_sxml := dbms_metadata.fetch_xml(l_mh);
         dbms_metadata.close(l_mh);
         
-        /* 
-           Transform using XSLT: remove the object's schema
-         */
-        create_synonym_sxml_xslt(l_xslt_text, p_object_owner);
-        l_xslt := xmltype(l_xslt_text);
-        l_sxml := l_sxml.transform(
-            xsl       => l_xslt,
-            parammap  => xlst_transform_param('remove-object-schema' , gc_strip_object_schema)
-        );
-        dbms_lob.freetemporary(l_xslt_text);
+        if l_sxml is not null then
+            /* 
+               Transform using XSLT: remove the object's schema
+             */
+            create_synonym_sxml_xslt(l_xslt_text, p_object_owner);
+            l_xslt := xmltype(l_xslt_text);
+            l_sxml := l_sxml.transform(
+                xsl       => l_xslt,
+                parammap  => xlst_transform_param('remove-object-schema' , gc_strip_object_schema)
+            );
+            dbms_lob.freetemporary(l_xslt_text);
 
-        /*
-           Convert from SXML to DDL
-         */
-        dbms_lob.createtemporary(l_ddl, true);
-        
-        l_mh := dbms_metadata.openw('SYNONYM');
-        l_th := dbms_metadata.add_transform(l_mh, 'SXMLDDL');
-        dbms_metadata.convert(l_mh, l_sxml, l_ddl);
-        dbms_metadata.close(l_mh);
-        
-        dbms_lob.append(l_ddl, gc_sql_terminator);
-        print_clob(ltrim(l_ddl));
-        dbms_lob.freetemporary(l_ddl);
+            /*
+               Convert from SXML to DDL
+             */
+            dbms_lob.createtemporary(l_ddl, true);
+            
+            l_mh := dbms_metadata.openw('SYNONYM');
+            l_th := dbms_metadata.add_transform(l_mh, 'SXMLDDL');
+            dbms_metadata.convert(l_mh, l_sxml, l_ddl);
+            dbms_metadata.close(l_mh);
+            
+            dbms_lob.append(l_ddl, gc_sql_terminator);
+            print_clob(ltrim(l_ddl));
+            dbms_lob.freetemporary(l_ddl);
 
-        g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+            g_fetch_ddl_cnt := g_fetch_ddl_cnt + 1;
+
+        else
+            /*
+               dbms_metadata did not find the synonym!
+               This seems to happen for public synonyms of SYS objects
+               metadata-linked to the root container (origin_con_id = 1)
+               Workaround: use our own generator :-/
+             */
+            print_synonym_ddl_alt(p_synonym_owner, p_synonym_name, p_object_owner);
+        end if;
+
     end print_synonym_ddl;
 
 
@@ -337,7 +411,14 @@ declare
             dbms_metadata.set_transform_param(l_th, 'REF_CONSTRAINTS', false);
             dbms_metadata.set_transform_param(l_th, 'CONSTRAINTS_AS_ALTER', true);
         end if;
-        
+
+        if rdbms_version >= 12.2
+            and p_object_type in ('TABLE', 'CLUSTER', 'VIEW', 'MATERIALIZED_VIEW',
+                                  'PROCEDURE', 'FUNCTION', 'PACKAGE', 'TYPE', 'TRIGGER')
+        then
+            dbms_metadata.set_transform_param(l_th, 'COLLATION_CLAUSE', 'NON_DEFAULT');
+        end if;
+ 
         if p_object_type in ('TABLE', 'INDEX') then
             dbms_metadata.set_transform_param(l_th, 'SEGMENT_ATTRIBUTES', not(gc_strip_segment_attrs));
             dbms_metadata.set_transform_param(l_th, 'STORAGE', false);
@@ -511,6 +592,13 @@ declare
         end if;
     end print_object_grants;
     
+
+    function rdbms_version return number
+    is
+    begin
+        return dbms_db_version.version + dbms_db_version.release / 10;
+    end rdbms_version;
+
    
     procedure create_table_sxml_xslt (p_clob in out nocopy clob)
     is
@@ -864,7 +952,9 @@ declare
         if p_object_type in ('PROCEDURE', 'FUNCTION', 'PACKAGE', 'TYPE') then
             print_object_grants(p_schema_name, p_object_name, p_object_type);
             print_nl;
+        end if;
 
+        if p_object_type in ('PROCEDURE', 'FUNCTION', 'PACKAGE', 'TYPE', 'SQL_DOMAIN') then
             print_dependent_synonyms(p_schema_name, p_object_name);
         end if;
     end print_other_ddl;
@@ -1086,6 +1176,8 @@ begin
             print_table_ddl(gc_schema_name, gc_object_name);
         when 'VIEW' then
             print_view_ddl(gc_schema_name, gc_object_name);
+        when 'DOMAIN' then
+            print_other_ddl('SQL_DOMAIN', gc_schema_name, gc_object_name);
         else
             print_other_ddl(gc_object_type, gc_schema_name, gc_object_name);
     end case;

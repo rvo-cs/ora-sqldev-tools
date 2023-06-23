@@ -2482,6 +2482,7 @@ from
 where
     lop.inst_id = :Inst_id
     and lop.sid = :Sid
+    and lop.serial# = :Serial#
 order by
     lop.last_update_time desc nulls last]]></sql>
                     <binds>
@@ -2494,6 +2495,12 @@ order by
                         <bind id="Sid">
                             <prompt><![CDATA[Sid]]></prompt>
                             <tooltip><![CDATA[Sid]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                        <bind id="Serial#">
+                            <prompt><![CDATA[Serial#]]></prompt>
+                            <tooltip><![CDATA[Serial#]]></tooltip>
                             <value><![CDATA[NULL_VALUE]]></value>
                             <bracket><![CDATA[null]]></bracket>
                         </bind>
@@ -2531,6 +2538,7 @@ from
 where
     lop.inst_id = :Inst_id
     and lop.sid = :Sid
+    and lop.serial# = :Serial#
 order by
     lop.last_update_time desc nulls last]]></sql>
                     <binds>
@@ -2543,6 +2551,12 @@ order by
                         <bind id="Sid">
                             <prompt><![CDATA[Sid]]></prompt>
                             <tooltip><![CDATA[Sid]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                        <bind id="Serial#">
+                            <prompt><![CDATA[Serial#]]></prompt>
+                            <tooltip><![CDATA[Serial#]]></tooltip>
                             <value><![CDATA[NULL_VALUE]]></value>
                             <bracket><![CDATA[null]]></bracket>
                         </bind>

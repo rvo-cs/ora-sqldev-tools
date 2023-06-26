@@ -337,7 +337,7 @@ from
     , :JOB_NAME    as job_name
 from 
     table(
-        c##pkg_pub_textfile_viewer.datapump_job_log_text(
+        c##pkg_pub_datapump_log_viewer.datapump_job_log_text(
             :OWNER_NAME, :JOB_NAME
             , p_head_limit => :LOG_HEAD_LINES
             , p_tail_limit => :LOG_TAIL_LINES

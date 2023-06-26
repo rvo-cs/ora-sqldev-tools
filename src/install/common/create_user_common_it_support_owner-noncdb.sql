@@ -98,6 +98,16 @@ grant execute on pkg_pub_textfile_viewer to public;
 
 /*----------------------------------------------------------------------------*/
 
+@@pkg_pub_datapump_log_viewer.pks
+@@pkg_pub_datapump_log_viewer.pkb
+
+grant execute on pkg_pub_datapump_log_viewer to public;
+
+create or replace public synonym c##pkg_pub_datapump_log_viewer
+for pkg_pub_datapump_log_viewer;
+
+/*----------------------------------------------------------------------------*/
+
 @@pkg_pub_utility.pks
 @@pkg_pub_utility.pkb
 

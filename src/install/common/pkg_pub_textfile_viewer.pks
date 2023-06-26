@@ -5,8 +5,7 @@ create or replace package pkg_pub_textfile_viewer authid current_user as
  *
  * PURPOSE
  *      A package for enabling to read text files on the database server host 
- *      through pipeline table functions. This is mostly intended as an easy
- *      way to browse Data Pump log files.
+ *      through pipeline table functions.
  *
  * SECURITY
  *      This package is defined as AUTHID CURRENT USER and runs with the
@@ -109,22 +108,5 @@ create or replace package pkg_pub_textfile_viewer authid current_user as
     return tt_rec_line
     pipelined;
     
-    /*
-        Returns the contents of the log file of the specified Data Pump job.
-        The job must be listed in USER_DATAPUMP_JOBS (if the session user owns
-        the job) or in DBA_DATAPUMP_JOBS, and the master table must exist. If
-        returning all the lines from the log file is not needed, limits can be
-        specified as to the maximum number of lines to be returned, either at
-        the head end or at the tail end of the file, or both.
-     */
-    function datapump_job_log_text (
-        p_owner_name      in varchar2,                  -- owner of the Data Pump job
-        p_job_name        in varchar2,                  -- name of the Data Pump job
-        p_head_limit      in number     default null,   -- max. lines from the head end
-        p_tail_limit      in number     default null    -- max. lines from the tail end
-    )
-    return tt_rec_line
-    pipelined;
-
 end pkg_pub_textfile_viewer;
 /

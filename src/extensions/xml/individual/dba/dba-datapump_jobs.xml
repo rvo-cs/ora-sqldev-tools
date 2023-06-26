@@ -94,8 +94,15 @@ from
 			<sql><![CDATA[select
     d.*,
     e.last_analyzed,
-    :LOG_HEAD_LINES   as log_head_lines,
-    :LOG_TAIL_LINES   as log_tail_lines
+    xmlserialize(
+        document
+        xmlelement("bindData",
+            xmlforest(
+                :LOG_HEAD_LINES   as "logHeadLines",
+                :LOG_TAIL_LINES   as "logTailLines"
+            ))
+        as varchar2(2000)
+    ) as "Bind_data"
 from
     (select
         b.*,
@@ -315,35 +322,36 @@ from
         <display id="null" type="" style="Table" enable="true">
             <name><![CDATA[Logfile]]></name>
             <description><![CDATA[]]></description>
-            <tooltip><![CDATA[Contents of the logfile of the job]]></tooltip>
+            <tooltip><![CDATA[Details of the logfile of the job]]></tooltip>
             <drillclass><![CDATA[]]></drillclass>
             <CustomValues>
                 <TYPE><![CDATA[horizontal]]></TYPE>
             </CustomValues>
             <query>
-                <sql><![CDATA[select 
+                <sql><![CDATA[select
     case
-        when sqlcode < 0    then 'SQLDEV:GAUGE:0:100:100:100:0' -- Red
-        when sqlcode = 100  then 'SQLDEV:GAUGE:0:100:0:0:0'     -- Green
-        when sqlcode is null
-            and sqlerrm is not null then 'SQLDEV:GAUGE:0:100:0:100:0' -- Orange
-    end         as wl
-    , lineno    as line#
-    , text      as log_text
-    , sqlerrm   as note
-    , file#
-    , filepath
-    , :OWNER_NAME  as owner_name
-    , :JOB_NAME    as job_name
-from 
-    table(
-        c##pkg_pub_datapump_log_viewer.datapump_job_log_text(
-            :OWNER_NAME, :JOB_NAME
-            , p_head_limit => :LOG_HEAD_LINES
-            , p_tail_limit => :LOG_TAIL_LINES
-        ))
-where                
-    :OWNER_NAME is not null]]></sql>
+        when b.sqlcode < 0 then
+            'SQLDEV:GAUGE:0:100:100:100:0' -- Red
+    end as wl,
+    b.job_owner as owner_name, 
+    b.job_name,
+    b.log_directory,
+    b.log_filename,
+    b.sqlerrm as error_message,
+    :Bind_data as "Bind_data"
+from
+    (select
+        :OWNER_NAME as owner_name,
+        :JOB_NAME   as job_name
+    from
+        dual
+    where
+        :OWNER_NAME is not null
+    ) a,
+    table(c##pkg_pub_datapump_log_viewer.datapump_job_log(
+        p_owner_name => a.owner_name,
+        p_job_name   => a.job_name
+    )) b]]></sql>
                 <binds>
                     <bind id="OWNER_NAME">
                         <prompt><![CDATA[OWNER_NAME]]></prompt>
@@ -357,20 +365,99 @@ where
                         <value><![CDATA[NULL_VALUE]]></value>
                         <bracket><![CDATA[null]]></bracket>
                     </bind>
-                    <bind id="LOG_HEAD_LINES">
-                        <prompt><![CDATA[LOG_HEAD_LINES]]></prompt>
-                        <tooltip><![CDATA[LOG_HEAD_LINES]]></tooltip>
-                        <value><![CDATA[NULL_VALUE]]></value>
-                        <bracket><![CDATA[null]]></bracket>
-                    </bind>
-                    <bind id="LOG_TAIL_LINES">
-                        <prompt><![CDATA[LOG_TAIL_LINES]]></prompt>
-                        <tooltip><![CDATA[LOG_TAIL_LINES]]></tooltip>
+                    <bind id="Bind_data">
+                        <prompt><![CDATA[Bind_data]]></prompt>
+                        <tooltip><![CDATA[Bind_data]]></tooltip>
                         <value><![CDATA[NULL_VALUE]]></value>
                         <bracket><![CDATA[null]]></bracket>
                     </bind>
                 </binds>
             </query>
+            <display id="null" type="" style="Table" enable="true">
+                <name><![CDATA[Logfile contents]]></name>
+                <description><![CDATA[]]></description>
+                <tooltip><![CDATA[Contents of the logfile of the job]]></tooltip>
+                <drillclass><![CDATA[]]></drillclass>
+                <CustomValues>
+                    <TYPE><![CDATA[horizontal]]></TYPE>
+                </CustomValues>
+                <query>
+                    <sql><![CDATA[with
+bind_values as (
+    select
+        log_head_lines,
+        log_tail_lines
+    from
+        xmltable(
+            '/bindData' passing xmlparse(document :Bind_data)
+            columns
+                log_head_lines number path 'logHeadLines',
+                log_tail_lines number path 'logTailLines'
+        )
+)
+select 
+    case
+        when sqlcode < 0 then
+            'SQLDEV:GAUGE:0:100:100:100:0'                  -- Red
+        when sqlcode = 100 then
+            'SQLDEV:GAUGE:0:100:0:0:0'                      -- Green
+        when sqlcode is null and sqlerrm is not null then
+            'SQLDEV:GAUGE:0:100:0:100:0'                    -- Orange
+        when regexp_like(text, '^(ORA-\d{5}:|Job "[^"]*"."[^"]*" completed with) ') then
+            'SQLDEV:GAUGE:0:100:0:100:0'                    -- Orange
+    end         as wl
+    , lineno    as line#
+    , text      as log_text
+    , sqlerrm   as note
+    , filepath
+    , :OWNER_NAME  as owner_name
+    , :JOB_NAME    as job_name
+from 
+    bind_values bv,
+    table(
+        c##pkg_pub_textfile_viewer.file_text(
+              p_dirname    => :LOG_DIRECTORY
+            , p_filename   => :LOG_FILENAME
+            , p_head_limit => bv.log_head_lines
+            , p_tail_limit => bv.log_tail_lines
+        ))
+where                
+    :LOG_DIRECTORY is not null
+    and :LOG_FILENAME is not null]]></sql>
+                    <binds>
+                        <bind id="OWNER_NAME">
+                            <prompt><![CDATA[OWNER_NAME]]></prompt>
+                            <tooltip><![CDATA[OWNER_NAME]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                        <bind id="JOB_NAME">
+                            <prompt><![CDATA[JOB_NAME]]></prompt>
+                            <tooltip><![CDATA[JOB_NAME]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                        <bind id="LOG_DIRECTORY">
+                            <prompt><![CDATA[LOG_DIRECTORY]]></prompt>
+                            <tooltip><![CDATA[LOG_DIRECTORY]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                        <bind id="LOG_FILENAME">
+                            <prompt><![CDATA[LOG_FILENAME]]></prompt>
+                            <tooltip><![CDATA[LOG_FILENAME]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                        <bind id="Bind_data">
+                            <prompt><![CDATA[Bind_data]]></prompt>
+                            <tooltip><![CDATA[Bind_data]]></tooltip>
+                            <value><![CDATA[NULL_VALUE]]></value>
+                            <bracket><![CDATA[null]]></bracket>
+                        </bind>
+                    </binds>
+                </query>
+            </display>
         </display>
 	</display>
 </display>

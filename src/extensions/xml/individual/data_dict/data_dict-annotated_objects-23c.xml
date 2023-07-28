@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<folder>
+<name><![CDATA[Data Dictionary]]></name>
+<display id="c3095158-d6d8-4064-a7fd-171e522cc9b0" type="" style="Table" enable="true">
+	<name><![CDATA[Data Dict – Objects with annotations (23c)]]></name>
+	<description><![CDATA[List of objects annotated with annotations matching the specified criteria]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+    <queries>
+        <query minversion="23.0">
+            <sql><![CDATA[with 
+object_like_in as (
+    select
+        :OBJECT_LIKE_LIST  as str,
+        '\s* ( ( [^"[:space:]] "? )+ | " ( [^"] )* " ) \s*'  as rex
+    from
+        dual
+),
+object_pattrn_raw as (
+    select
+        regexp_substr(a.str, a.rex, 1, level, 'x')  as tok
+    from
+        object_like_in a
+    connect by
+        regexp_instr (a.str, a.rex, 1, level, 0, 'x') > 0
+),
+object_pattrn_trimmed as (
+    select
+        regexp_replace(regexp_replace(b.tok, '^\s*'), '\s*$')  as tok
+    from
+        object_pattrn_raw b
+),
+object_pattrn_dequoted as (
+    select 
+        regexp_replace(c.tok, '^" (.*) "$', '\1', 1, 1, 'nx')  as tok
+    from
+        object_pattrn_trimmed c
+),
+object_like_list as (
+    select /*+ materialize */
+        d.tok  as object_like
+    from
+        object_pattrn_dequoted d
+    where
+        d.tok is not null
+),
+matching_objects as (
+    select
+        a.owner,
+        a.object_type,
+        a.object_name,
+        listagg(b.object_like, ' | ') within group (order by b.object_like)
+            as matching_patterns
+    from
+        dba_objects a,
+        object_like_list b
+    where
+        (:OWNER_LIKE is null or upper(a.owner) like upper(:OWNER_LIKE) escape '\')
+        and (:OWNER_RE is null or regexp_like(a.owner, :OWNER_RE, 'i'))
+        and (:OBJECT_TYPE_LIKE is null or a.object_type like upper(:OBJECT_TYPE_LIKE) escape '\')
+        and (:OBJECT_TYPE_RE is null or regexp_like(a.object_type, :OBJECT_TYPE_RE, 'i'))
+        and a.object_type in (
+                -- List of object types which may be annotated
+                'TABLE',
+                'VIEW',
+                'INDEX',
+                'MATERIALIZED VIEW',
+                'DOMAIN'
+            )
+        and upper(a.object_name) like upper(b.object_like) escape '\'
+    group by
+        a.owner,
+        a.object_type,
+        a.object_name
+),
+annotated_objects as (
+    select 
+        oau.owner,
+        oau.object_type,
+        oau.object_name,
+        case
+            when (:B_OBJECT_ANNOT_LIKE is null or sum(oau.annot_name_like) > 0)
+                and (:B_OBJECT_ANNOT_RE is null or sum(oau.annot_name_re) > 0)
+            then
+                'Y'
+            else
+                'N'
+        end as matching_annot_name,
+        case
+            when (:B_OBJECT_ANNOT_VALUE_LIKE is null or sum(oau.annot_value_like) > 0)
+                and (:B_OBJECT_ANNOT_VALUE_RE is null or sum(oau.annot_value_re) > 0)
+            then
+                'Y'
+            else
+                'N'
+        end as matching_annot_value,
+        case
+            when sum(annot_name_not_like) is null
+                and sum(annot_name_neg_re) is null
+            then
+                'N'
+            else
+                'Y'
+        end as excl_annot_name,
+        count(*) as object_annot_count,
+        json_serialize(
+            json_objectagg(
+                key oau.annotation_name 
+                value oau.annotation_value 
+                null on null
+                returning json
+            ) 
+            returning varchar2(4000) 
+            pretty ordered
+        ) as all_annotations
+    from 
+        (select 
+            u.annotation_owner as owner,
+            u.object_type,
+            u.object_name,
+            u.annotation_name,
+            u.annotation_value,
+            case
+                when :B_OBJECT_ANNOT_LIKE is not null
+                    and upper(u.annotation_name) like upper(:B_OBJECT_ANNOT_LIKE) escape '\'
+                then
+                    1
+            end as annot_name_like,
+            case
+                when :B_OBJECT_ANNOT_RE is not null
+                    and regexp_like(u.annotation_name, :B_OBJECT_ANNOT_RE, 'i')
+                then
+                    1
+            end as annot_name_re,
+            case
+                when :B_OBJECT_ANNOT_VALUE_LIKE is not null
+                    and upper(u.annotation_value) like upper(:B_OBJECT_ANNOT_VALUE_LIKE) escape '\'
+                then
+                    1
+            end as annot_value_like,
+            case
+                when :B_OBJECT_ANNOT_VALUE_RE is not null
+                    and regexp_like(u.annotation_value, :B_OBJECT_ANNOT_VALUE_RE, 'i')
+                then
+                   1
+            end as annot_value_re,
+            case
+                when :B_OBJECT_ANNOT_NOT_LIKE is not null
+                    and upper(u.annotation_name) like upper(:B_OBJECT_ANNOT_NOT_LIKE) escape '\'
+                then
+                    1
+            end as annot_name_not_like,
+            case
+                when :B_OBJECT_ANNOT_NEG_RE is not null
+                    and regexp_like(u.annotation_name, :B_OBJECT_ANNOT_NEG_RE, 'i')
+                then
+                    1
+            end as annot_name_neg_re
+        from 
+            dba_annotations_usage u
+        where 
+            u.column_name is null
+            and (u.annotation_owner, u.object_type, u.object_name) 
+                in (select o.owner, o.object_type, o.object_name from matching_objects o)
+        ) oau
+    group by
+        oau.owner,
+        oau.object_type,
+        oau.object_name
+)
+select
+    ml.owner                as "Owner",
+    ml.object_type          as "Object type",
+    ml.object_name          as "Object name",
+    case
+        when
+            ao.matching_annot_name = 'Y'
+            and ao.matching_annot_value = 'Y'
+            and ao.excl_annot_name = 'N'
+        then
+            ao.all_annotations
+    end                     as "Selected object annotations",
+    case
+        when coalesce(:B_OBJECT_ANNOT_LIKE, :B_OBJECT_ANNOT_RE) is not null
+        then
+            ao.matching_annot_name
+    end                     as "Matching annot. name?",
+    case
+        when coalesce(:B_OBJECT_ANNOT_NOT_LIKE, :B_OBJECT_ANNOT_NEG_RE) is not null
+        then
+            ao.excl_annot_name
+    end                     as "Excl. annot. name?",
+    case
+        when coalesce(:B_OBJECT_ANNOT_VALUE_LIKE, :B_OBJECT_ANNOT_VALUE_RE) is not null
+        then
+            ao.matching_annot_value
+    end                     as "Matching annot. value?",
+    ao.object_annot_count   as "Annot. count",
+    case
+        when
+            ao.matching_annot_name <> 'Y'
+            or ao.matching_annot_value <> 'Y'
+            or ao.excl_annot_name <> 'N'
+        then
+            ao.all_annotations
+    end                     as "Non-selected obj. annotations",
+    ml.matching_patterns    as "Object LIKE pattern"
+from
+    annotated_objects ao,
+    matching_objects ml
+where
+    ml.owner = ao.owner (+)
+    and ml.object_type = ao.object_type (+)
+    and ml.object_name = ao.object_name (+)
+    and (case
+            when lnnvl(upper(:B_SHOW_ALL_LIKE_OBJECTS) = 'Y') then
+                ao.owner
+            else
+                ml.owner
+        end) = ml.owner
+    and (case
+            when lnnvl(upper(:B_SHOW_ALL_LIKE_OBJECTS) = 'Y')
+                and lnnvl(upper(:B_SHOW_ALL_ANNOTATED_OBJECTS) = 'Y')
+                and (ao.matching_annot_name <> 'Y'
+                    or ao.matching_annot_value <> 'Y'
+                    or ao.excl_annot_name <> 'N')
+            then
+                0
+            else
+                1
+        end) = 1
+order by 
+    ml.owner,
+    ml.object_name,
+    ml.object_type]]></sql>
+            <binds>
+                <bind id="OBJECT_LIKE_LIST">
+                    <prompt><![CDATA[Object name like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (CI; escape '\') for matching object names — optionally: list of pattens separated by blanks]]></tooltip>
+                    <value><![CDATA[foo%]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OWNER_LIKE">
+                    <prompt><![CDATA[Owner like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (CI; escape '\') for matching the name of the object owner]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OWNER_RE">
+                    <prompt><![CDATA[Owner regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression (CI) for matching the name of the object owner]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OBJECT_TYPE_LIKE">
+                    <prompt><![CDATA[Object type like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (CI; escape '\') for matching the object type]]></tooltip>
+                    <value><![CDATA[TABLE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OBJECT_TYPE_RE">
+                    <prompt><![CDATA[Object type regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression (CI) for matching the object type]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_OBJECT_ANNOT_LIKE">
+                    <prompt><![CDATA[Annotation like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (CI; escape '\') for matching annotation names]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_OBJECT_ANNOT_RE">
+                    <prompt><![CDATA[Annotation regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression (CI) for matching annotation names]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_OBJECT_ANNOT_NOT_LIKE">
+                    <prompt><![CDATA[Annotation NOT like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (CI; escape '\') for excluding objects having matching annotations]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_OBJECT_ANNOT_NEG_RE">
+                    <prompt><![CDATA[Annotation negative regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression (CI) for excluding objects having matching annotations]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_OBJECT_ANNOT_VALUE_LIKE">
+                    <prompt><![CDATA[Annot. value like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (CI; escape '\') for matching values of annotations]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_OBJECT_ANNOT_VALUE_RE">
+                    <prompt><![CDATA[Annot. value regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression (CI) for matching values of annotations]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_SHOW_ALL_ANNOTATED_OBJECTS">
+                    <prompt><![CDATA[Show all annotated objects?]]></prompt>
+                    <tooltip><![CDATA[If 'Y', all annotated objects will be shown, regardless of criteria on annotations]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="B_SHOW_ALL_LIKE_OBJECTS">
+                    <prompt><![CDATA[Show all like objects?]]></prompt>
+                    <tooltip><![CDATA[If 'Y', all objects matching one of the name patterns will be shown, including unannotated objects]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+        <query>
+            <sql><![CDATA[select
+    'Annotations are available in Oracle 23c or higher.'  as "Unsupported DB version!"
+from
+    dual]]></sql>        </query>
+    </queries>
+</display>
+</folder>
+</displays>

@@ -10,8 +10,136 @@
 	<CustomValues>
 		<TYPE><![CDATA[horizontal]]></TYPE>
 	</CustomValues>
-	<query>
-		<sql><![CDATA[with 
+    <queries>
+        <query minversion="23.0">
+            <sql><![CDATA[with 
+table_like_in as (
+    select
+        :TABLE_LIKE_LIST  as str,
+        '\s* ( ( [^"[:space:]] "? )+ | " ( [^"] )* " ) \s*'  as rex
+    from
+        dual
+),
+table_pattrn_raw as (
+    select
+        regexp_substr(a.str, a.rex, 1, level, 'x')  as tok
+    from
+        table_like_in a
+    connect by
+        regexp_instr (a.str, a.rex, 1, level, 0, 'x') > 0
+),
+table_pattrn_trimmed as (
+    select
+        regexp_replace(regexp_replace(b.tok, '^\s*'), '\s*$')  as tok
+    from
+        table_pattrn_raw b
+),
+table_pattrn_dequoted as (
+    select 
+        regexp_replace(c.tok, '^" (.*) "$', '\1', 1, 1, 'nx')  as tok
+    from
+        table_pattrn_trimmed c
+),
+table_like_list as (
+    select /*+ materialize */
+        d.tok  as table_like
+    from
+        table_pattrn_dequoted d
+    where
+        d.tok is not null
+),
+matching_tables as (
+    select
+        listagg(b.table_like, ' | ') within group (order by b.table_like)
+            as matching_patterns,
+        a.owner, a.table_name
+    from
+        dba_tables a,
+        table_like_list b
+    where
+        (:OWNER_LIKE is null or upper(a.owner) like upper(:OWNER_LIKE) escape '\') 
+        and (:OWNER_RE is null or regexp_like(a.owner, :OWNER_RE, 'i'))
+        and upper(a.table_name) like upper(b.table_like) escape '\'
+    group by
+        a.owner, a.table_name
+),
+matching_table_annotations as (
+    select
+        aus.annotation_owner  as owner,
+        aus.object_name       as table_name,
+        json_serialize(json_objectagg(key aus.annotation_name
+                                      value aus.annotation_value
+                                      null on null)
+                       returning varchar2(4000)
+                       pretty ordered)  as annotations
+    from
+        dba_annotations_usage aus,
+        matching_tables tab
+    where
+        aus.annotation_owner = tab.owner
+        and aus.object_name = tab.table_name
+        and aus.object_type = 'TABLE'
+        and aus.column_name is null
+    group by
+        aus.annotation_owner,
+        aus.object_name
+)
+select /*+ noparallel */
+    b.owner,
+    b.table_name,
+    b.num_rows,
+    b.blocks,
+    b.avg_row_len,
+    b.iot_type,
+    b.iot_name,
+    b.status,
+    b.partitioned,
+    b.nested,
+    b.temporary,
+    b.duration,
+    b.sample_size,
+    b.last_analyzed,
+    c.comments,
+    d.annotations,
+    a.matching_patterns
+from
+    matching_tables a,
+    dba_tables b,
+    dba_tab_comments c,
+    matching_table_annotations d
+where
+    a.owner = b.owner
+    and a.table_name = b.table_name
+    and a.owner = c.owner (+)
+    and a.table_name = c.table_name (+)
+    and a.owner = d.owner (+)
+    and a.table_name = d.table_name (+)
+order by
+    b.owner,
+    b.table_name]]></sql>
+            <binds>
+                <bind id="TABLE_LIKE_LIST">
+                    <prompt><![CDATA[Table like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by blanks]]></tooltip>
+                    <value><![CDATA[FOO%]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OWNER_LIKE">
+                    <prompt><![CDATA[Owner like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern for matching the name of the table owner]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OWNER_RE">
+                    <prompt><![CDATA[Owner regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression for matching the name of the table owner]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+        <query>
+            <sql><![CDATA[with 
 table_like_in as (
     select
         :TABLE_LIKE_LIST  as str,
@@ -91,27 +219,28 @@ where
 order by
     b.owner,
     b.table_name]]></sql>
-		<binds>
-			<bind id="TABLE_LIKE_LIST">
-				<prompt><![CDATA[Table like?]]></prompt>
-				<tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by blanks]]></tooltip>
-				<value><![CDATA[FOO%]]></value>
-				<bracket><![CDATA[null]]></bracket>
-			</bind>
-			<bind id="OWNER_LIKE">
-				<prompt><![CDATA[Owner like?]]></prompt>
-				<tooltip><![CDATA[LIKE pattern for matching the name of the table owner]]></tooltip>
-				<value><![CDATA[NULL_VALUE]]></value>
-				<bracket><![CDATA[null]]></bracket>
-			</bind>
-			<bind id="OWNER_RE">
-				<prompt><![CDATA[Owner regexp?]]></prompt>
-				<tooltip><![CDATA[Regular expression for matching the name of the table owner]]></tooltip>
-				<value><![CDATA[NULL_VALUE]]></value>
-				<bracket><![CDATA[null]]></bracket>
-			</bind>
-		</binds>
-	</query>
+            <binds>
+                <bind id="TABLE_LIKE_LIST">
+                    <prompt><![CDATA[Table like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern (escape '\') for matching tables -- optionally: list of pattens separated by blanks]]></tooltip>
+                    <value><![CDATA[FOO%]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OWNER_LIKE">
+                    <prompt><![CDATA[Owner like?]]></prompt>
+                    <tooltip><![CDATA[LIKE pattern for matching the name of the table owner]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="OWNER_RE">
+                    <prompt><![CDATA[Owner regexp?]]></prompt>
+                    <tooltip><![CDATA[Regular expression for matching the name of the table owner]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+    </queries>
     <item reload="true" reloadparent="false" removeFromParent="false">
         <title>Gather Stats...</title>
         <help><![CDATA[This gathers statistics on the specified table.
@@ -1053,6 +1182,139 @@ order by
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
         <queries>
+		<query minversion="23.0">
+			<sql><![CDATA[select /*+ noparallel */
+    a.owner,
+    a.table_name,
+    a.column_id,
+    a.column_name,
+    case
+        when a.data_type in ('CHAR', 'VARCHAR', 'VARCHAR2', 'NCHAR', 'NVARCHAR', 'NVARCHAR2')
+            then lower(a.data_type) 
+                    || '(' || a.char_length 
+                    || decode(a.char_used, 'B', ' byte', 'C', ' char', null) || ')'
+        when a.data_type = 'NUMBER' 
+            then lower(a.data_type)
+                    || case
+                        when a.data_precision is null and a.data_scale is null then null
+                        when a.data_precision is null and a.data_scale is not null 
+                            then '(* ,' || a.data_scale || ')'
+                        else '(' || a.data_precision || ',' || a.data_scale || ')' end
+        when data_type = 'FLOAT' 
+            then lower(a.data_type)
+                    || case when a.data_precision is not null then '(' || a.data_precision || ')' end
+        else lower(a.data_type) end
+        as data_type,
+    a.nullable,
+    case when e.column_name is not null then 'Y' end as is_pk,
+    case when h.column_name is not null then 'Y' end as is_idx,
+    a.data_default,
+    a.domain_owner,
+    a.domain_name,
+    a.data_type_mod,
+    a.data_type_owner,
+    decode(a.hidden_column, 'NO', 'N', 'YES', 'Y') as hidden_column,
+    decode(a.virtual_column, 'NO', 'N', 'YES', 'Y') as virtual_column,
+    a.segment_column_id,
+    a.internal_column_id,
+    a.qualified_col_name,
+    b.comments,
+    h.cnt_indexes,
+    h.index_list,
+    cau.annotations
+from
+    dba_tab_cols a,
+    dba_col_comments b,
+    (select
+        c.owner,
+        c.table_name,
+        d.column_name
+    from 
+        dba_constraints c,
+        dba_cons_columns d
+    where 
+        c.owner = :OWNER
+        and c.table_name = :TABLE_NAME
+        and c.constraint_type = 'P'
+        and c.owner = d.owner
+        and c.table_name = d.table_name
+        and c.constraint_name = d.constraint_name
+    ) e,
+    (select
+        f.table_owner,
+        f.table_name,
+        g.column_name,
+        count(*) as cnt_indexes,
+        listagg(dbms_assert.enquote_name(g.index_owner) 
+                || '.' || dbms_assert.enquote_name(g.index_name)
+                || ' (' || g.column_position || ')', ', ') 
+                within group (order by g.index_owner, g.index_name) as index_list
+    from
+        dba_indexes f,
+        dba_ind_columns g
+    where
+        f.table_owner = :OWNER
+        and f.table_name = :TABLE_NAME
+        and g.index_owner = f.owner
+        and g.index_name = f.index_name
+    group by
+        f.table_owner,
+        f.table_name,
+        g.column_name
+    ) h,
+    (select
+        aus.annotation_owner as table_owner,
+        aus.object_name      as table_name,
+        aus.column_name, 
+        json_serialize(json_objectagg(key aus.annotation_name 
+                                      value aus.annotation_value 
+                                      null on null) 
+                       returning varchar2(4000)
+                       pretty ordered)  as annotations
+    from
+        dba_annotations_usage aus
+    where
+        aus.annotation_owner = :OWNER
+        and aus.object_name = :TABLE_NAME
+        and aus.object_type = 'TABLE'
+        and aus.column_name is not null
+    group by
+        aus.annotation_owner,
+        aus.object_name,
+        aus.column_name
+    ) cau
+where
+    a.owner = :OWNER
+    and  a.table_name = :TABLE_NAME
+    and  a.owner = b.owner (+)
+    and  a.table_name = b.table_name (+)
+    and  a.column_name = b.column_name (+)
+    and  a.owner = e.owner (+)
+    and  a.table_name = e.table_name (+)
+    and  a.column_name = e.column_name (+)
+    and  a.owner = h.table_owner (+)
+    and  a.table_name = h.table_name (+)
+    and  a.column_name = h.column_name (+)
+    and  a.owner = cau.table_owner (+)
+    and  a.table_name = cau.table_name (+)
+    and  a.column_name = cau.column_name (+)
+order by
+    a.internal_column_id]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+        </query>
 		<query minversion="12.1">
 			<sql><![CDATA[select /*+ noparallel */
     a.owner,
@@ -1275,8 +1537,60 @@ order by
 		<CustomValues>
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
-		<query>
-			<sql><![CDATA[select /*+ noparallel */
+        <queries>
+            <query minversion="23.0">
+                <sql><![CDATA[select /*+ noparallel */
+    a.constraint_name,
+    a.constraint_type,
+    a.domain_owner,
+    a.domain_name,
+    a.domain_constraint_name  as domain_constraint,
+    a.search_condition,
+    a.r_owner,
+    a.r_constraint_name,
+    a.delete_rule,
+    a.status,
+    a.deferrable,
+    a.deferred,
+    a.validated,
+    a.generated,
+    a.bad,
+    a.rely,
+    a.last_change,
+    a.index_owner,
+    a.index_name,
+    (select listagg(b.column_name, ', ') within group (order by b.position)
+    from dba_cons_columns b 
+    where 
+        b.owner = a.owner 
+        and b.constraint_name = a.constraint_name 
+        and b.table_name = a.table_name
+    ) as column_list
+from 
+    dba_constraints a
+where 
+    a.owner = :OWNER
+    and a.table_name = :TABLE_NAME
+order by
+    decode(a.constraint_type, 'P', 1, 'U', 2, 'R', 3, 'C', 4, 99),
+    a.constraint_name]]></sql>
+                <binds>
+                    <bind id="OWNER">
+                        <prompt><![CDATA[OWNER]]></prompt>
+                        <tooltip><![CDATA[OWNER]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="TABLE_NAME">
+                        <prompt><![CDATA[TABLE_NAME]]></prompt>
+                        <tooltip><![CDATA[TABLE_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+            <query>
+                <sql><![CDATA[select /*+ noparallel */
     a.constraint_name,
     a.constraint_type,
     a.search_condition,
@@ -1308,6 +1622,124 @@ where
 order by
     decode(a.constraint_type, 'P', 1, 'U', 2, 'R', 3, 'C', 4, 99),
     a.constraint_name]]></sql>
+                <binds>
+                    <bind id="OWNER">
+                        <prompt><![CDATA[OWNER]]></prompt>
+                        <tooltip><![CDATA[OWNER]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="TABLE_NAME">
+                        <prompt><![CDATA[TABLE_NAME]]></prompt>
+                        <tooltip><![CDATA[TABLE_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        </queries>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Indexes]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+        <queries>
+		<query minversion="23.0">
+			<sql><![CDATA[select /*+ noparallel */
+    a.owner, 
+    a.index_name, 
+    a.index_type, 
+    a.visibility,
+    a.degree,
+    a.uniqueness, 
+    a.compression, 
+    a.prefix_length, 
+    a.partitioned,
+    d.locality,
+    a.tablespace_name, 
+    a.logging, 
+    a.status, 
+    a.num_rows, 
+    a.blevel, 
+    a.leaf_blocks, 
+    a.distinct_keys, 
+    a.avg_leaf_blocks_per_key, 
+    a.avg_data_blocks_per_key, 
+    a.clustering_factor,
+    case when b.blocks > 0 then round(a.clustering_factor / b.blocks, 2) end as scaled_clustr_factor,
+    a.sample_size,
+    a.last_analyzed, 
+    a.temporary, 
+    a.generated, 
+    a.global_stats, 
+    a.funcidx_status, 
+    a.join_index, 
+    a.pct_threshold, 
+    a.include_column, 
+    a.pct_direct_access, 
+    a.iot_redundant_pkey_elim, 
+    a.dropped, 
+    a.orphaned_entries, 
+    a.indexing,
+    (select
+        listagg(e.column_name 
+                    || case when e.descend = 'DESC' then ' desc' end, ', ')
+            within group (order by e.column_position)
+    from
+        dba_ind_columns e
+    where
+        e.index_owner = a.owner
+        and e.index_name = a.index_name
+    ) as ind_columns,
+    c.column_name as lob_col_name,
+    iau.annotations
+from 
+    dba_indexes a,
+    dba_tables b,
+    dba_lobs c,
+    dba_part_indexes d,
+    (select
+        aus.annotation_owner as index_owner,
+        aus.object_name      as index_name,
+        json_serialize(json_objectagg(key aus.annotation_name 
+                                      value aus.annotation_value 
+                                      null on null) 
+                       returning varchar2(4000)
+                       pretty ordered)  as annotations
+    from
+        dba_indexes ind,
+        dba_annotations_usage aus
+    where
+        ind.table_owner = :OWNER
+        and ind.table_name = :TABLE_NAME
+        and aus.annotation_owner = ind.owner
+        and aus.object_name = ind.index_name
+        and aus.object_type = 'INDEX'
+        and aus.column_name is null
+    group by
+        aus.annotation_owner,
+        aus.object_name
+    ) iau
+where
+    a.table_owner = :OWNER
+    and a.table_name = :TABLE_NAME
+    and a.table_owner = b.owner
+    and a.table_name = b.table_name
+    and a.table_owner = c.owner (+)
+    and a.table_name = c.table_name (+)
+    and a.index_name = c.index_name (+)
+    and a.owner = d.owner (+)
+    and a.index_name = d.index_name (+)
+    and a.owner = iau.index_owner (+)
+    and a.index_name = iau.index_name (+)
+order by
+    decode(index_type, 'CLUSTER', 1, 'IOT - TOP', 2, 'DOMAIN', 3, 'LOB', 100, 10),
+    index_name
+]]></sql>
 			<binds>
 				<bind id="OWNER">
 					<prompt><![CDATA[OWNER]]></prompt>
@@ -1323,16 +1755,6 @@ order by
 				</bind>
 			</binds>
 		</query>
-	</display>
-	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[Indexes]]></name>
-		<description><![CDATA[]]></description>
-		<tooltip><![CDATA[]]></tooltip>
-		<drillclass><![CDATA[]]></drillclass>
-		<CustomValues>
-			<TYPE><![CDATA[horizontal]]></TYPE>
-		</CustomValues>
-        <queries>
 		<query minversion="12.1">
 			<sql><![CDATA[select /*+ noparallel */
     a.owner, 
@@ -4198,6 +4620,84 @@ order by
 				</bind>
 			</binds>
 		</query>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Annotations]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+        <queries>
+            <query minversion="23.0">
+                <sql><![CDATA[select /*+ no_parallel no_merge(aus) no_merge(col) */
+    aus.annotation_owner        as owner,
+    aus.object_name             as table_name,
+    aus.column_name,
+    col.column_id,
+    cast(null as varchar2(128)) as index_name,
+    aus.annotation_name,
+    aus.annotation_value,
+    aus.domain_owner,
+    aus.domain_name
+from
+    dba_annotations_usage aus,
+    dba_tab_cols col
+where
+    aus.annotation_owner = :OWNER
+    and aus.object_type = 'TABLE'
+    and aus.object_name = :TABLE_NAME
+    and col.owner (+) = aus.annotation_owner
+    and col.table_name (+) = aus.object_name
+    and col.column_name (+) = aus.column_name
+union all
+select /*+ no_merge(ind) no_merge(aus) */
+    aus.annotation_owner  as owner,
+    ind.table_name,
+    aus.column_name,
+    cast(null as number)  as column_id,
+    ind.index_name,
+    aus.annotation_name,
+    aus.annotation_value,
+    aus.domain_owner,
+    aus.domain_name
+from
+    dba_indexes ind,
+    dba_annotations_usage aus
+where
+    ind.table_owner = :OWNER
+    and ind.table_name = :TABLE_NAME
+    and aus.annotation_owner = ind.owner
+    and aus.object_name = ind.index_name
+    and aus.object_type = 'INDEX'
+    and aus.column_name is null
+order by
+    index_name nulls first,
+    column_id nulls first,
+    annotation_name]]></sql>
+                <binds>
+                    <bind id="OWNER">
+                        <prompt><![CDATA[OWNER]]></prompt>
+                        <tooltip><![CDATA[OWNER]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="TABLE_NAME">
+                        <prompt><![CDATA[TABLE_NAME]]></prompt>
+                        <tooltip><![CDATA[TABLE_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+            <query>
+                <sql><![CDATA[select
+    'Annotations require Oracle 23c or higher.'  as "Unavailable feature"
+from
+    dual]]></sql>
+            </query>
+        </queries>
 	</display>
 </display>
 </folder>

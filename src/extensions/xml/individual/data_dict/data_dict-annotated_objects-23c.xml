@@ -3,13 +3,13 @@
 <folder>
 <name><![CDATA[Data Dictionary]]></name>
 <display id="c3095158-d6d8-4064-a7fd-171e522cc9b0" type="" style="Table" enable="true">
-	<name><![CDATA[Data Dict – Objects with annotations (23c)]]></name>
-	<description><![CDATA[List of objects annotated with annotations matching the specified criteria]]></description>
-	<tooltip><![CDATA[]]></tooltip>
-	<drillclass><![CDATA[]]></drillclass>
-	<CustomValues>
-		<TYPE><![CDATA[horizontal]]></TYPE>
-	</CustomValues>
+    <name><![CDATA[Data Dict – Objects with annotations (23c)]]></name>
+    <description><![CDATA[List of objects annotated with annotations matching the specified criteria]]></description>
+    <tooltip><![CDATA[]]></tooltip>
+    <drillclass><![CDATA[]]></drillclass>
+    <CustomValues>
+        <TYPE><![CDATA[horizontal]]></TYPE>
+    </CustomValues>
     <queries>
         <query minversion="23.0">
             <sql><![CDATA[with 
@@ -320,9 +320,10 @@ order by
         </query>
         <query>
             <sql><![CDATA[select
-    'Annotations are available in Oracle 23c or higher.'  as "Unsupported DB version!"
+    'Annotations require Oracle 23c or higher.'  as "Unavailable feature"
 from
-    dual]]></sql>        </query>
+    dual]]></sql>
+        </query>
     </queries>
 </display>
 </folder>

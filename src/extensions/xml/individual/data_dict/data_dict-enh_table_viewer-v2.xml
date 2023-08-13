@@ -712,13 +712,85 @@ select case
 		<CustomValues>
 			<TYPE><![CDATA[vertical]]></TYPE>
 		</CustomValues>
-		<query>
-			<sql><![CDATA[select /*+ noparallel */
+        <queries>
+            <query minversion="12.2">
+                <sql><![CDATA[select /*+ noparallel */
     a.owner,
     a.table_name,
-    --a.num_rows,
-    --a.blocks,
-    --a.avg_row_len,
+    a.partitioned,
+    a.row_movement,
+    a.tablespace_name,
+    a.iot_name,
+    a.iot_type,
+    a.nested,
+    a.temporary,
+    a.duration,
+    a.cluster_name,
+    a.cluster_owner,
+    a.status,
+    a.dropped,
+    a.read_only,
+    a.backed_up,
+    a.degree,
+    a.default_collation,
+    a.buffer_pool,
+    a.cache,
+    a.flash_cache,
+    a.result_cache,
+    a.cell_flash_cache,
+    a.pct_free,
+    a.pct_increase,
+    a.pct_used,
+    a.ini_trans,
+    a.initial_extent,
+    a.next_extent,
+    a.min_extents,
+    a.max_extents,
+    a.freelists,
+    a.freelist_groups,
+    a.instances,
+    a.logging,
+    a.monitoring,
+    a.compression,
+    a.compress_for,
+    a.dependencies,
+    a.segment_created,
+    a.skip_corrupt,
+    a.table_lock,
+    c.created,
+    c.last_ddl_time,
+    b.comments
+from
+    dba_tables a,
+    dba_tab_comments b,
+    dba_objects c
+where
+    a.owner = :OWNER
+    and a.table_name = :TABLE_NAME
+    and a.owner = b.owner (+)
+    and a.table_name = b.table_name (+)
+    and a.owner = c.owner (+)
+    and a.table_name = c.object_name (+)
+    and c.object_type (+) = 'TABLE']]></sql>
+                <binds>
+                    <bind id="OWNER">
+                        <prompt><![CDATA[OWNER]]></prompt>
+                        <tooltip><![CDATA[OWNER]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="TABLE_NAME">
+                        <prompt><![CDATA[TABLE_NAME]]></prompt>
+                        <tooltip><![CDATA[TABLE_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+            <query>
+                <sql><![CDATA[select /*+ noparallel */
+    a.owner,
+    a.table_name,
     a.partitioned,
     a.row_movement,
     a.tablespace_name,
@@ -756,17 +828,8 @@ select case
     a.compress_for,
     a.dependencies,
     a.segment_created,
-    --a.num_freelist_blocks,
-    --a.empty_blocks,
-    --a.avg_space,
-    --a.avg_space_freelist_blocks,
-    --a.chain_cnt,
-    --a.sample_size,
-    --a.last_analyzed,
     a.skip_corrupt,
     a.table_lock,
-    --a.global_stats,
-    --a.user_stats,
     c.created,
     c.last_ddl_time,
     b.comments
@@ -782,21 +845,22 @@ where
     and a.owner = c.owner (+)
     and a.table_name = c.object_name (+)
     and c.object_type (+) = 'TABLE']]></sql>
-			<binds>
-				<bind id="OWNER">
-					<prompt><![CDATA[OWNER]]></prompt>
-					<tooltip><![CDATA[OWNER]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-				<bind id="TABLE_NAME">
-					<prompt><![CDATA[TABLE_NAME]]></prompt>
-					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-			</binds>
-		</query>
+                <binds>
+                    <bind id="OWNER">
+                        <prompt><![CDATA[OWNER]]></prompt>
+                        <tooltip><![CDATA[OWNER]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="TABLE_NAME">
+                        <prompt><![CDATA[TABLE_NAME]]></prompt>
+                        <tooltip><![CDATA[TABLE_NAME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        </queries>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Table stats]]></name>
@@ -1211,13 +1275,19 @@ order by
     a.data_default,
     a.domain_owner,
     a.domain_name,
+    decode(a.default_on_null, 'NO', 'N', 'YES', 'Y') as default_on_null,
+    decode(a.default_on_null_upd, 'NO', 'N', 'YES', 'Y') as default_on_null_upd,
     a.data_type_mod,
     a.data_type_owner,
-    decode(a.hidden_column, 'NO', 'N', 'YES', 'Y') as hidden_column,
-    decode(a.virtual_column, 'NO', 'N', 'YES', 'Y') as virtual_column,
+    decode(a.identity_column, 'NO', 'N', 'YES', 'Y')  as identity_column,
+    decode(a.hidden_column, 'NO', 'N', 'YES', 'Y')    as hidden_column,
+    decode(a.virtual_column, 'NO', 'N', 'YES', 'Y')   as virtual_column,
+    a.collated_column_id,
+    decode(a.sensitive_column, 'NO', 'N', 'YES', 'Y') as sensitive_column,
     a.segment_column_id,
     a.internal_column_id,
     a.qualified_col_name,
+    a.collation,
     b.comments,
     h.cnt_indexes,
     h.index_list,
@@ -1315,6 +1385,117 @@ order by
 				</bind>
 			</binds>
         </query>
+		<query minversion="12.2">
+			<sql><![CDATA[select /*+ noparallel */
+    a.owner,
+    a.table_name,
+    a.column_id,
+    a.column_name,
+    case
+        when a.data_type in ('CHAR', 'VARCHAR', 'VARCHAR2', 'NCHAR', 'NVARCHAR', 'NVARCHAR2')
+            then lower(a.data_type) 
+                    || '(' || a.char_length 
+                    || decode(a.char_used, 'B', ' byte', 'C', ' char', null) || ')'
+        when a.data_type = 'NUMBER' 
+            then lower(a.data_type)
+                    || case
+                        when a.data_precision is null and a.data_scale is null then null
+                        when a.data_precision is null and a.data_scale is not null 
+                            then '(* ,' || a.data_scale || ')'
+                        else '(' || a.data_precision || ',' || a.data_scale || ')' end
+        when data_type = 'FLOAT' 
+            then lower(a.data_type)
+                    || case when a.data_precision is not null then '(' || a.data_precision || ')' end
+        else lower(a.data_type) end
+        as data_type,
+    a.nullable,
+    case when e.column_name is not null then 'Y' end as is_pk,
+    case when h.column_name is not null then 'Y' end as is_idx,
+    a.data_default,
+    decode(a.default_on_null, 'NO', 'N', 'YES', 'Y') as default_on_null,
+    a.data_type_mod,
+    a.data_type_owner,
+    decode(a.identity_column, 'NO', 'N', 'YES', 'Y')  as identity_column,
+    decode(a.hidden_column, 'NO', 'N', 'YES', 'Y')    as hidden_column,
+    decode(a.virtual_column, 'NO', 'N', 'YES', 'Y')   as virtual_column,
+    a.collated_column_id,
+    decode(a.sensitive_column, 'NO', 'N', 'YES', 'Y') as sensitive_column,
+    a.segment_column_id,
+    a.internal_column_id,
+    a.qualified_col_name,
+    a.collation,
+    b.comments,
+    h.cnt_indexes,
+    h.index_list
+from
+    dba_tab_cols a,
+    dba_col_comments b,
+    (select
+        c.owner,
+        c.table_name,
+        d.column_name
+    from 
+        dba_constraints c,
+        dba_cons_columns d
+    where 
+        c.owner = :OWNER
+        and c.table_name = :TABLE_NAME
+        and c.constraint_type = 'P'
+        and c.owner = d.owner
+        and c.table_name = d.table_name
+        and c.constraint_name = d.constraint_name
+    ) e,
+    (select
+        f.table_owner,
+        f.table_name,
+        g.column_name,
+        count(*) as cnt_indexes,
+        listagg(dbms_assert.enquote_name(g.index_owner) 
+                || '.' || dbms_assert.enquote_name(g.index_name)
+                || ' (' || g.column_position || ')', ', ') 
+                within group (order by g.index_owner, g.index_name) as index_list
+    from
+        dba_indexes f,
+        dba_ind_columns g
+    where
+        f.table_owner = :OWNER
+        and f.table_name = :TABLE_NAME
+        and g.index_owner = f.owner
+        and g.index_name = f.index_name
+    group by
+        f.table_owner,
+        f.table_name,
+        g.column_name
+    ) h
+where
+    a.owner = :OWNER
+    and  a.table_name = :TABLE_NAME
+    and  a.owner = b.owner (+)
+    and  a.table_name = b.table_name (+)
+    and  a.column_name = b.column_name (+)
+    and  a.owner = e.owner (+)
+    and  a.table_name = e.table_name (+)
+    and  a.column_name = e.column_name (+)
+    and  a.owner = h.table_owner (+)
+    and  a.table_name = h.table_name (+)
+    and  a.column_name = h.column_name (+)
+order by
+    a.internal_column_id]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+        </query>
 		<query minversion="12.1">
 			<sql><![CDATA[select /*+ noparallel */
     a.owner,
@@ -1342,10 +1523,13 @@ order by
     case when e.column_name is not null then 'Y' end as is_pk,
     case when h.column_name is not null then 'Y' end as is_idx,
     a.data_default,
+    decode(a.default_on_null, 'NO', 'N', 'YES', 'Y') as default_on_null,
     a.data_type_mod,
     a.data_type_owner,
-    decode(a.hidden_column, 'NO', 'N', 'YES', 'Y') as hidden_column,
-    decode(a.virtual_column, 'NO', 'N', 'YES', 'Y') as virtual_column,
+    decode(a.identity_column, 'NO', 'N', 'YES', 'Y')  as identity_column,
+    decode(a.hidden_column, 'NO', 'N', 'YES', 'Y')    as hidden_column,
+    decode(a.virtual_column, 'NO', 'N', 'YES', 'Y')   as virtual_column,
+    decode(a.sensitive_column, 'NO', 'N', 'YES', 'Y') as sensitive_column,
     a.segment_column_id,
     a.internal_column_id,
     a.qualified_col_name,

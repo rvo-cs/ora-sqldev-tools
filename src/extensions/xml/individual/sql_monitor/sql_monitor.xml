@@ -1179,12 +1179,58 @@ ash_samp as (
 ash_samp_2 as (
     select
         (select
-            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
-                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+            greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                        , extract( day from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 86400
+                                        + extract( hour from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 3600
+                                        + extract( minute from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 60
+                                        + extract( second from
+                                              cast(gm.last_refresh_time as timestamp) 
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          )
+                                        )
+                                  ) ))
+                / least(150, greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                                         , extract( day from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 86400
+                                                         + extract( hour from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 3600
+                                                         + extract( minute from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 60
+                                                         + extract( second from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           )
+                                                         )
+                                                   ) )))
         from
+            gv$ash_info ai,
             gv$sql_monitor gm
         where
-            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            ai.inst_id = gm.inst_id
+            and (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
             and gm.sql_id = :SQL_ID
             and gm.sql_exec_id = :SQL_EXEC_ID
             and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
@@ -1520,12 +1566,58 @@ ash_samp as (
 ash_samp_2 as (
     select
         (select
-            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
-                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+            greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                        , extract( day from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 86400
+                                        + extract( hour from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 3600
+                                        + extract( minute from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 60
+                                        + extract( second from
+                                              cast(gm.last_refresh_time as timestamp) 
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          )
+                                        )
+                                  ) ))
+                / least(150, greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                                         , extract( day from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 86400
+                                                         + extract( hour from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 3600
+                                                         + extract( minute from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 60
+                                                         + extract( second from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           )
+                                                         )
+                                                   ) )))
         from
+            gv$ash_info ai,
             gv$sql_monitor gm
         where
-            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            ai.inst_id = gm.inst_id
+            and (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
             and gm.sql_id = :SQL_ID
             and gm.sql_exec_id = :SQL_EXEC_ID
             and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
@@ -1872,12 +1964,58 @@ ash_samp as (
 ash_samp_2 as (
     select
         (select
-            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
-                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+            greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                        , extract( day from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 86400
+                                        + extract( hour from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 3600
+                                        + extract( minute from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 60
+                                        + extract( second from
+                                              cast(gm.last_refresh_time as timestamp) 
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          )
+                                        )
+                                  ) ))
+                / least(150, greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                                         , extract( day from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 86400
+                                                         + extract( hour from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 3600
+                                                         + extract( minute from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 60
+                                                         + extract( second from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           )
+                                                         )
+                                                   ) )))
         from
+            gv$ash_info ai,
             gv$sql_monitor gm
         where
-            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            ai.inst_id = gm.inst_id
+            and (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
             and gm.sql_id = :SQL_ID
             and gm.sql_exec_id = :SQL_EXEC_ID
             and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')
@@ -2219,12 +2357,58 @@ ash_samp as (
 ash_samp_2 as (
     select
         (select
-            greatest(1, floor( max(gm.elapsed_time) / power(10,6) ))
-                / least(150, greatest(1, floor( max(gm.elapsed_time) / power(10,6) )))
+            greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                        , extract( day from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 86400
+                                        + extract( hour from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 3600
+                                        + extract( minute from
+                                              cast(gm.last_refresh_time as timestamp)
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          ) * 60
+                                        + extract( second from
+                                              cast(gm.last_refresh_time as timestamp) 
+                                              - greatest( cast(gm.sql_exec_start as timestamp)
+                                                        , ai.oldest_sample_time )
+                                          )
+                                        )
+                                  ) ))
+                / least(150, greatest(1, floor( max(least( gm.elapsed_time / power(10,6)
+                                                         , extract( day from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 86400
+                                                         + extract( hour from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 3600
+                                                         + extract( minute from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           ) * 60
+                                                         + extract( second from
+                                                               cast(gm.last_refresh_time as timestamp)
+                                                               - greatest( cast(gm.sql_exec_start as timestamp)
+                                                                         , ai.oldest_sample_time )
+                                                           )
+                                                         )
+                                                   ) )))
         from
+            gv$ash_info ai,
             gv$sql_monitor gm
         where
-            (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
+            ai.inst_id = gm.inst_id
+            and (gm.inst_id = :INST_ID or gm.px_qcinst_id = :INST_ID)
             and gm.sql_id = :SQL_ID
             and gm.sql_exec_id = :SQL_EXEC_ID
             and gm.sql_exec_start = to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS')

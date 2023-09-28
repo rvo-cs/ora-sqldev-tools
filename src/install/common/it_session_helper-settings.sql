@@ -14,7 +14,7 @@ define def_it_role_view_session_self = "IT_VIEW_SESS_SELF"
 -- user; the complete role name is formed by appending the username to that
 -- prefix, separated by a colon.
 --
-define def_it_role_view_session_prfx = "IT_vIEW_SESS"
+define def_it_role_view_session_prfx = "IT_VIEW_SESS"
 
 -- Name of the role enabling to terminate one's own sessions
 define def_it_role_end_session_self = "IT_END_SESS_SELF"

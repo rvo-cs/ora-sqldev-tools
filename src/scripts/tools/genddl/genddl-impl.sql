@@ -832,7 +832,7 @@ declare
                     </xsl:copy>
                 </xsl:template>
 
-                <xsl:template match="CONSTRAINT_T/BASE_OBJ/OWNER_NAME" priority="2">
+                <xsl:template match="BASE_OBJ/OWNER_NAME" priority="2">
                     <xsl:variable name="base-object-owner" select="." />
                     <xsl:if test="not($remove-object-schema)
                                     or $base-object-owner != $object-owner">
@@ -842,17 +842,7 @@ declare
                     </xsl:if>
                 </xsl:template>
                 
-                <xsl:template match="REF_CONSTRAINT_T/BASE_OBJ/OWNER_NAME" priority="2">
-                    <xsl:variable name="base-object-owner" select="." />
-                    <xsl:if test="not($remove-object-schema)
-                                    or $base-object-owner != $object-owner">
-                        <xsl:copy>
-                            <xsl:apply-templates/>
-                        </xsl:copy>
-                    </xsl:if>
-                </xsl:template>
-
-                <xsl:template match="REF_CONSTRAINT_T/*/SCHEMA_OBJ/OWNER_NAME" priority="2">
+                <xsl:template match="SCHEMA_OBJ/OWNER_NAME" priority="2">
                     <xsl:variable name="target-object-owner" select="." />
                     <xsl:if test="not($remove-object-schema)
                                     or $target-object-owner != $object-owner">
@@ -861,7 +851,7 @@ declare
                         </xsl:copy>
                     </xsl:if>
                 </xsl:template>
-                
+
                 <xsl:template match="IND/PCT_FREE" priority="1" />
                 <xsl:template match="IND/INITRANS" priority="1" />
                 <xsl:template match="IND/MAXTRANS" priority="1" />
@@ -899,7 +889,7 @@ declare
                     p_custom_filter => 'TYPE_NUM = 7');
             print_nl;
         end if;
-        
+
         /* PRIMARY KEY constraints */
         if gc_primary_key_as_alter then
             print_dependent_constraints(p_schema_name, p_table_name, p_constraint_type => 'P');
@@ -1053,6 +1043,8 @@ declare
                 a.owner = p_table_owner
                 and a.table_name = p_table_name
                 and a.constraint_type = p_constraint_type
+              &&def_db_version_ge_23  /* Oracle 23: skip constraints inherited from domains */
+              &&def_db_version_ge_23  and a.domain_constraint_name is null
                 and b.username = a.owner
                 and oc.owner# = b.user_id
                 and oc.name = a.constraint_name

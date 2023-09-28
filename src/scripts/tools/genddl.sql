@@ -10,6 +10,7 @@ whenever oserror exit failure rollback
 set verify off
 
 @@genddl-settings
+@@common/util/def_db_version
 
 set termout off
 set feedback off
@@ -167,6 +168,8 @@ undefine def_spool_naming_scheme
 undefine 1
 undefine 2
 undefine 3
+
+@@common/util/undef_db_version
 
 whenever sqlerror continue none
 whenever oserror continue none

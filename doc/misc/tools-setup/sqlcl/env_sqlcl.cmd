@@ -10,7 +10,7 @@ REM library directory (containing the native OCI driver) must be present
 REM in the PATH and precede any other client installations.
 REM -----------------------------------------------------------------------
 
-set ORACLE_HOME=F:\Produits\Win_7\Oracle\instantclient\instantclient_18_5
+set ORACLE_HOME=F:\Produits\Oracle\instantclient\instantclient_19_17
 
 set PATH=%ORACLE_HOME%;%PATH%
 
@@ -30,12 +30,13 @@ REM Command aliases
 REM -----------------------------------------------------------------------
 
 REM SQLcl with jdbc:thin
-doskey sqlcl=F:\Produits\Win_7\Oracle\SQLcl\sql.cmd $*
-doskey sqlcl-prev=F:\Produits\Win_7\Oracle\SQLcl\sql-prev.cmd $*
+doskey sqlcl=F:\Produits\Oracle\SQLcl\sql.cmd $*
+doskey sql-exe=F:\Produits\Oracle\SQLcl\sqlw.cmd $*
+doskey sqlcl-prev=F:\Produits\Oracle\SQLcl\sql-prev.cmd $*
 
 REM SQLcl with jdbc:oci
-doskey sqlcl-oci=F:\Produits\Win_7\Oracle\SQLcl\sql+oci.cmd -oci $*
+doskey sqlcl-oci=F:\Produits\Oracle\SQLcl\sql+oci.cmd -oci $*
 
 REM SQL Developer
-doskey sqldev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-22.2.1.234.1810-x64\sqldeveloper.exe $*
-doskey sqldev-prev=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-21.4.3.063.0100-x64\sqldeveloper.exe $*
+doskey sqldev=F:\Produits\Oracle\SQLDeveloper\sqldeveloper-23.1.0.097.1607-x64\sqldeveloper.exe $*
+doskey sqldev-prev=F:\Produits\Oracle\SQLDeveloper\sqldeveloper-21.4.3.063.0100-x64\sqldeveloper.exe $*

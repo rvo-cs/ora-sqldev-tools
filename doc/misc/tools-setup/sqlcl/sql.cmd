@@ -1,8 +1,8 @@
 @ECHO OFF
 
-REM =============================================================
-REM sql.cmd -- wrapper script for starting SQLcl under Windows 7
-REM =============================================================
+REM ==================================================================
+REM sql.cmd -- wrapper script for starting SQLcl under Windows 7/10/11
+REM ==================================================================
 
 REM #########################################################################################
 REM Origin: https://gist.github.com/PaulNeumann/d541b251e160038412b02d471a3f4704#file-sql-cmd
@@ -18,8 +18,7 @@ REM SQLcl can use that JDK, if you want it to. Otherwise, point
 REM JAVA_HOME to your preferred JDK.
 REM -------------------------------------------------------------
 
-SET JAVA_HOME=F:\Produits\Win_7\Oracle\SQLDeveloper\sqldeveloper-22.2.1.234.1810-x64\jdk\jre
-REM -- java.version= 11.0.16.1
+SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.19
 
 REM =============================================================
 REM Set SQL_HOME folder
@@ -28,7 +27,7 @@ REM This is the root directory of the installed SQLcl product;
 REM e.g. %SQL_HOME%\bin\sql.exe is the included binary executable.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Win_7\Oracle\SQLcl\sqlcl\sqlcl-22.4.0.342.1212
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.3.0.270.1251
 
 REM =============================================================
 REM Set SQLPATH folder
@@ -67,6 +66,7 @@ SET CPFILE=%SQL_HOME%\lib\dbtools-sqlcl.jar;%SQL_HOME%\lib\*;%SQL_HOME%\lib\ext\
 
 REM Set JVM arguments
 SET STD_ARGS=-Djava.awt.headless=true -Dfile.encoding=UTF-8
+SET STD_ARGS=%STD_ARGS% -Dpolyglot.engine.WarnInterpreterOnly=false
 SET STD_ARGS=%STD_ARGS% -Xss100m
 SET STD_ARGS=%STD_ARGS% -XX:+IgnoreUnrecognizedVMOptions
 REM SET STD_ARGS=%STD_ARGS% -XX:+PrintFlagsFinal
@@ -83,9 +83,9 @@ SET STD_ARGS=%STD_ARGS% -Djava.io.tmpdir=E:\Home\romain\.java-temp
 REM cover up windows read registry warning
 SET STD_ARGS=%STD_ARGS% --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED
 
-REM !!! ONLY IF USING THE JAVA 11 JDK !!!
 REM Inhibit Nashorn deprecation warning
 SET STD_ARGS=%STD_ARGS% -Dnashorn.args=--no-deprecation-warning
+
 REM enable graal scripts
 SET STD_ARGS=%STD_ARGS% -Dpolyglot.js.nashorn-compat=true
 

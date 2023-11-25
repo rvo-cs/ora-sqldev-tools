@@ -1844,6 +1844,8 @@ order by
     a.prefix_length, 
     a.partitioned,
     d.locality,
+    a.indexing,
+    a.orphaned_entries,
     a.tablespace_name, 
     a.logging, 
     a.status, 
@@ -1867,8 +1869,6 @@ order by
     a.pct_direct_access, 
     a.iot_redundant_pkey_elim, 
     a.dropped, 
-    a.orphaned_entries, 
-    a.indexing,
     (select
         listagg(e.column_name 
                     || case when e.descend = 'DESC' then ' desc' end, ', ')
@@ -1951,6 +1951,8 @@ order by
     a.prefix_length, 
     a.partitioned,
     d.locality,
+    a.indexing,
+    a.orphaned_entries, 
     a.tablespace_name, 
     a.logging, 
     a.status, 
@@ -1974,8 +1976,6 @@ order by
     a.pct_direct_access, 
     a.iot_redundant_pkey_elim, 
     a.dropped, 
-    a.orphaned_entries, 
-    a.indexing,
     (select
         listagg(e.column_name 
                     || case when e.descend = 'DESC' then ' desc' end, ', ')
@@ -2918,6 +2918,7 @@ order by
     b.interval,
     b.compression,
     b.compress_for,
+    b.indexing,
     a.num_rows, 
     a.blocks, 
     a.empty_blocks, 
@@ -3476,6 +3477,7 @@ order by
             p_part_name => b.partition_name, p_subpart_name => b.subpartition_name) as subpart_hv,
     b.compression,
     b.compress_for,
+    b.indexing,
     a.num_rows, 
     a.blocks, 
     a.empty_blocks, 
@@ -3977,6 +3979,7 @@ from
         null as subpart_hv,
         b.compression,
         b.compress_for,
+        b.indexing,
         a.num_rows, 
         a.blocks, 
         a.empty_blocks, 
@@ -4035,6 +4038,7 @@ from
                 p_part_name => c.partition_name, p_subpart_name => c.subpartition_name) as subpart_hv,
         c.compression,
         c.compress_for,
+        c.indexing,
         a.num_rows, 
         a.blocks, 
         a.empty_blocks, 

@@ -28,6 +28,10 @@
      , a.issys_modifiable     as "System Modifiable?"
      , a.description          as "Description"
      , a.inst_id
+     , a.ismodified           as "Modified?"
+     , a.isadjusted           as "Adjusted?"
+     , a.update_comment       as "Update comment"
+     , a.default_value        as "Default value"
   from gv$system_parameter a
      , gv$pdbs b
  where case
@@ -41,6 +45,7 @@
              'Y'
        end = 'Y'
    and (:PARAMETER_NAME is null or instr(lower(a.name), lower(:PARAMETER_NAME)) > 0)
+   and (:PARAMETER_RE is null or regexp_like(a.name, :PARAMETER_RE, 'i'))
    and substr(a.name, 1, 2) <> '__'
    and a.inst_id = b.inst_id (+)
    and a.con_id = b.con_id (+)
@@ -79,6 +84,12 @@
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
+			<bind id="PARAMETER_RE">
+				<prompt><![CDATA[Parameter Regexp?]]></prompt>
+				<tooltip><![CDATA[Regular expression matching parameter name(s), case insensitive]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
         </binds>
     </query>
 	<query>
@@ -96,11 +107,15 @@
      , issys_modifiable     as "System Modifiable?"
      , description          as "Description"
      , inst_id
+     , ismodified           as "Modified?"
+     , isadjusted           as "Adjusted?"
+     , update_comment       as "Update comment"
   from gv$system_parameter
  where ((:INSTANCE_NUM is null and inst_id = sys_context('USERENV', 'INSTANCE'))
         or :INSTANCE_NUM = '*'
         or (regexp_like(:INSTANCE_NUM, '^\s*[0-9]+\s*$') and to_number(:INSTANCE_NUM) = inst_id))
    and (:PARAMETER_NAME is null or instr(lower(name), lower(:PARAMETER_NAME)) > 0)
+   and (:PARAMETER_RE is null or regexp_like(name, :PARAMETER_RE, 'i'))
    and substr(name, 1, 2) <> '__'
  order by name
         , inst_id]]></sql>
@@ -114,6 +129,12 @@
 			<bind id="PARAMETER_NAME">
 				<prompt><![CDATA[Parameter Name?]]></prompt>
 				<tooltip><![CDATA[Parameter name (or part thereof), case insensitive]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="PARAMETER_RE">
+				<prompt><![CDATA[Parameter Regexp?]]></prompt>
+				<tooltip><![CDATA[Regular expression matching parameter name(s), case insensitive]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>

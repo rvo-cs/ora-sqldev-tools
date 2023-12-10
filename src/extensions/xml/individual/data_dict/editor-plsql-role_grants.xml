@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+	<display type="editor" style="null" enable="true" connType="oracle" 
+            objectType="FUNCTION,PROCEDURE,PACKAGE">
+		<name><![CDATA[Role Grants]]></name>
+		<description><![CDATA[Role(s) granted to this code unit]]></description>
+		<tooltip><![CDATA[Role(s) granted to this code unit]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+        <queries>
+            <query minversion="12.1">
+                <sql>
+                    <![CDATA[select owner,
+       object_name,
+       object_type,
+       role as granted_role
+  from sys.all_code_role_privs
+ where owner = :OBJECT_OWNER
+   and object_name = :OBJECT_NAME
+   and object_type = case :OBJECT_TYPE
+                        when 'PACKAGE' then
+                           'PACKAGE'
+                        when 'PACKAGE BODY' then
+                           'PACKAGE'
+                        when 'FUNCTION' then
+                           'FUNCTION'
+                        when 'PROCEDURE' then
+                           'PROCEDURE'
+                     end
+ order by role]]>
+                </sql>
+            </query>
+            <query maxversion="11.2">
+                <sql>
+                    <![CDATA[select 'Code based access control (CBAC) requires Oracle 12.1 or higher' as "Unavailable feature"
+  from dual
+ where :OBJECT_OWNER is not null
+   and :OBJECT_NAME is not null
+   and :OBJECT_TYPE is not null]]>
+                </sql>
+            </query>
+        </queries>
+	</display>
+</displays>

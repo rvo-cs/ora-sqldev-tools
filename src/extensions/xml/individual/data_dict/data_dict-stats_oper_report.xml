@@ -13,7 +13,10 @@
 		<sql><![CDATA[whenever sqlerror exit failure rollback
 whenever oserror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 10000
 set trimspool on
 set heading off

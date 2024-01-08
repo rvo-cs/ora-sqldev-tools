@@ -2,8 +2,8 @@ set trimspool on
 set trimout on
 set tab off
 
---set long 10000000
---set longchunksize 10000000
+--set long 2000000
+--set longchunksize 200000
 
 -- Root dir. of the local clone of Tanel Poder's tpt-oracle Git repository
 -- (git clone https://github.com/tanelpoder/tpt-oracle.git)

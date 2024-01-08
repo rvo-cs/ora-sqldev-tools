@@ -471,7 +471,10 @@ from
 			<sql><![CDATA[whenever sqlerror exit failure rollback
 whenever oserror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 600
 set heading off
 set feedback off
@@ -508,7 +511,10 @@ where
 			<sql><![CDATA[whenever sqlerror exit failure rollback
 whenever oserror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 10000
 set trimspool on
 set heading off
@@ -609,7 +615,10 @@ where :SPOOL_DIRECTORY is not null;]]></sql>
 			<sql><![CDATA[whenever sqlerror exit failure rollback
 whenever oserror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 32767
 set trimspool on
 set heading off

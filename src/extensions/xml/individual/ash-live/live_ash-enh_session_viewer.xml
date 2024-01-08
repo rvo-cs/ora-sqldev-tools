@@ -4361,7 +4361,10 @@ from
                 <sql><![CDATA[
 whenever sqlerror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 600
 set heading off
 set feedback off
@@ -4451,7 +4454,10 @@ where
                 <sql><![CDATA[
 whenever sqlerror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 600
 set heading off
 set feedback off
@@ -5383,7 +5389,10 @@ undefine def_default_ash_time_bucket
                     <sql><![CDATA[whenever sqlerror exit failure rollback
 whenever oserror exit failure rollback
 
+set termout off
+-- This would trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
 set long 5000000
+set termout on
 set linesize 10000
 set trimspool on
 set heading off

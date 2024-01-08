@@ -6,8 +6,11 @@ set trimspool on
 set trimout on
 set tab off
 
-set long 10000000
-set longchunksize 10000000
+set termout off
+-- This could trigger the HIGH_LONG_MEM_WARNING message if TERMOUT was ON
+set long 2000000
+set termout on
+set longchunksize 200000
 
 set history nofails
 set history filter none

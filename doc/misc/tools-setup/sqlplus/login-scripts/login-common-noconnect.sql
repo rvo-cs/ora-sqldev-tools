@@ -6,8 +6,8 @@ set trimspool on
 set trimout on
 set tab off
 
-set long 10000000
-set longchunksize 10000000
+set long 5000000
+set longchunksize 200000
 
 define _EDITOR="C:\Program Files (x86)\Vim\vim74\gvim.exe"
 

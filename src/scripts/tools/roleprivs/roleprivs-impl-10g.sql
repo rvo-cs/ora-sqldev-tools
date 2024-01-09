@@ -485,7 +485,7 @@ prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All object privileges
 prompt ---------------------
 
-@@roleprivs-note-oraobj&&def_hide_ora_obj
+@@roleprivs-note-oraobj&&def_hide_ora_obj..sql
 
 column role                     format a30 wrapped
 column object_privs             format a50 word_wrapped

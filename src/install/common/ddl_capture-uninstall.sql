@@ -52,7 +52,7 @@ set verify off
 -- Drop the owner user, if needed
 -- ------------------------------
 
-@@ddl_capture/drop_capture_owner&&def_drop_ddl_capture_user
+@@ddl_capture/drop_capture_owner&&def_drop_ddl_capture_user..sql
 
 
 /*--------------------------------------------------------------------------------------*/

@@ -29,7 +29,7 @@ prompt ================
 prompt Public synonyms
 prompt ----------------
 
-@@it_session_helper/drop_pubsyn&&def_it_sess_helper_with_pubsyn
+@@it_session_helper/drop_pubsyn&&def_it_sess_helper_with_pubsyn..sql
 
 prompt
 prompt =======================
@@ -47,7 +47,7 @@ drop sequence "&&def_it_sess_helper_user".seq_sess_helper;
 -- Drop the owner user, if needed
 -- ------------------------------
 
-@@it_session_helper/drop_owner_accnt&&def_drop_it_sess_helper_user
+@@it_session_helper/drop_owner_accnt&&def_drop_it_sess_helper_user..sql
 
 
 /*--------------------------------------------------------------------------------------*/

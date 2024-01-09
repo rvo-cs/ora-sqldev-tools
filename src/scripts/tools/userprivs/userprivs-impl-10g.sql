@@ -474,7 +474,7 @@ prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All system privileges
 prompt ---------------------
 
-@@userprivs-note-public&&def_hide_grants_to_public
+@@userprivs-note-public&&def_hide_grants_to_public..sql
 
 column grantee                  format a30 wrapped
 column privilege                format a40 word_wrapped
@@ -610,9 +610,9 @@ prompt ~~~~~~~~~~~~~~~~~~~~~
 prompt All object privileges
 prompt ---------------------
 
-@@userprivs-note-oraobj&&def_hide_ora_obj
-@@userprivs-note-puboraobj&&def_hide_public_ora_obj
-@@userprivs-note-public&&def_hide_grants_to_public
+@@userprivs-note-oraobj&&def_hide_ora_obj..sql
+@@userprivs-note-puboraobj&&def_hide_public_ora_obj..sql
+@@userprivs-note-public&&def_hide_grants_to_public..sql
 
 column grantee                  format a30 wrapped
 column object_privs             format a50 word_wrapped
@@ -966,7 +966,7 @@ order by
 
 clear columns
 
-@@userprivs-dblinks-&&def_show_db_links
+@@userprivs-dblinks-&&def_show_db_links..sql
 
 prompt === End ===
 

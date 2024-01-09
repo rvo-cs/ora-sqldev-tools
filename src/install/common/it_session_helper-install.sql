@@ -64,7 +64,7 @@ prompt ================
 prompt Public synonyms
 prompt ----------------
 
-@@it_session_helper/create_pubsyn&&def_it_sess_helper_with_pubsyn
+@@it_session_helper/create_pubsyn&&def_it_sess_helper_with_pubsyn..sql
 
 prompt
 prompt =============================

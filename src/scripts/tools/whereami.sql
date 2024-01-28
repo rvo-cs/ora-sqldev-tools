@@ -143,11 +143,11 @@ from
 
 select
     &&def_skip_diag_info (select value
-    &&def_skip_diag_info    from v$diag_info
+    &&def_skip_diag_info    from "PUBLIC".v$diag_info
     &&def_skip_diag_info   where inst_id = sys_context('USERENV', 'INSTANCE')
     &&def_skip_diag_info     and name = 'Diag Trace')                as diag_trace,
     &&def_skip_diag_info (select regexp_replace(value, '^.*/')
-    &&def_skip_diag_info    from v$diag_info
+    &&def_skip_diag_info    from "PUBLIC".v$diag_info
     &&def_skip_diag_info   where inst_id = sys_context('USERENV', 'INSTANCE')
     &&def_skip_diag_info     and name = 'Default Trace File')        as trace_file,
     1 as unused_col

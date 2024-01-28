@@ -1,5 +1,10 @@
 create or replace trigger trig_ddl_post
-after ddl on database
+after ddl
+    or create
+    or alter 
+    or drop
+&&def_ddl_capture_grants    or grant
+on database
 disable
 declare
     l_ddl_text  clob;
@@ -28,7 +33,7 @@ begin
         ora_sysevent, 
         substrb(ora_dict_obj_type, 1, 20), 
         substrb(ora_dict_obj_owner, 1, 128),
-        substrb(ora_dict_obj_name, 1, 128),
+        substrb(ora_dict_obj_name, 1, 261),
         l_ddl_text
     );
 exception

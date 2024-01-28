@@ -76,25 +76,8 @@ alter session set current_schema = "&&_USER";
 
 set verify on
 
-undefine def_ddl_capture_user
-undefine def_ddl_capture_tabspc
-undefine def_ddl_capture_temp_tabspc
-undefine def_read_captured_ddl_role
-undefine def_common_ddl_capture_user
-undefine def_pdb_aware
-undefine def_pre_ddl_table
-undefine def_post_ddl_table
-undefine def_pre_ddl_view
-undefine def_post_ddl_view
-undefine def_purge_job_name
-undefine def_purge_retention_weeks
-undefine def_purge_retention_days
-undefine def_purge_repeat_interval 
-undefine def_drop_ddl_capture_user
-undefine def_db_version_ge_12
-undefine def_db_version_lt_12
-undefine def_db_version_ge_18
-undefine def_db_version_lt_18
+@@ddl_capture/undef_ddl_capture_settings
+@@ddl_capture/undef_db_version
 undefine def_echo
 
 whenever oserror continue none

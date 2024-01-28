@@ -11,6 +11,10 @@ define def_ddl_capture_tabspc = "USERS"
 -- Temporary tablespace of the owner user
 define def_ddl_capture_temp_tabspc = "TEMP"
 
+-- Shall we capture grants? 
+-- Use "" to enable, "--" to disable
+define def_ddl_capture_grants = ""
+
 -- Multitenant: create the owner user as a common user?
 -- Use "" to enable, "--" to disable
 --

@@ -6,8 +6,8 @@ create table &&def_pre_ddl_table (
 &&def_pdb_aware  , con_name            varchar2(128 byte)
 &&def_pdb_aware        default substrb(sys_context('USERENV', 'CON_NAME'), 1, 128)         not null
   , object_type         varchar2(20 byte)                                   not null
-  , object_owner        varchar2(128 byte)                                  not null
-  , object_name         varchar2(128 byte)                                  not null
+  , object_owner        varchar2(128 byte)                                  null
+  , object_name         varchar2(261 byte)                                  null
   , session_id          number
         default to_number(sys_context('USERENV', 'SID'))                    not null
   , session_user        varchar2(128 byte)  
@@ -48,7 +48,7 @@ begin
 end;
 /
 comment on column &&def_pre_ddl_table..object_type    is 'Target object info: object type';
-comment on column &&def_pre_ddl_table..object_owner   is 'Target object info! object owner';
+comment on column &&def_pre_ddl_table..object_owner   is 'Target object info: object owner';
 comment on column &&def_pre_ddl_table..object_name    is 'Target object info: object name';
 comment on column &&def_pre_ddl_table..session_id     is 'Calling session info: session id';
 comment on column &&def_pre_ddl_table..session_user   is 'Calling session info: session user';

@@ -15,6 +15,10 @@ define def_ddl_capture_temp_tabspc = "TEMP"
 -- Use "" to enable, "--" to disable
 define def_ddl_capture_grants = ""
 
+-- Shall we capture grants details into a separate table?
+-- Use "" to enable, "--" to disable
+define def_ddl_capture_grant_details = ""
+
 -- Multitenant: create the owner user as a common user?
 -- Use "" to enable, "--" to disable
 --
@@ -37,8 +41,14 @@ define def_pdb_aware = "--"
 define def_pre_ddl_table  = "TORAPREDDL"
 define def_post_ddl_table = "TORAPOSTDDL"
 
+define def_pre_grant_table = "TORAPREGRANT"
+define def_post_grant_table = "TORAPOSTGRANT"
+
 define def_pre_ddl_view   = "VORAPREDDL"
 define def_post_ddl_view  = "VORAPOSTDDL"
+
+define def_pre_grant_view = "VORAPREGRANT"
+define def_post_grant_view = "VORAPOSTGRANT"
 
 
 ------------------------------------------------------------------------------------------

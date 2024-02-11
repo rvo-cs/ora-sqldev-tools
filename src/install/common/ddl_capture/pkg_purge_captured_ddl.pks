@@ -8,6 +8,11 @@ create or replace package pkg_purge_captured_ddl authid definer as
     gc_pre_ddl_table     constant user_tables.table_name %type := '&&def_pre_ddl_table';
     gc_post_ddl_table    constant user_tables.table_name %type := '&&def_post_ddl_table';
 
+   $if $$ddl_capture_grant_details $then
+    gc_pre_grant_table   constant user_tables.table_name %type := '&&def_pre_grant_table';
+    gc_post_grant_table  constant user_tables.table_name %type := '&&def_post_grant_table';
+   $end
+   
     /*
      * Number of top-most partitions which are always preserved (ignored)
      * when purging.

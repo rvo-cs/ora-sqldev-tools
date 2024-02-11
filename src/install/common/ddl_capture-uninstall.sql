@@ -33,6 +33,7 @@ prompt =======================
 prompt Dropping schema objects
 prompt -----------------------
 
+drop package "&&def_ddl_capture_user".pkg_capture_ddl;
 drop package "&&def_ddl_capture_user".pkg_purge_captured_ddl;
 
 drop view "&&def_ddl_capture_user"."&&def_pre_ddl_view";
@@ -40,6 +41,9 @@ drop view "&&def_ddl_capture_user"."&&def_post_ddl_view";
 
 drop table "&&def_ddl_capture_user"."&&def_pre_ddl_table" purge;
 drop table "&&def_ddl_capture_user"."&&def_post_ddl_table" purge;
+
+@@ddl_capture/uninstall-views-grant_details&&def_ddl_capture_grant_details..sql
+@@ddl_capture/uninstall-tables-grant_details&&def_ddl_capture_grant_details..sql
 
 drop sequence "&&def_ddl_capture_user".seq_ddl_pre;
 drop sequence "&&def_ddl_capture_user".seq_ddl_post;

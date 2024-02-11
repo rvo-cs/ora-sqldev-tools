@@ -1,0 +1,1 @@
+-- No op: capturing details of GRANTs is disabled in settings

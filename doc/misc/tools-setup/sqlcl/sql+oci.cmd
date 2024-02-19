@@ -1,12 +1,17 @@
 @ECHO OFF
 
 REM ==================================================================
-REM sql.cmd -- wrapper script for starting SQLcl under Windows 7/10/11
+REM sql+oci.cmd -- wrapper script for SQLcl under Windows 7/10/11
+REM
+REM Note: using the jdbc:oci driver from Oracle Instant Client
+REM
+REM Note: this script was derived from Paul Neumann's sql.cmd
+REM (https://gist.github.com/PaulNeumann/d541b251e160038412b02d471a3f4704#file-sql-cmd)
+REM with changes and additions in order to: (i) tailor it to my own
+REM requirements, and: (ii) keep it in sync with the reference `sql`
+REM bash starter script bundled with SQLcl, so it can be used along
+REM with the latest versions of the product.
 REM ==================================================================
-
-REM #########################################################################################
-REM Origin: https://gist.github.com/PaulNeumann/d541b251e160038412b02d471a3f4704#file-sql-cmd
-REM #########################################################################################
 
 SETLOCAL
 
@@ -27,7 +32,7 @@ REM This is the root directory of the installed SQLcl product;
 REM e.g. %SQL_HOME%\bin\sql.exe is the included binary executable.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.3.0.270.1251
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
 
 REM =============================================================
 REM Set SQLPATH folder
@@ -88,6 +93,8 @@ SET STD_ARGS=%STD_ARGS% -Djava.io.tmpdir=E:\Home\romain\.java-temp
 
 REM cover up windows read registry warning
 SET STD_ARGS=%STD_ARGS% --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED
+REM ... and reflective access by JLine to private static class of ProcessBuilder
+SET STD_ARGS=%STD_ARGS% --add-opens=java.base/java.lang=ALL-UNNAMED
 
 REM Inhibit Nashorn deprecation warning
 SET STD_ARGS=%STD_ARGS% -Dnashorn.args=--no-deprecation-warning
@@ -99,7 +106,6 @@ REM Set logging configuration
 IF DEFINED LOGGING_CONFIG (
     SET STD_ARGS=%STD_ARGS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
 )
-
 
 REM =============================================================
 REM All set, let's start SQLcl

@@ -6,9 +6,10 @@
 # PURPOSE
 #   Simple wrapper script for SQLcl
 #
-# REMARK
-#   Freely derived from:
-#   https://gist.github.com/PaulNeumann/d541b251e160038412b02d471a3f4704#file-sql-cmd
+#   This script sets the proper environment configuration,
+#   then calls the reference `sql` bash starter script from
+#   the SQLcl bundle; settings are passed to the JVM through
+#   the JAVA_TOOL_OPTIONS environment variable.
 #
 
 set -o nounset
@@ -28,7 +29,7 @@ export JAVA_HOME
 # e.g. ${SQL_HOME}/bin/sql is the included launching script.
 #--------------------------------------------------------------
 
-SQL_HOME=/usr/local/share/oracle/sqlcl/sqlcl-23.3.0.270.1251
+SQL_HOME=/usr/local/share/oracle/sqlcl/sqlcl-23.4.0.023.2321
 
 #==============================================================
 # Set SQLPATH folder
@@ -93,7 +94,7 @@ export _JAVA_OPTIONS
 unset ORACLE_HOME
 
 #==============================================================
-# SQLcl 23.3 and earlier: the supplied sql launching script
+# SQLcl 23.4 and earlier: the supplied sql launching script
 # picks the JDK from the PATH, rather that using the one
 # specified by the JAVA_HOME environment variable. Therefore
 # we must put ${JAVA_HOME}/bin first in the PATH, in order

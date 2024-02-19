@@ -2,14 +2,10 @@
 
 REM ===================================================================
 REM sqlw.cmd -- wrapper script for starting SQLcl under Windows 7/10/11
-REM ===================================================================
-
+REM
 REM This version of the wrapper script calls the official sql.exe 
-REM binary shipped for Windows as part of the SQLcl bundle. Settings
-REM are passed to the JVM through the JAVA_TOOL_OPTIONS variable.
-
-REM Note: freely derived from:
-REM https://gist.github.com/PaulNeumann/d541b251e160038412b02d471a3f4704#file-sql-cmd
+REM binary included in the SQLcl bundle for Windows. Settings are
+REM passed to the JVM through the JAVA_TOOL_OPTIONS variable.
 REM -------------------------------------------------------------------
 
 SETLOCAL
@@ -27,7 +23,7 @@ REM This is the root directory of the installed SQLcl product;
 REM e.g. %SQL_HOME%\bin\sql.exe is the included binary executable.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.3.0.270.1251
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
 
 REM =============================================================
 REM Set SQLPATH folder
@@ -82,7 +78,8 @@ set JAVA_TOOL_OPTIONS=%STD_ARGS%
 
 REM =============================================================
 REM Unset ORACLE_HOME, otherwise sql.exe picks it as the location
-REM of the JDBC driver; comment this line if that is expected.
+REM of the JDBC driver; comment this line if that is expected
+REM (e.g. if using the jdbc:oci driver)
 REM -------------------------------------------------------------
 
 set ORACLE_HOME=

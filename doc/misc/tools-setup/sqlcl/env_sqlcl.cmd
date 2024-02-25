@@ -10,7 +10,7 @@ REM library directory (containing the native OCI driver) must be present
 REM in the PATH and precede any other client installations.
 REM -----------------------------------------------------------------------
 
-set ORACLE_HOME=F:\Produits\Oracle\instantclient\instantclient_19_17
+set ORACLE_HOME=F:\Produits\Oracle\instantclient\instantclient_21_11
 
 set PATH=%ORACLE_HOME%;%PATH%
 
@@ -38,5 +38,5 @@ REM SQLcl with jdbc:oci
 doskey sqlcl-oci=F:\Produits\Oracle\SQLcl\sql+oci.cmd -oci $*
 
 REM SQL Developer
-doskey sqldev=F:\Produits\Oracle\SQLDeveloper\sqldeveloper-23.1.0.097.1607-x64\sqldeveloper.exe $*
+doskey sqldev=F:\Produits\Oracle\SQLDeveloper\sqldeveloper-23.1.1.345.2114-x64\sqldeveloper.exe $*
 doskey sqldev-prev=F:\Produits\Oracle\SQLDeveloper\sqldeveloper-21.4.3.063.0100-x64\sqldeveloper.exe $*

@@ -11,22 +11,36 @@ REM -------------------------------------------------------------------
 SETLOCAL
 
 REM =============================================================
-REM Set JAVA_HOME folder
+REM JAVA_HOME folder
+REM
+REM This is the root directory of the JDK to be used for running
+REM SQLcl, such that the java command is %JAVA_HOME%\bin\java.exe
+REM
+REM Remarks:
+REM     a) Releases of SQLcl "stand-alone" 22.x and higher
+REM        require the JDK 11 or 17 (SQLcl 21.4 was the last
+REM        release using Java 8), with GraalVM being officially
+REM        supported since SQLcl 23.3.
+REM
+REM     b) in general, the JDK shipped with SQL Developer in the
+REM        "with JDK included" bundle can be used, provided it's
+REM        recent enough.
 REM -------------------------------------------------------------
 
 SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.19
 
 REM =============================================================
-REM Set SQL_HOME folder
+REM SQL_HOME folder
 REM
-REM This is the root directory of the installed SQLcl product;
-REM e.g. %SQL_HOME%\bin\sql.exe is the included binary executable.
+REM This is the root directory of the installed SQLcl product,
+REM such that %SQL_HOME%\bin\sql.exe is the included binary
+REM executable for Windows x64.
 REM -------------------------------------------------------------
 
 SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
 
 REM =============================================================
-REM Set SQLPATH folder
+REM SQLPATH folder
 REM
 REM This sets the search path for scripts started with @ or @@.
 REM If the SQLPATH environment variable is set, and the SQLPATH
@@ -39,10 +53,10 @@ IF DEFINED SQLPATH (
 SET SQLPATH=E:\Home\romain\oracle\sqlcl%SQLPATH%
 
 REM =============================================================
-REM Set TNS_ADMIN folder
+REM TNS_ADMIN folder
 REM
-REM If you want SQLcl to use a tnsnames.ora file, point the
-REM TNS_ADMIN environment variable to the file's folder.
+REM If you want SQLcl to use a tnsnames.ora file, set the
+REM TNS_ADMIN environment variable to that file's folder.
 REM -------------------------------------------------------------
 
 SET TNS_ADMIN=E:\Home\romain\SQL_Developer\tns_admin

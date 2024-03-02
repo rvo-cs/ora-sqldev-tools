@@ -40,67 +40,119 @@ REM -------------------------------------------------------------
 SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
 
 REM =============================================================
-REM SQLPATH folder
+REM Additions to SQLPATH
 REM
-REM This sets the search path for scripts started with @ or @@.
-REM If the SQLPATH environment variable is set, and the SQLPATH
-REM folder contains a login.sql, SQLcl will run it.
+REM The SQLPATH environment variable defines the default search
+REM path for scripts started with START or @. If it is set, and
+REM one folder in that list contains a login.sql, SQLcl will run
+REM it after login into the database, and upon start if it is
+REM started with /nolog.
+REM
+REM Use the SQLPATH_PREPEND variable to set folder(s) to be added
+REM to the beginning of the SQLPATH environment variable.
+REM
+REM Use the SQLPATH_APPEND variable to set folder(s) to be added
+REM to the end of the SQLPATH environment variable.
 REM -------------------------------------------------------------
 
-IF DEFINED SQLPATH (
-    SET SQLPATH=;%SQLPATH%
-)
-SET SQLPATH=E:\Home\romain\oracle\sqlcl%SQLPATH%
+SET SQLPATH_PREPEND=E:\Home\romain\oracle\sqlcl
+
+SET SQLPATH_APPEND=
+
+REM =============================================================
+REM Localization
+REM
+REM Set SQLCL_USER_LANGUAGE to set SQLcl into that language
+REM -------------------------------------------------------------
+
+SET SQLCL_USER_LANGUAGE=en
 
 REM =============================================================
 REM TNS_ADMIN folder
 REM
 REM If you want SQLcl to use a tnsnames.ora file, set the
-REM TNS_ADMIN environment variable to that file's folder.
+REM TNS_ADMIN environment variable to that file's directory.
 REM -------------------------------------------------------------
 
 SET TNS_ADMIN=E:\Home\romain\SQL_Developer\tns_admin
 
 REM =============================================================
-REM Switch codepage to UTF-8
+REM JVM settings
+REM
+REM Set SQLCL_JAVA_HEAPSIZE_MIN_MAX if you want to use specific
+REM min/max sizes for the Java heap, rather than the defaults.
+REM
+REM Set SQLCL_JAVA_IO_TMPDIR if you want to use a specific
+REM directory for Java temporary files, rather than the default.
 REM -------------------------------------------------------------
+
+SET SQLCL_JAVA_HEAPSIZE_MIN_MAX=-Xms512m -Xmx1600m
+
+SET SQLCL_JAVA_IO_TMPDIR=E:\Home\romain\.java-temp
+
+
+REM @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+REM @@@@@ NO USER CONFIGURATION IS EXPECTED BELOW THIS LINE @@@@@
+REM @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+REM ---------------------------------
+REM Adjust the SQLPATH env. variable
+
+IF DEFINED SQLPATH (
+    SET SQLPATH_SEP=;
+)
+IF DEFINED SQLPATH_PREPEND (
+    SET SQLPATH=%SQLPATH_PREPEND%%SQLPATH_SEP%%SQLPATH%
+    SET SQLPATH_PREPEND=
+    SET SQLPATH_SEP=;
+)
+IF DEFINED SQLPATH_APPEND (
+    SET SQLPATH=%SQLPATH%%SQLPATH_SEP%%SQLPATH_APPEND%
+    SET SQLPATH_APPEND=
+)
+SET SQLPATH_SEP=
+
+REM -----------------------------
+REM Switch the codepage to UTF-8
 
 CHCP 65001 >NUL 2>&1
 
-REM =============================================================
-REM JVM arguments, to be passed through JAVA_TOOL_OPTIONS
-REM (or _JAVA_OPTIONS if necessary)
-REM -------------------------------------------------------------
+REM -------------------------------------------------------
+REM JVM arguments, to be passed through JAVA_TOOL_OPTIONS,
+REM or _JAVA_OPTIONS if necessary
 
-SET STD_ARGS=-Dfile.encoding=UTF-8
+IF DEFINED SQLCL_JAVA_HEAPSIZE_MIN_MAX (
+    SET _JAVA_OPTIONS=%_JAVA_OPTIONS% %SQLCL_JAVA_HEAPSIZE_MIN_MAX%
+    SET SQLCL_JAVA_HEAPSIZE_MIN_MAX=
+)
 
-REM Java heap size min/max
-SET _JAVA_OPTIONS=%_JAVA_OPTIONS% -Xms512m -Xmx1600m
+SET JVM_OPTS=-Dfile.encoding=UTF-8
 
-REM Set User language to English
-SET STD_ARGS=%STD_ARGS% -Duser.language=en
-
-REM Set java.io.tmpdir
-SET STD_ARGS=%STD_ARGS% -Djava.io.tmpdir=E:\Home\romain\.java-temp
+IF DEFINED SQLCL_USER_LANGUAGE (
+    SET JVM_OPTS=%JVM_OPTS% -Duser.language=%SQLCL_USER_LANGUAGE%
+    SET SQLCL_USER_LANGUAGE=
+)
+IF DEFINED SQLCL_JAVA_IO_TMPDIR (
+    SET JVM_OPTS=%JVM_OPTS% -Djava.io.tmpdir=%SQLCL_JAVA_IO_TMPDIR%
+    SET SQLCL_JAVA_IO_TMPDIR=
+)
 
 REM Set logging configuration
 IF DEFINED LOGGING_CONFIG (
-    SET STD_ARGS=%STD_ARGS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
+    SET JVM_OPTS=%JVM_OPTS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
 )
  
-set JAVA_TOOL_OPTIONS=%STD_ARGS%
+set JAVA_TOOL_OPTIONS=%JVM_OPTS%
 
-REM =============================================================
+REM -------------------------------------------------------------
 REM Unset ORACLE_HOME, otherwise sql.exe picks it as the location
 REM of the JDBC driver; comment this line if that is expected
 REM (e.g. if using the jdbc:oci driver)
-REM -------------------------------------------------------------
 
 set ORACLE_HOME=
 
-REM =============================================================
-REM All set, let's start SQLcl
-REM -------------------------------------------------------------
+REM ---------------------
+REM Finally, start SQLcl
 
 "%SQL_HOME%\bin\sql.exe" %*
 

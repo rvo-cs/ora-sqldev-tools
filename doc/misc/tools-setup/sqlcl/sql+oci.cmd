@@ -47,82 +47,139 @@ REM -------------------------------------------------------------
 SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
 
 REM =============================================================
-REM SQLPATH folder
+REM Additions to SQLPATH
 REM
-REM This sets the search path for scripts started with @ or @@.
-REM If the SQLPATH environment variable is set, and the SQLPATH
-REM folder contains a login.sql, SQLcl will run it.
+REM The SQLPATH environment variable defines the default search
+REM path for scripts started with START or @. If it is set, and
+REM one folder in that list contains a login.sql, SQLcl will run
+REM it after login into the database, and upon start if it is
+REM started with /nolog.
+REM
+REM Use the SQLPATH_PREPEND variable to set folder(s) to be added
+REM to the beginning of the SQLPATH environment variable.
+REM
+REM Use the SQLPATH_APPEND variable to set folder(s) to be added
+REM to the end of the SQLPATH environment variable.
 REM -------------------------------------------------------------
 
-IF DEFINED SQLPATH (
-    SET SQLPATH=;%SQLPATH%
-)
-SET SQLPATH=E:\Home\romain\oracle\sqlcl%SQLPATH%
+SET SQLPATH_PREPEND=E:\Home\romain\oracle\sqlcl
+
+SET SQLPATH_APPEND=
+
+REM =============================================================
+REM Localization
+REM
+REM Set SQLCL_USER_LANGUAGE to set SQLcl into that language
+REM -------------------------------------------------------------
+
+SET SQLCL_USER_LANGUAGE=en
 
 REM =============================================================
 REM TNS_ADMIN folder
 REM
 REM If you want SQLcl to use a tnsnames.ora file, set the
-REM TNS_ADMIN environment variable to that file's folder.
+REM TNS_ADMIN environment variable to that file's directory.
 REM -------------------------------------------------------------
 
 SET TNS_ADMIN=E:\Home\romain\SQL_Developer\tns_admin
 
 REM =============================================================
-REM Switch codepage to UTF-8
+REM JVM settings
+REM
+REM Set SQLCL_JAVA_HEAPSIZE_MIN_MAX if you want to use specific
+REM min/max sizes for the Java heap, rather than the defaults.
+REM
+REM Set SQLCL_JAVA_IO_TMPDIR if you want to use a specific
+REM directory for Java temporary files, rather than the default.
 REM -------------------------------------------------------------
+
+SET SQLCL_JAVA_HEAPSIZE_MIN_MAX=-Xms512m -Xmx1600m
+
+SET SQLCL_JAVA_IO_TMPDIR=E:\Home\romain\.java-temp
+
+
+REM @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+REM @@@@@ NO USER CONFIGURATION IS EXPECTED BELOW THIS LINE @@@@@
+REM @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+REM ---------------------------------
+REM Adjust the SQLPATH env. variable
+
+IF DEFINED SQLPATH (
+    SET SQLPATH_SEP=;
+)
+IF DEFINED SQLPATH_PREPEND (
+    SET SQLPATH=%SQLPATH_PREPEND%%SQLPATH_SEP%%SQLPATH%
+    SET SQLPATH_PREPEND=
+    SET SQLPATH_SEP=;
+)
+IF DEFINED SQLPATH_APPEND (
+    SET SQLPATH=%SQLPATH%%SQLPATH_SEP%%SQLPATH_APPEND%
+    SET SQLPATH_APPEND=
+)
+SET SQLPATH_SEP=
+
+REM -----------------------------
+REM Switch the codepage to UTF-8
 
 CHCP 65001 >NUL 2>&1
 
-REM =============================================================
-REM Set the classpath and JVM arguments
-REM -------------------------------------------------------------
+REM ------------------
+REM Set JVM arguments
+
+SET JVM_OPTS=-Djava.awt.headless=true -Dfile.encoding=UTF-8
+SET JVM_OPTS=%JVM_OPTS% -Dpolyglot.engine.WarnInterpreterOnly=false
+SET JVM_OPTS=%JVM_OPTS% -Xss100m
+SET JVM_OPTS=%JVM_OPTS% -XX:+IgnoreUnrecognizedVMOptions
+REM SET JVM_OPTS=%JVM_OPTS% -XX:+PrintFlagsFinal
+
+IF DEFINED SQLCL_JAVA_HEAPSIZE_MIN_MAX (
+    SET JVM_OPTS=%JVM_OPTS% %SQLCL_JAVA_HEAPSIZE_MIN_MAX%
+    SET SQLCL_JAVA_HEAPSIZE_MIN_MAX=
+)
+IF DEFINED SQLCL_USER_LANGUAGE (
+    SET JVM_OPTS=%JVM_OPTS% -Duser.language=%SQLCL_USER_LANGUAGE%
+    SET SQLCL_USER_LANGUAGE=
+)
+IF DEFINED SQLCL_JAVA_IO_TMPDIR (
+    SET JVM_OPTS=%JVM_OPTS% -Djava.io.tmpdir=%SQLCL_JAVA_IO_TMPDIR%
+    SET SQLCL_JAVA_IO_TMPDIR=
+)
+
+REM Inhibit warnings about illegal reflective access when reading the Windows registry
+SET JVM_OPTS=%JVM_OPTS% --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED
+REM ... and about reflective access by JLine to private static class of ProcessBuilder
+SET JVM_OPTS=%JVM_OPTS% --add-opens=java.base/java.lang=ALL-UNNAMED
+
+REM Inhibit Nashorn deprecation warning
+SET JVM_OPTS=%JVM_OPTS% -Dnashorn.args=--no-deprecation-warning
+
+REM Enable graal scripts
+SET JVM_OPTS=%JVM_OPTS% -Dpolyglot.js.nashorn-compat=true
+
+REM Set logging configuration
+IF DEFINED LOGGING_CONFIG (
+    SET JVM_OPTS=%JVM_OPTS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
+)
+
+REM -----------------------
+REM Set the Java classpath
 
 REM Required for jdbc:oci: the OCI native driver from the Oracle Client
 REM must be found in the classpath before any other Oracle JDBC driver.
 REM The ORACLE_HOME env. variable is set in the calling environment.
 
-SET CPFILE=%ORACLE_HOME%\ojdbc8.jar
+SET CPLIST=%ORACLE_HOME%\ojdbc8.jar
 
-REM Add all SQLcl libraries to classpath
-SET CPFILE=%CPFILE%;%SQL_HOME%\lib\dbtools-sqlcl.jar;%SQL_HOME%\lib\*;%SQL_HOME%\lib\ext\*
+REM Remark: simple approach here so far: all the JARs shipped with SQLcl
+REM are put in the classpath (as opposed to enumerating them one by one),
+REM with dbtools-sqlcl.jar before the other libraries.
 
-REM Set JVM arguments
-SET STD_ARGS=-Djava.awt.headless=true -Dfile.encoding=UTF-8
-SET STD_ARGS=%STD_ARGS% -Dpolyglot.engine.WarnInterpreterOnly=false
-SET STD_ARGS=%STD_ARGS% -Xss100m
-SET STD_ARGS=%STD_ARGS% -XX:+IgnoreUnrecognizedVMOptions
-REM SET STD_ARGS=%STD_ARGS% -XX:+PrintFlagsFinal
+SET CPLIST=%CPLIST%;%SQL_HOME%\lib\dbtools-sqlcl.jar;%SQL_HOME%\lib\*;%SQL_HOME%\lib\ext\*
 
-REM Java heap size min/max
-SET STD_ARGS=%STD_ARGS% -Xms512m -Xmx1600m
+REM ---------------------
+REM Finally, start SQLcl
 
-REM Set User language to English
-SET STD_ARGS=%STD_ARGS% -Duser.language=en
-
-REM Set java.io.tmpdir
-SET STD_ARGS=%STD_ARGS% -Djava.io.tmpdir=E:\Home\romain\.java-temp
-
-REM cover up windows read registry warning
-SET STD_ARGS=%STD_ARGS% --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED
-REM ... and reflective access by JLine to private static class of ProcessBuilder
-SET STD_ARGS=%STD_ARGS% --add-opens=java.base/java.lang=ALL-UNNAMED
-
-REM Inhibit Nashorn deprecation warning
-SET STD_ARGS=%STD_ARGS% -Dnashorn.args=--no-deprecation-warning
-
-REM enable graal scripts
-SET STD_ARGS=%STD_ARGS% -Dpolyglot.js.nashorn-compat=true
-
-REM Set logging configuration
-IF DEFINED LOGGING_CONFIG (
-    SET STD_ARGS=%STD_ARGS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
-)
-
-REM =============================================================
-REM All set, let's start SQLcl
-REM -------------------------------------------------------------
-
-"%JAVA_HOME%\bin\java" %STD_ARGS% -cp "%CPFILE%" oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli %*
+"%JAVA_HOME%\bin\java" %JVM_OPTS% -cp "%CPLIST%" oracle.dbtools.raptor.scriptrunner.cmdline.SqlCli %*
 
 ENDLOCAL

@@ -734,8 +734,8 @@ live_and_recent_sessions as (
         liv.type,
         liv.status,
         ash.cnt_samp            as ash_cnt_samp,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_cpu_time_ratio)  as avg_cpu_pct,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_db_time_ratio)   as avg_activ_pct,
+        round( (100 * ash.tm_delta_cpu_time_ratio), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_cpu_time_ratio), 0), 1))))) )  as avg_cpu_pct,
+        round( (100 * ash.tm_delta_db_time_ratio) , greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_db_time_ratio) , 0), 1))))) )  as avg_activ_pct,
         ash.cnt_sql_exec        as ash_cnt_sql_exec,
         nullif(ash.cnt_xid, 0)  as ash_cnt_xid,
         liv.command,
@@ -791,15 +791,15 @@ live_and_recent_sessions as (
         liv.resource_consumer_group,
         ash.in_parse,
         ash.in_hard_parse,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_iops, 0))           as avg_read_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_iops, 0))          as avg_write_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_mbps, 0))           as avg_read_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_mbps, 0))          as avg_write_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_interconnect_mbps, 0))   as avg_interconnect_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.pga_allocated_mb, 0))          as ash_pga_alloc_mb,
-        c##pkg_pub_utility.prec_round(nullif(ash.temp_space_allocated_mb, 0))   as ash_temp_space_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_pga_allocated_mb)                 as ash_max_pga_alloc_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_temp_space_allocated_mb)          as ash_max_temp_space_mb
+        round( nullif(ash.delta_read_iops, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_iops, 0)         )))) )  as avg_read_iops,
+        round( nullif(ash.delta_write_iops, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_iops, 0)        )))) )  as avg_write_iops,
+        round( nullif(ash.delta_read_mbps, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_mbps, 0)         )))) )  as avg_read_mbps,
+        round( nullif(ash.delta_write_mbps, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_mbps, 0)        )))) )  as avg_write_mbps,
+        round( nullif(ash.delta_interconnect_mbps, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_interconnect_mbps, 0) )))) )  as avg_interconnect_mbps,
+        round( nullif(ash.pga_allocated_mb, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.pga_allocated_mb, 0)        )))) )  as ash_pga_alloc_mb,
+        round( nullif(ash.temp_space_allocated_mb, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.temp_space_allocated_mb, 0) )))) )  as ash_temp_space_mb
+        --, round( ash.max_pga_allocated_mb       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_pga_allocated_mb       , 0), 1))))) )  as ash_max_pga_alloc_mb
+        --, round( ash.max_temp_space_allocated_mb, greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_temp_space_allocated_mb, 0), 1))))) )  as ash_max_temp_space_mb
         , localtimestamp                    as sample_time
     from
         live_sessions liv,
@@ -824,8 +824,8 @@ live_and_recent_sessions as (
         end                     as type,
         'ENDED'                 as status,
         ash.cnt_samp            as ash_cnt_samp,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_cpu_time_ratio)    as avg_cpu_pct,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_db_time_ratio)     as avg_activ_pct,
+        round( (100 * ash.tm_delta_cpu_time_ratio), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_cpu_time_ratio), 0), 1))))) )  as avg_cpu_pct,
+        round( (100 * ash.tm_delta_db_time_ratio) , greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_db_time_ratio) , 0), 1))))) )  as avg_activ_pct,
         ash.cnt_sql_exec        as ash_cnt_sql_exec,
         nullif(ash.cnt_xid, 0)  as ash_cnt_xid,
         ash.command,
@@ -893,15 +893,15 @@ live_and_recent_sessions as (
         ash.consumer_group          as resource_consumer_group,
         ash.in_parse,
         ash.in_hard_parse,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_iops, 0))           as avg_read_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_iops, 0))          as avg_write_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_mbps, 0))           as avg_read_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_mbps, 0))          as avg_write_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_interconnect_mbps, 0))   as avg_interconnect_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.pga_allocated_mb, 0))          as ash_pga_alloc_mb,
-        c##pkg_pub_utility.prec_round(nullif(ash.temp_space_allocated_mb, 0))   as ash_temp_space_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_pga_allocated_mb)                 as ash_max_pga_alloc_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_temp_space_allocated_mb)          as ash_max_temp_space_mb
+        round( nullif(ash.delta_read_iops, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_iops, 0)         )))) )  as avg_read_iops,
+        round( nullif(ash.delta_write_iops, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_iops, 0)        )))) )  as avg_write_iops,
+        round( nullif(ash.delta_read_mbps, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_mbps, 0)         )))) )  as avg_read_mbps,
+        round( nullif(ash.delta_write_mbps, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_mbps, 0)        )))) )  as avg_write_mbps,
+        round( nullif(ash.delta_interconnect_mbps, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_interconnect_mbps, 0) )))) )  as avg_interconnect_mbps,
+        round( nullif(ash.pga_allocated_mb, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.pga_allocated_mb, 0)        )))) )  as ash_pga_alloc_mb,
+        round( nullif(ash.temp_space_allocated_mb, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.temp_space_allocated_mb, 0) )))) )  as ash_temp_space_mb
+        --, round( ash.max_pga_allocated_mb       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_pga_allocated_mb       , 0), 1))))) )  as ash_max_pga_alloc_mb
+        --, round( ash.max_temp_space_allocated_mb, greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_temp_space_allocated_mb, 0), 1))))) )  as ash_max_temp_space_mb
         , ash.sample_time
     from
         ash_sessions_last_20s ash,
@@ -1590,8 +1590,8 @@ live_and_recent_sessions as (
         liv.type,
         liv.status,
         ash.cnt_samp            as ash_cnt_samp,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_cpu_time_ratio)  as avg_cpu_pct,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_db_time_ratio)   as avg_activ_pct,
+        round( (100 * ash.tm_delta_cpu_time_ratio), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_cpu_time_ratio), 0), 1))))) )  as avg_cpu_pct,
+        round( (100 * ash.tm_delta_db_time_ratio) , greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_db_time_ratio) , 0), 1))))) )  as avg_activ_pct,
         ash.cnt_sql_exec        as ash_cnt_sql_exec,
         nullif(ash.cnt_xid, 0)  as ash_cnt_xid,
         liv.command,
@@ -1647,15 +1647,15 @@ live_and_recent_sessions as (
         liv.resource_consumer_group,
         ash.in_parse,
         ash.in_hard_parse,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_iops, 0))           as avg_read_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_iops, 0))          as avg_write_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_mbps, 0))           as avg_read_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_mbps, 0))          as avg_write_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_interconnect_mbps, 0))   as avg_interconnect_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.pga_allocated_mb, 0))          as ash_pga_alloc_mb,
-        c##pkg_pub_utility.prec_round(nullif(ash.temp_space_allocated_mb, 0))   as ash_temp_space_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_pga_allocated_mb)                 as ash_max_pga_alloc_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_temp_space_allocated_mb)          as ash_max_temp_space_mb
+        round( nullif(ash.delta_read_iops, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_iops, 0)         )))) )  as avg_read_iops,
+        round( nullif(ash.delta_write_iops, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_iops, 0)        )))) )  as avg_write_iops,
+        round( nullif(ash.delta_read_mbps, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_mbps, 0)         )))) )  as avg_read_mbps,
+        round( nullif(ash.delta_write_mbps, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_mbps, 0)        )))) )  as avg_write_mbps,
+        round( nullif(ash.delta_interconnect_mbps, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_interconnect_mbps, 0) )))) )  as avg_interconnect_mbps,
+        round( nullif(ash.pga_allocated_mb, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.pga_allocated_mb, 0)        )))) )  as ash_pga_alloc_mb,
+        round( nullif(ash.temp_space_allocated_mb, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.temp_space_allocated_mb, 0) )))) )  as ash_temp_space_mb
+        --, round( ash.max_pga_allocated_mb       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_pga_allocated_mb       , 0), 1))))) )  as ash_max_pga_alloc_mb
+        --, round( ash.max_temp_space_allocated_mb, greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_temp_space_allocated_mb, 0), 1))))) )  as ash_max_temp_space_mb
         , localtimestamp                    as sample_time
     from
         live_sessions liv,
@@ -1679,8 +1679,8 @@ live_and_recent_sessions as (
         end                     as type,
         'ENDED'                 as status,
         ash.cnt_samp            as ash_cnt_samp,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_cpu_time_ratio)    as avg_cpu_pct,
-        c##pkg_pub_utility.prec_round(100 * ash.tm_delta_db_time_ratio)     as avg_activ_pct,
+        round( (100 * ash.tm_delta_cpu_time_ratio), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_cpu_time_ratio), 0), 1))))) )  as avg_cpu_pct,
+        round( (100 * ash.tm_delta_db_time_ratio) , greatest(0, 2 - floor(log(10, abs(nvl(nullif( (100 * ash.tm_delta_db_time_ratio) , 0), 1))))) )  as avg_activ_pct,
         ash.cnt_sql_exec        as ash_cnt_sql_exec,
         nullif(ash.cnt_xid, 0)  as ash_cnt_xid,
         ash.command,
@@ -1748,15 +1748,15 @@ live_and_recent_sessions as (
         ash.consumer_group          as resource_consumer_group,
         ash.in_parse,
         ash.in_hard_parse,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_iops, 0))           as avg_read_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_iops, 0))          as avg_write_iops,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_read_mbps, 0))           as avg_read_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_write_mbps, 0))          as avg_write_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.delta_interconnect_mbps, 0))   as avg_interconnect_mbps,
-        c##pkg_pub_utility.prec_round(nullif(ash.pga_allocated_mb, 0))          as ash_pga_alloc_mb,
-        c##pkg_pub_utility.prec_round(nullif(ash.temp_space_allocated_mb, 0))   as ash_temp_space_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_pga_allocated_mb)                 as ash_max_pga_alloc_mb
-        --, c##pkg_pub_utility.prec_round(ash.max_temp_space_allocated_mb)          as ash_max_temp_space_mb
+        round( nullif(ash.delta_read_iops, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_iops, 0)         )))) )  as avg_read_iops,
+        round( nullif(ash.delta_write_iops, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_iops, 0)        )))) )  as avg_write_iops,
+        round( nullif(ash.delta_read_mbps, 0)        , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_read_mbps, 0)         )))) )  as avg_read_mbps,
+        round( nullif(ash.delta_write_mbps, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_write_mbps, 0)        )))) )  as avg_write_mbps,
+        round( nullif(ash.delta_interconnect_mbps, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.delta_interconnect_mbps, 0) )))) )  as avg_interconnect_mbps,
+        round( nullif(ash.pga_allocated_mb, 0)       , greatest(0, 2 - floor(log(10, abs( nullif(ash.pga_allocated_mb, 0)        )))) )  as ash_pga_alloc_mb,
+        round( nullif(ash.temp_space_allocated_mb, 0), greatest(0, 2 - floor(log(10, abs( nullif(ash.temp_space_allocated_mb, 0) )))) )  as ash_temp_space_mb
+        --, round( ash.max_pga_allocated_mb       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_pga_allocated_mb       , 0), 1))))) )  as ash_max_pga_alloc_mb
+        --, round( ash.max_temp_space_allocated_mb, greatest(0, 2 - floor(log(10, abs(nvl(nullif( ash.max_temp_space_allocated_mb, 0), 1))))) )  as ash_max_temp_space_mb
         , ash.sample_time
     from
         ash_sessions_last_20s ash,
@@ -4132,10 +4132,12 @@ order by
                     <sql><![CDATA[with
 db_release_level as (
     select
-        c##pkg_pub_utility.db_version   as version,
-        c##pkg_pub_utility.db_release   as release
+        to_number(substr(comp.version, 1, instr(comp.version, '.') - 1))  as version
     from
-        dual
+        sys.product_component_version comp
+    where
+        comp.product like 'Oracle Database %'
+        and rownum = 1
 ),
 bind_values as (
     select
@@ -4255,10 +4257,12 @@ from
                     <sql><![CDATA[with
 db_release_level as (
     select
-        c##pkg_pub_utility.db_version   as version,
-        c##pkg_pub_utility.db_release   as release
+        to_number(substr(comp.version, 1, instr(comp.version, '.') - 1))  as version
     from
-        dual
+        sys.product_component_version comp
+    where
+        comp.product like 'Oracle Database %'
+        and rownum = 1
 ),
 bind_values as (
     select
@@ -4808,13 +4812,17 @@ select
     asg.sample_time_end                             as "To_sample_time",
     asg.status                                      as "Status",
     asg.elapsed                                     as "Elapsed",
-    c##pkg_pub_utility.prec_round(
-        extract(second from asg.elapsed) * 1
-        + extract(minute from asg.elapsed) * 60
-        + extract(hour from asg.elapsed) * 3600
-        + extract(day from asg.elapsed) * 86400)    as "Ela (s)",
-    c##pkg_pub_utility.prec_round(asg.cpu_time_s)   as "CPU time (s)",
-    c##pkg_pub_utility.prec_round(asg.db_time_s)    as "DB time (s)",
+    round( (extract(second from asg.elapsed) * 1
+            + extract(minute from asg.elapsed) * 60
+            + extract(hour from asg.elapsed) * 3600
+            + extract(day from asg.elapsed) * 86400),
+           greatest(0, 2 - floor(log(10, abs(nvl(nullif((extract(second from asg.elapsed) * 1
+                                                         + extract(minute from asg.elapsed) * 60
+                                                         + extract(hour from asg.elapsed) * 3600
+                                                         + extract(day from asg.elapsed) * 86400), 0),
+                                                 1))))) )  as "Ela (s)",
+    round( asg.cpu_time_s, greatest(0, 2 - floor(log(10, abs(nvl(nullif( asg.cpu_time_s, 0), 1))))) )  as "CPU time (s)",
+    round( asg.db_time_s , greatest(0, 2 - floor(log(10, abs(nvl(nullif( asg.db_time_s , 0), 1))))) )  as "DB time (s)",
     asg.cnt_samp                                    as "# Samp",
     asg.cnt_current_sql                             as "# Samp curr. SQL",
     asg.in_parse                                    as "In parse?",
@@ -4826,8 +4834,8 @@ select
     asg.sql_exec_start                              as "Sql_exec_start",
     asg.sql_full_plan_hash_value                    as "Full_plan_hash_value",  -- 12.1 and higher
     asg.sql_plan_hash_value                         as "Plan_hash_value",
-    c##pkg_pub_utility.prec_round(asg.pga_allocated / power(2,20))          as "PGA alloc (Mb)",
-    c##pkg_pub_utility.prec_round(asg.temp_space_allocated / power(2,20))   as "Temp space (Mb)",
+    round( (asg.pga_allocated        / power(2,20)), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (asg.pga_allocated        / power(2,20)), 0), 1))))) )  as "PGA alloc (Mb)",
+    round( (asg.temp_space_allocated / power(2,20)), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (asg.temp_space_allocated / power(2,20)), 0), 1))))) )  as "Temp space (Mb)",
     asg.module                                      as "Module",
     asg.action                                      as "Action",
     asg.client_id                                   as "Client_identifier",
@@ -5149,13 +5157,17 @@ select
     asg.sample_time_end                             as "To_sample_time",
     asg.status                                      as "Status",
     asg.elapsed                                     as "Elapsed",
-    c##pkg_pub_utility.prec_round(
-        extract(second from asg.elapsed) * 1
-        + extract(minute from asg.elapsed) * 60
-        + extract(hour from asg.elapsed) * 3600
-        + extract(day from asg.elapsed) * 86400)    as "Ela (s)",
-    c##pkg_pub_utility.prec_round(asg.cpu_time_s)   as "CPU time (s)",
-    c##pkg_pub_utility.prec_round(asg.db_time_s)    as "DB time (s)",
+    round( (extract(second from asg.elapsed) * 1
+            + extract(minute from asg.elapsed) * 60
+            + extract(hour from asg.elapsed) * 3600
+            + extract(day from asg.elapsed) * 86400),
+           greatest(0, 2 - floor(log(10, abs(nvl(nullif((extract(second from asg.elapsed) * 1
+                                                         + extract(minute from asg.elapsed) * 60
+                                                         + extract(hour from asg.elapsed) * 3600
+                                                         + extract(day from asg.elapsed) * 86400), 0),
+                                                 1))))) )  as "Ela (s)",
+    round( asg.cpu_time_s, greatest(0, 2 - floor(log(10, abs(nvl(nullif( asg.cpu_time_s, 0), 1))))) )  as "CPU time (s)",
+    round( asg.db_time_s , greatest(0, 2 - floor(log(10, abs(nvl(nullif( asg.db_time_s , 0), 1))))) )  as "DB time (s)",
     asg.cnt_samp                                    as "# Samp",
     asg.cnt_current_sql                             as "# Samp curr. SQL",
     asg.in_parse                                    as "In parse?",
@@ -5166,8 +5178,8 @@ select
     asg.sql_exec_id                                 as "Sql_exec_id",
     asg.sql_exec_start                              as "Sql_exec_start",
     asg.sql_plan_hash_value                         as "Plan_hash_value",
-    c##pkg_pub_utility.prec_round(asg.pga_allocated / power(2,20))          as "PGA alloc (Mb)",
-    c##pkg_pub_utility.prec_round(asg.temp_space_allocated / power(2,20))   as "Temp space (Mb)",
+    round( (asg.pga_allocated        / power(2,20)), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (asg.pga_allocated        / power(2,20)), 0), 1))))) )  as "PGA alloc (Mb)",
+    round( (asg.temp_space_allocated / power(2,20)), greatest(0, 2 - floor(log(10, abs(nvl(nullif( (asg.temp_space_allocated / power(2,20)), 0), 1))))) )  as "Temp space (Mb)",
     asg.module                                      as "Module",
     asg.action                                      as "Action",
     asg.client_id                                   as "Client_identifier",

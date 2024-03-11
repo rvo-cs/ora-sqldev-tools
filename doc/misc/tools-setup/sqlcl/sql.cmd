@@ -1,4 +1,6 @@
 @ECHO OFF
+REM SPDX-FileCopyrightText: 2024 R.Vassallo
+REM SPDX-License-Identifier: BSD Zero Clause License
 
 REM ==================================================================
 REM sql.cmd -- wrapper script for starting SQLcl under Windows 7/10/11

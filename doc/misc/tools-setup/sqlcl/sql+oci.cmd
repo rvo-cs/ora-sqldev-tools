@@ -1,4 +1,6 @@
 @ECHO OFF
+REM SPDX-FileCopyrightText: 2024 R.Vassallo
+REM SPDX-License-Identifier: BSD Zero Clause License
 
 REM ==================================================================
 REM sql+oci.cmd -- wrapper script for SQLcl under Windows 7/10/11

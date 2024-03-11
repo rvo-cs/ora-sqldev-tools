@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
 /* 
     An attempt to find differences between declared names of view columns
     and corresponding column names / aliases in the select-list of each

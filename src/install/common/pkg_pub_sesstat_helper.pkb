@@ -1,4 +1,8 @@
 create or replace package body pkg_pub_sesstat_helper as
+/*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     subtype t_snap_id     is pls_integer;
     subtype t_session_id  is pls_integer;

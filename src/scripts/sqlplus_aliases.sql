@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
     sqlplus_aliases.sql
 
     DESCRIPTION

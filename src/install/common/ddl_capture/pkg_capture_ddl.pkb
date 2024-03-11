@@ -1,4 +1,8 @@
 create or replace package body pkg_capture_ddl as
+/*
+ * SPDX-FileCopyrightText: 2024 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     procedure capture_pre
     is

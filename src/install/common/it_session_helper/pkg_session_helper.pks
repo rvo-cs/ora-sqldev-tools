@@ -1,5 +1,10 @@
 create or replace package pkg_session_helper authid definer as
 /*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
  * PACKAGE
  *      pkg_session_helper
  *

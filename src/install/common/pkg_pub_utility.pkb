@@ -1,4 +1,8 @@
 create or replace package body pkg_pub_utility as
+/*
+ * SPDX-FileCopyrightText: 2021-2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     function db_version
     return number 

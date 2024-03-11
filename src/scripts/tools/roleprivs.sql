@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 set echo off
 
 define def_role = "&1"

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2022 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 set echo off
 
 define def_username = "&1"

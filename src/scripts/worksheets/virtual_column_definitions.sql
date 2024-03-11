@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
     Sample query for extracting the definitions of all virtual columns
     from all tables in the database AND convert the DATA_DEFAULT column
     from LONG to VARCHAR2 (if possible), so it can be manipulated by

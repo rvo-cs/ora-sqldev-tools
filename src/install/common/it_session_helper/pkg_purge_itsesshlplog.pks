@@ -1,4 +1,8 @@
 create or replace package pkg_purge_itsesshlplog authid definer as
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     subtype t_interval_ds0  is interval day(3) to second(0);
 

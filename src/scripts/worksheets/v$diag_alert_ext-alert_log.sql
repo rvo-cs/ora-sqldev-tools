@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2022 R.Vassallo
+-- SPDX-License-Identifier: BSD Zero Clause License
+
 /*  
   ###################################################################
   ###  NOTE: the DBA role is mandatory to query V$DIAG_ALERT_EXT  ###

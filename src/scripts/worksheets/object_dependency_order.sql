@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
     PURPOSE
         This worksheet is about listing database objects in dependency order
         (i.e. dependents after referenced objects). This can be useful, e.g. 

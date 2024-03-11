@@ -1,5 +1,10 @@
 create or replace package pkg_pub_textfile_viewer authid current_user as
 /*
+ * SPDX-FileCopyrightText: 2021-2023 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
+/*
  * PACKAGE
  *      pkg_pub_textfile_viewer
  *

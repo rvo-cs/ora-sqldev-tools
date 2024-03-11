@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2024 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
     sqlcl_aliases-post_23_4.sql
 
     DESCRIPTION

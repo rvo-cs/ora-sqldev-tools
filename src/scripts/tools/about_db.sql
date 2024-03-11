@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2022 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 whenever sqlerror exit failure rollback
 whenever oserror exit failure rollback
 

@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2024 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
+/*
 FILENAME
     copy_tracefile.sql
 

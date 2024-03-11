@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2020 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
 whenever sqlerror exit failure rollback
 
 set serveroutput on format word_wrapped

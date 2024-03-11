@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2022 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 -- Spool directory
 -- 
 define def_spool_directory = "E:/Home/romain/Temp"

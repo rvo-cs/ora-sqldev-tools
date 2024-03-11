@@ -1,4 +1,8 @@
 create or replace package body pkg_purge_itsesshlplog as
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     function dry_run_prefix( p_dry_run in boolean ) return varchar2;     -- fwd decl.
     function boolean_as_vc2( p_bool_value in boolean ) return varchar2;  -- fwd decl.

@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2024 R.Vassallo
+-- SPDX-License-Identifier: Apache License 2.0
+
 select
     case
         when sqlcode < 0    then 'SQLDEV:GAUGE:0:100:100:100:0' -- Red

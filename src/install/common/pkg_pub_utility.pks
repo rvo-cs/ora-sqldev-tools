@@ -1,5 +1,10 @@
 create or replace package pkg_pub_utility authid current_user as
 /*
+ * SPDX-FileCopyrightText: 2021-2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
  * PACKAGE
  *      pkg_pub_utility
  *

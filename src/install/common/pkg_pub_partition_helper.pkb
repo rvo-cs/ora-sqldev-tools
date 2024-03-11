@@ -1,4 +1,8 @@
 create or replace package body pkg_pub_partition_helper as
+/*
+ * SPDX-FileCopyrightText: 2018-2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     gc_sqlstmt_hv_all_tab_part constant varchar2(500 byte) := 
             q'{select a.high_value 

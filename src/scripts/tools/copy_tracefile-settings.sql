@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2024 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
 -- Default directory object for the OS directory where trace files
 -- are generated; specify "" to disable using a default
 --

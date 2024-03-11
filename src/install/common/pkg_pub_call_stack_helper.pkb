@@ -1,4 +1,8 @@
 create or replace package body pkg_pub_call_stack_helper as
+/*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     gc_newln constant varchar2(1) := chr(10);
     

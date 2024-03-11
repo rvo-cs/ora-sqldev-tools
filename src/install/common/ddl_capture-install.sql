@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2024 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 define def_echo = ""
 
 whenever oserror exit failure rollback

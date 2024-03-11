@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2024 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 -- Owner user
 define def_ddl_capture_user = "CMN_DDL_CAPTURE$OWNER"
 --define def_ddl_capture_user = "C##DDL_CAPTURE$OWNER"

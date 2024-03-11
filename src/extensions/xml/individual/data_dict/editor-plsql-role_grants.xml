@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  SPDX-FileCopyrightText: 2023 R.Vassallo
+  SPDX-License-Identifier: BSD Zero Clause License
+ -->
 <displays>
 	<display type="editor" style="null" enable="true" connType="oracle" 
             objectType="FUNCTION,PROCEDURE,PACKAGE">

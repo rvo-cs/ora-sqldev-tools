@@ -1,0 +1,57 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ora-sqldev-tools
+Source: https://github.com/rvo-cs/ora-sqldev-tools
+
+Files: src/install/common/ddl_capture/*.sql
+Copyright: 2021-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/install/common/it_session_helper/*.sql
+Copyright: 2023 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/config/*.sql
+Copyright: 2021 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/sqlcl/aliases/*.sql
+Copyright: 2021-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/tools/common/util/*.sql
+Copyright: 2021-2023 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/tools/copy_tracefile/*.sql
+Copyright: 2024 R.Vassallo
+License: Apache License 2.0
+
+Files: src/scripts/tools/genddl/*.sql
+Copyright: 2021-2023 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/tools/roleprivs/*.sql
+Copyright: 2021-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/tools/userddl/*.sql
+Copyright: 2021-2022 R.Vassallo
+License: BSD Zero Clause License
+
+Files: src/scripts/tools/userprivs/*.sql
+Copyright: 2021-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: doc/misc/tools-setup/sqlcl/login-scripts/*.sql
+Copyright: 2019-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: doc/misc/tools-setup/sqldeveloper/login-scripts/*.sql
+Copyright: 2020-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: doc/misc/tools-setup/sqlplus/login-scripts/*.sql
+Copyright: 2019-2024 R.Vassallo
+License: BSD Zero Clause License
+
+

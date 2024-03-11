@@ -1,4 +1,8 @@
 create or replace package body pkg_pub_textfile_viewer as
+/*
+ * SPDX-FileCopyrightText: 2021-2023 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
 
     gc_dir_sep       constant varchar2(1)  := '/';
 

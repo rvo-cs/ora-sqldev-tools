@@ -1,4 +1,8 @@
 <items>
+<!--
+  SPDX-FileCopyrightText: 2022 R.Vassallo
+  SPDX-License-Identifier: BSD Zero Clause License
+ -->
     <item type="CONNECTION" reloadparent="false" weight="10.0" minversion="12.1">
         <title>Set Container...</title>
         <help><![CDATA[This runs the statement:

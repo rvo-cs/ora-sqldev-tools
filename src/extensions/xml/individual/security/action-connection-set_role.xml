@@ -1,4 +1,8 @@
 <items>
+<!--
+  SPDX-FileCopyrightText: 2022 R.Vassallo
+  SPDX-License-Identifier: BSD Zero Clause License
+ -->
     <item type="CONNECTION" reloadparent="false" weight="10.0">
         <title>Set Role...</title>
         <help><![CDATA[This action enables to set role(s) in the session.

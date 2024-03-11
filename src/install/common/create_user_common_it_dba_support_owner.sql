@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
 whenever oserror exit failure rollback
 whenever sqlerror exit failure rollback
 /*

@@ -1,4 +1,8 @@
 create or replace package body pkg_pub_stats_helper as
+/*
+ * SPDX-FileCopyrightText: 2018-2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     function raw_value_as_vc2 (p_raw in raw, p_data_type in varchar2) return varchar2 
     is 

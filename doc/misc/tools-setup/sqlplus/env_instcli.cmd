@@ -1,3 +1,6 @@
+@REM SPDX-FileCopyrightText: 2021 R.Vassallo
+@REM SPDX-License-Identifier: BSD Zero Clause License
+
 @REM ============================================================
 @REM env_instcli.cmd -- initializations for Oracle Instant Client
 @REM ------------------------------------------------------------

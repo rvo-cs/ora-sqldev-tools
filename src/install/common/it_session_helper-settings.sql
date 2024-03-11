@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 -- Owner user
 define def_it_sess_helper_user = "CMN_IT_SESSION_HELPER$OWNER"
 

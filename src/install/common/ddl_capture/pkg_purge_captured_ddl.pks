@@ -1,4 +1,8 @@
 create or replace package pkg_purge_captured_ddl authid definer as
+/*
+ * SPDX-FileCopyrightText: 2021-2024 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     subtype t_interval_ds0  is interval day to second(0);
 

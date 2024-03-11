@@ -1,5 +1,10 @@
 create or replace package pkg_dba_parse_util authid current_user as
 /*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ */
+
+/*
  * PACKAGE
  *      pkg_dba_parse_util
  *
@@ -12,8 +17,8 @@ create or replace package pkg_dba_parse_util authid current_user as
  *      privileges of the caller.
  *
  *      The owner of this package must have the following object privs:
- *        . Oracle < 18c  : EXECUTE on the SYS.UTL_XML package
- *        . Oracle >= 18c : EXECUTE on the SYS.UTL_XML_LIB library
+ *        . EXECUTE on the SYS.UTL_XML package
+ *        . For Oracle >= 18c: EXECUTE on the SYS.UTL_XML_LIB library
  *
  *      WARNING: beginning with 18c, the p_parsing_userid argument, if different
  *      from the session user id, enables the caller to perform the parse AS IF

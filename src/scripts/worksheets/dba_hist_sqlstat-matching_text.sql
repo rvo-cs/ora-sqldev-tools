@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 with 
 hist_time_model as (
     select 

@@ -1,3 +1,6 @@
+@REM SPDX-FileCopyrightText: 2023-2024 R.Vassallo
+@REM SPDX-License-Identifier: BSD Zero Clause License
+
 @ECHO OFF
 
 REM ===================================================================

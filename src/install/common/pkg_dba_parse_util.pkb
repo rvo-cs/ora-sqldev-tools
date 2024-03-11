@@ -1,28 +1,16 @@
 create or replace package body pkg_dba_parse_util as
-
-   $if dbms_db_version.version >= 18 $then 
-    procedure kuxparsequery (
-        p_curruid  in number,
-        p_schema   in varchar2,
-        p_sqltext  in clob,
-        p_lobloc   in out nocopy clob
-    )
-    is
-    language c
-    library sys.utl_xml_lib
-    name "kuxParseQuery"
-    with context parameters (
-        context,
-        p_curruid  ocinumber,
-        p_curruid  indicator,
-        p_schema   ocistring,
-        p_schema   indicator,
-        p_sqltext  ociloblocator,
-        p_sqltext  indicator,
-        p_lobloc   ociloblocator,
-        p_lobloc   indicator
-    );
-   $end
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: Apache License 2.0
+ *
+ *-----------------------------------------------------------------------------+
+ * ATTRIBUTION NOTICE: the implementation of the parsequery function is adapted
+ * from the parse_util.parse_query function from the plscope-utils project:
+ * https://github.com/PhilippSalvisberg/plscope-utils/blob/v1.0.0/database/utils/package/parse_util.pkb
+ * Copyright 2011-2017 Philipp Salvisberg <philipp.salvisberg@trivadis.com>
+ * Licensed under the Apache License, Version 2.0
+ *-----------------------------------------------------------------------------+
+ */
 
     function parsequery(
         p_parsing_schema  in varchar2,
@@ -32,13 +20,38 @@ create or replace package body pkg_dba_parse_util as
         p_sqltext         in clob
     )
     return xmltype
-    /*
-        Note: derived from Philipp Salvisberg's parse_util.parse_query function
-        https://github.com/PhilippSalvisberg/plscope-utils/blob/v1.0.0/database/utils/package/parse_util.pkb
-     */
     is
+    -- SPDX-SnippetBegin
+    -- SPDX-License-Identifier: Apache License 2.0
+    -- SPDX-SnippetCopyrightText: Copyright 2011-2017 Philipp Salvisberg <philipp.salvisberg@trivadis.com>
+    -- SPDX-SnippetComment: text in this snippet was adapted from the original parse_util.parse_query function
+
         l_clob clob;
         l_xml  xmltype;
+
+       $if dbms_db_version.version >= 18 $then 
+        procedure kuxparsequery (
+            p_curruid  in number,
+            p_schema   in varchar2,
+            p_sqltext  in clob,
+            p_lobloc   in out nocopy clob
+        )
+        is
+        language c
+        library sys.utl_xml_lib
+        name "kuxParseQuery"
+        with context parameters (
+            context,
+            p_curruid  ocinumber,
+            p_curruid  indicator,
+            p_schema   ocistring,
+            p_schema   indicator,
+            p_sqltext  ociloblocator,
+            p_sqltext  indicator,
+            p_lobloc   ociloblocator,
+            p_lobloc   indicator
+        );
+       $end
     begin
         if dbms_lob.getlength(p_sqltext) > 0 then
             dbms_lob.createtemporary(l_clob, true);
@@ -69,6 +82,8 @@ create or replace package body pkg_dba_parse_util as
             dbms_lob.freetemporary(l_clob);
         end if;
         return l_xml;
+
+    -- SPDX-SnippetEnd
     end parsequery;
 
 

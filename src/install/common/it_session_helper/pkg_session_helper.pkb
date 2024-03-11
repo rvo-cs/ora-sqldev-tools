@@ -1,4 +1,8 @@
 create or replace package body pkg_session_helper as
+/*
+ * SPDX-FileCopyrightText: 2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     gc_role_dba             constant t_role_name := 'DBA';
     gc_role_select_catalog  constant t_role_name := 'SELECT_CATALOG_ROLE';

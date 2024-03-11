@@ -1,5 +1,8 @@
 #!/bin/ksh
 #
+# SPDX-FileCopyrightText: 2023-2024 R.Vassallo
+# SPDX-License-Identifier: BSD Zero Clause License
+#
 # FILE
 #   sql.ksh
 #

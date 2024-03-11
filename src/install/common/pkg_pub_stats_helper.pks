@@ -1,5 +1,10 @@
 create or replace package pkg_pub_stats_helper authid current_user as
 /*
+ * SPDX-FileCopyrightText: 2018-2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
+/*
  * PACKAGE
  *      pkg_pub_stats_helper
  *

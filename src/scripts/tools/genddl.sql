@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2023 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
+
 set echo off
 
 define def_object_type = "&1"

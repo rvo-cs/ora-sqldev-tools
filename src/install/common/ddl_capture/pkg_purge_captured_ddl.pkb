@@ -1,4 +1,8 @@
 create or replace package body pkg_purge_captured_ddl as
+/*
+ * SPDX-FileCopyrightText: 2021 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
+ */
 
     procedure purge(
         p_table_name        in  varchar2,

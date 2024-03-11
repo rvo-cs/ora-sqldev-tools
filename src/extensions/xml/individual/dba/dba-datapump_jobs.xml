@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  SPDX-FileCopyrightText: 2022-2023 R.Vassallo
+  SPDX-License-Identifier: Apache License 2.0
+ -->
 <displays>
 <folder>
 <name><![CDATA[DBA]]></name>

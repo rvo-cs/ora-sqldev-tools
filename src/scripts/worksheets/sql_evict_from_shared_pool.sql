@@ -1,3 +1,6 @@
+-- SPDX-FileCopyrightText: 2024 R.Vassallo
+-- SPDX-License-Identifier: BSD Zero Clause License
+
 set role dba;
 
 select /*__sqlarea_search__*/

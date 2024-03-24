@@ -288,26 +288,52 @@ order by
             <query minversion="19.0">
                 <sql><![CDATA[with child_cursor as (
     select 
-        sql_id, child_number
+        'inst_id = ' || to_char(inst_id)
+            || ' and sql_id = ''' || sql_id || ''''
+            || ' and child_number = ' || to_char(child_number)  as filter_preds,
+        'SQL_ID ' || sql_id || ', child number ' || to_char(child_number)
+            || case
+                   when inst_id <> :INST_ID then
+                       '  (inst_id: ' || to_char(inst_id) || ')'
+               end as label
     from 
-        v$sql
+        gv$sql
     where
         sql_id = :SQL_ID
         and lnnvl(plan_hash_value <> :PLAN_HASH)
         and lnnvl(plan_hash_value = 0)
     order by
+        case
+            when inst_id = :INST_ID then
+                1
+            else
+                2
+        end asc,
         last_active_time desc
     fetch first 1 row only
 )
-select b.* 
+select
+    cast(a.label as varchar2(300)) as plan_table_output
+from
+    child_cursor a
+union all
+select
+    b.*
 from 
     child_cursor a,
-    table(dbms_xplan.display_cursor(
-            sql_id => a.sql_id,
-            cursor_child_no => a.child_number,
+    table(dbms_xplan.display(
+            table_name   => 'GV$SQL_PLAN_STATISTICS_ALL',
+            statement_id => null,
+            filter_preds => a.filter_preds,
             format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection -qbregistry +allstats last')
     )) b]]></sql>
                 <binds>
+                    <bind id="INST_ID">
+                        <prompt><![CDATA[INST_ID]]></prompt>
+                        <tooltip><![CDATA[INST_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
                     <bind id="SQL_ID">
                         <prompt><![CDATA[SQL_ID]]></prompt>
                         <tooltip><![CDATA[SQL_ID]]></tooltip>
@@ -331,26 +357,52 @@ from
             <query minversion="12.1">
                 <sql><![CDATA[with child_cursor as (
     select 
-        sql_id, child_number
+        'inst_id = ' || to_char(inst_id)
+            || ' and sql_id = ''' || sql_id || ''''
+            || ' and child_number = ' || to_char(child_number)  as filter_preds,
+        'SQL_ID ' || sql_id || ', child number ' || to_char(child_number)
+            || case
+                   when inst_id <> :INST_ID then
+                       '  (inst_id: ' || to_char(inst_id) || ')'
+               end as label
     from 
-        v$sql
+        gv$sql
     where
         sql_id = :SQL_ID
         and lnnvl(plan_hash_value <> :PLAN_HASH)
         and lnnvl(plan_hash_value = 0)
     order by
+        case
+            when inst_id = :INST_ID then
+                1
+            else
+                2
+        end asc,
         last_active_time desc
     fetch first 1 row only
 )
-select b.* 
+select
+    cast(a.label as varchar2(300)) as plan_table_output
+from
+    child_cursor a
+union all
+select
+    b.*
 from 
     child_cursor a,
-    table(dbms_xplan.display_cursor(
-            sql_id => a.sql_id,
-            cursor_child_no => a.child_number,
+    table(dbms_xplan.display(
+            table_name   => 'GV$SQL_PLAN_STATISTICS_ALL',
+            statement_id => null,
+            filter_preds => a.filter_preds,
             format => nvl(:PLAN_DISPLAY_FMT, 'Advanced +adaptive -projection +allstats last')
     )) b]]></sql>
                 <binds>
+                    <bind id="INST_ID">
+                        <prompt><![CDATA[INST_ID]]></prompt>
+                        <tooltip><![CDATA[INST_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
                     <bind id="SQL_ID">
                         <prompt><![CDATA[SQL_ID]]></prompt>
                         <tooltip><![CDATA[SQL_ID]]></tooltip>

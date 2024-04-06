@@ -1,4 +1,5 @@
 undefine def_db_version_ge_12
+undefine def_db_version_ge_12_2
 undefine def_db_version_ge_18
 undefine def_db_version_ge_19
 undefine def_db_version_ge_21

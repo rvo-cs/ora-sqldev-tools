@@ -46,8 +46,16 @@ Files: doc/misc/tools-setup/sqlcl/login-scripts/*.sql
 Copyright: 2019-2024 R.Vassallo
 License: BSD Zero Clause License
 
+Files: doc/misc/tools-setup/sqlcl/login-scripts/ddl_transform_params/*.sql
+Copyright: 2024 R.Vassallo
+License: BSD Zero Clause License
+
 Files: doc/misc/tools-setup/sqldeveloper/login-scripts/*.sql
 Copyright: 2020-2024 R.Vassallo
+License: BSD Zero Clause License
+
+Files: doc/misc/tools-setup/sqldeveloper/login-scripts/ddl_transform_params/*.sql
+Copyright: 2024 R.Vassallo
 License: BSD Zero Clause License
 
 Files: doc/misc/tools-setup/sqlplus/login-scripts/*.sql

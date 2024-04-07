@@ -1,7 +1,11 @@
 ## Contents
 
-* **[sql.cmd](sql.cmd)**:              command file for starting SQLcl under Windows
-* **[login-scripts](login-scripts)/**  contains the `login.sql` file and related files.
+* **[env_sqlcl.cmd](env_sqlcl.cmd)**:  command file for setting up the environment in a Windows console (cmd.exe)
+* **[sql.cmd](sql.cmd)**:              command file for starting SQLcl in a Windows console (cmd.exe)
+* **[sql+oci.cmd](sql+oci.cmd)**:      similar to [sql.cmd](sql.cmd), but using JDBC OCI instead of JDBC Thin
+* **[sqlw.cmd](sqlw.cmd)**:            wrapper script (as an alternative to [sql.cmd](sql.cmd)) for the bundled `sql.exe` binary for Windows
+* **[sql.ksh](sql.ksh)**:              Korn shell wrapper script for the bundled `sql` Bash script
+* **[login-scripts](login-scripts)/**  contains the `login.sql` file, plus related files.
 
 ## Setup
 

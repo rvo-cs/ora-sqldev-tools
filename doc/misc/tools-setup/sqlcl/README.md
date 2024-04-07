@@ -45,9 +45,11 @@ This script:
 
 #### Environment variables
 
-The following environment variables are configured in the `sql.cmd` script. In principle, these variables
-work in SQLcl just as they do in SQL\*Plus. Make sure you edit the script in order to _set your own values_ 
-for these parameters.
+The following environment variables are configured in the `sql.cmd` script, and likewise in the
+alternative (`sql+oci.cmd`, `sqlw.cmd`) scripts. In principle, these variables work in SQLcl just
+as they do in SQL\*Plus.
+
+Make sure you edit the scripts in order to _set your own values_ for these parameters.
 
 | Variable   | Value                                 | Description                                         |
 |:-----------|:--------------------------------------|:----------------------------------------------------|

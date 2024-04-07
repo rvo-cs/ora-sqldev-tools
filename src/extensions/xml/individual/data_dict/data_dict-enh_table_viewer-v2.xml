@@ -58,7 +58,7 @@ matching_tables as (
             as matching_patterns,
         a.owner, a.table_name
     from
-        dba_tables a,
+        dba_all_tables a,
         table_like_list b
     where
         (:OWNER_LIKE is null or upper(a.owner) like upper(:OWNER_LIKE) escape '\') 
@@ -91,24 +91,25 @@ matching_table_annotations as (
 select /*+ noparallel */
     b.owner,
     b.table_name,
-    b.num_rows,
-    b.blocks,
-    b.avg_row_len,
-    b.iot_type,
-    b.iot_name,
-    b.status,
-    b.partitioned,
-    b.nested,
-    b.temporary,
-    b.duration,
-    b.sample_size,
-    b.last_analyzed,
-    c.comments,
-    d.annotations,
-    a.matching_patterns
+    b.num_rows           as "Num rows",
+    b.blocks             as "Blocks",
+    b.avg_row_len        as "Avg row len",
+    b.iot_type           as "IOT type",
+    b.iot_name           as "IOT name",
+    b.status             as "Status",
+    b.partitioned        as "Partitioned?",
+    b.nested             as "Nested?",
+    nvl2(b.table_type, 'YES', 'NO') as "Object?",
+    b.temporary          as "Temporary?",
+    b.duration           as "Duration", 
+    b.sample_size        as "Sample size",
+    b.last_analyzed      as "Last analyzed",
+    c.comments           as "Comments",
+    d.annotations        as "Annotations",
+    a.matching_patterns  as "Matching patterns"
 from
     matching_tables a,
-    dba_tables b,
+    dba_all_tables b,
     dba_tab_comments c,
     matching_table_annotations d
 where
@@ -185,7 +186,7 @@ matching_tables as (
             as matching_patterns,
         a.owner, a.table_name
     from
-        dba_tables a,
+        dba_all_tables a,
         table_like_list b
     where
         (:OWNER_LIKE is null or upper(a.owner) like upper(:OWNER_LIKE) escape '\') 
@@ -197,23 +198,24 @@ matching_tables as (
 select /*+ noparallel */
     b.owner,
     b.table_name,
-    b.num_rows,
-    b.blocks,
-    b.avg_row_len,
-    b.iot_type,
-    b.iot_name,
-    b.status,
-    b.partitioned,
-    b.nested,
-    b.temporary,
-    b.duration,
-    b.sample_size,
-    b.last_analyzed,
-    c.comments,
-    a.matching_patterns
+    b.num_rows           as "Num rows",
+    b.blocks             as "Blocks",
+    b.avg_row_len        as "Avg row len",
+    b.iot_type           as "IOT Type",
+    b.iot_name           as "IOT Name",
+    b.status             as "Status",
+    b.partitioned        as "Partitioned?",
+    b.nested             as "Nested?",
+    nvl2(b.table_type, 'YES', 'NO') as "Object?",
+    b.temporary          as "Temporary?",
+    b.duration           as "Duration", 
+    b.sample_size        as "Sample size",
+    b.last_analyzed      as "Last analyzed",
+    c.comments           as "Comments",
+    a.matching_patterns  as "Matching patterns"
 from
     matching_tables a,
-    dba_tables b,
+    dba_all_tables b,
     dba_tab_comments c
 where
     a.owner = b.owner
@@ -709,7 +711,7 @@ select case
         </confirmation>
     </item>
 	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[Table details]]></name>
+		<name><![CDATA[Details]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
 		<drillclass><![CDATA[]]></drillclass>
@@ -726,6 +728,8 @@ select case
     a.tablespace_name,
     a.iot_name,
     a.iot_type,
+    a.table_type_owner,
+    a.table_type,
     a.nested,
     a.temporary,
     a.duration,
@@ -733,14 +737,14 @@ select case
     a.cluster_owner,
     a.status,
     a.dropped,
-    a.read_only,
+    d.read_only,
     a.backed_up,
     a.degree,
-    a.default_collation,
+    d.default_collation,
     a.buffer_pool,
     a.cache,
     a.flash_cache,
-    a.result_cache,
+    d.result_cache,
     a.cell_flash_cache,
     a.pct_free,
     a.pct_increase,
@@ -765,9 +769,10 @@ select case
     c.last_ddl_time,
     b.comments
 from
-    dba_tables a,
+    dba_all_tables a,
     dba_tab_comments b,
-    dba_objects c
+    dba_objects c,
+    dba_tables d
 where
     a.owner = :OWNER
     and a.table_name = :TABLE_NAME
@@ -775,7 +780,9 @@ where
     and a.table_name = b.table_name (+)
     and a.owner = c.owner (+)
     and a.table_name = c.object_name (+)
-    and c.object_type (+) = 'TABLE']]></sql>
+    and c.object_type (+) = 'TABLE'
+    and a.owner = d.owner (+)
+    and a.table_name = d.table_name (+)]]></sql>
                 <binds>
                     <bind id="OWNER">
                         <prompt><![CDATA[OWNER]]></prompt>
@@ -800,6 +807,8 @@ where
     a.tablespace_name,
     a.iot_name,
     a.iot_type,
+    a.table_type_owner,
+    a.table_type,
     a.nested,
     a.temporary,
     a.duration,
@@ -807,13 +816,13 @@ where
     a.cluster_owner,
     a.status,
     a.dropped,
-    a.read_only,
+    d.read_only,
     a.backed_up,
     a.degree,
     a.buffer_pool,
     a.cache,
     a.flash_cache,
-    a.result_cache,
+    d.result_cache,
     a.cell_flash_cache,
     a.pct_free,
     a.pct_increase,
@@ -838,9 +847,10 @@ where
     c.last_ddl_time,
     b.comments
 from
-    dba_tables a,
+    dba_all_tables a,
     dba_tab_comments b,
-    dba_objects c
+    dba_objects c,
+    dba_tables d
 where
     a.owner = :OWNER
     and a.table_name = :TABLE_NAME
@@ -848,7 +858,9 @@ where
     and a.table_name = b.table_name (+)
     and a.owner = c.owner (+)
     and a.table_name = c.object_name (+)
-    and c.object_type (+) = 'TABLE']]></sql>
+    and c.object_type (+) = 'TABLE'
+    and a.owner = d.owner (+)
+    and a.table_name = d.table_name (+)]]></sql>
                 <binds>
                     <bind id="OWNER">
                         <prompt><![CDATA[OWNER]]></prompt>
@@ -867,7 +879,7 @@ where
         </queries>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[Table stats]]></name>
+		<name><![CDATA[Statistics]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
 		<drillclass><![CDATA[]]></drillclass>
@@ -879,21 +891,21 @@ where
     a.owner,
     a.table_name,
     b.stattype_locked,
-    b.num_rows,
-    b.blocks,
-    b.avg_row_len,
+    a.num_rows,
+    a.blocks,
+    a.avg_row_len,
     a.partitioned,
-    b.avg_space,
-    b.avg_space_freelist_blocks,
-    b.num_freelist_blocks,
-    b.empty_blocks,
+    a.avg_space,
+    a.avg_space_freelist_blocks,
+    a.num_freelist_blocks,
+    a.empty_blocks,
     b.avg_cached_blocks,
     b.avg_cache_hit_ratio,
-    b.chain_cnt,
-    b.sample_size,
-    b.last_analyzed,
-    b.global_stats,
-    b.user_stats,
+    a.chain_cnt,
+    a.sample_size,
+    a.last_analyzed,
+    a.global_stats,
+    a.user_stats,
     b.stale_stats,
     c.inserts,
     c.updates,
@@ -902,16 +914,16 @@ where
     c.drop_segments,
     c.timestamp
 from
-    dba_tables a,
+    dba_all_tables a,
     dba_tab_statistics b,
     dba_tab_modifications c
 where
     a.owner = :OWNER
     and a.table_name = :TABLE_NAME
-    and a.owner = b.owner
-    and a.table_name = b.table_name
-    and b.partition_name is null
-    and b.subpartition_name is null
+    and a.owner = b.owner (+)
+    and a.table_name = b.table_name (+)
+    and b.partition_name (+) is null
+    and b.subpartition_name (+) is null
     and a.owner = c.table_owner (+)
     and a.table_name = c.table_name (+)
     and c.partition_name (+) is null
@@ -1137,7 +1149,43 @@ where
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
 		<query>
-			<sql><![CDATA[select /*+ noparallel */
+			<sql><![CDATA[with
+related_tables (owner, table_name) as (
+    select
+        ata.owner,
+        ata.table_name
+    from
+        dba_all_tables ata
+    where
+        ata.owner = :OWNER
+        and ata.table_name = :TABLE_NAME
+    union all
+    select
+        chld.owner,
+        chld.table_name
+    from
+        (select
+            nt.owner,
+            nt.table_name,
+            nt.parent_table_name
+        from
+            dba_nested_tables nt
+        union
+        select
+            iot.owner,
+            iot.table_name,
+            iot.iot_name as parent_table_name
+        from
+            dba_all_tables iot
+        where
+            iot.iot_type = 'IOT_OVERFLOW'
+        ) chld,
+        related_tables par
+    where
+        chld.owner = par.owner
+        and chld.parent_table_name = par.table_name
+)
+select /*+ noparallel */
     nvl(b.tablespace_name, '-- Grand total --') as tablespace_name,
     nvl(b.segment_type, nvl2(b.tablespace_name, '-- Total for TBS --', null)) as segment_type, 
     b.segment_subtype,
@@ -1147,79 +1195,80 @@ where
     sum(b.blocks) as total_blocks,
     b.lob_column_name
 from
-    (select 
-        a.tablespace_name,
-        a.segment_type, a.segment_subtype,
-        a.owner, a.segment_name, null as lob_column_name,
-        a.bytes, a.blocks
+    (select
+        seg.tablespace_name,
+        seg.segment_type, seg.segment_subtype,
+        seg.owner, seg.segment_name, null as lob_column_name,
+        seg.bytes, seg.blocks
     from
-        dba_segments a,
-        dba_tables b
+        dba_segments seg,
+        related_tables tbl
     where
-        b.owner = :OWNER
-        and b.table_name = :TABLE_NAME
-        and a.owner = b.owner
-        and a.segment_name = b.table_name
-        and a.segment_type in ('TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
+        seg.owner = tbl.owner
+        and seg.segment_name = tbl.table_name
+        and seg.segment_type in ('TABLE', 'NESTED TABLE', 'TABLE PARTITION', 'TABLE SUBPARTITION')
     union all
-    select 
-        a.tablespace_name,
-        a.segment_type, a.segment_subtype,
-        a.owner, a.segment_name, null as lob_column_name,
-        a.bytes, a.blocks
+    select
+        seg.tablespace_name,
+        seg.segment_type, seg.segment_subtype,
+        seg.owner, seg.segment_name, null as lob_column_name,
+        seg.bytes, seg.blocks
     from
-        dba_segments a,
-        dba_tables b
+        dba_segments seg,
+        dba_tables tbl
     where
-        b.owner = :OWNER
-        and b.table_name = :TABLE_NAME
-        and a.owner = b.owner
-        and a.segment_name = b.cluster_name
-        and a.segment_type = 'CLUSTER'
+        tbl.owner = :OWNER
+        and tbl.table_name = :TABLE_NAME
+        and seg.owner = tbl.owner
+        and seg.segment_name = tbl.cluster_name
+        and seg.segment_type = 'CLUSTER'
     union all
-    select 
-        a.tablespace_name,
-        a.segment_type, a.segment_subtype,
-        a.owner, a.segment_name, null as lob_column_name,
-        a.bytes, a.blocks
+    select
+        seg.tablespace_name,
+        seg.segment_type, seg.segment_subtype,
+        seg.owner, seg.segment_name, null as lob_column_name,
+        seg.bytes, seg.blocks
     from
-        dba_segments a,
-        dba_indexes b
+        dba_segments seg,
+        dba_indexes ind,
+        related_tables tbl
     where
-        b.table_owner = :OWNER
-        and b.table_name = :TABLE_NAME
-        and b.index_type <> 'LOB'
-        and a.owner = b.owner
-        and a.segment_name = b.index_name
-        and a.segment_type in ('INDEX', 'INDEX PARTITION', 'INDEX SUBPARTITION')
+        ind.table_owner = tbl.owner
+        and ind.table_name = tbl.table_name
+        and ind.index_type <> 'LOB'
+        and seg.owner = ind.owner
+        and seg.segment_name = ind.index_name
+        and seg.segment_type in ('INDEX', 'INDEX PARTITION', 'INDEX SUBPARTITION')
     union all
-    select 
-        a.tablespace_name,
-        a.segment_type, a.segment_subtype,
-        a.owner, a.segment_name, b.column_name as lob_column_name,
-        a.bytes, a.blocks
+    select
+        seg.tablespace_name,
+        seg.segment_type, seg.segment_subtype,
+        seg.owner, seg.segment_name, lob.column_name as lob_column_name,
+        seg.bytes, seg.blocks
     from
-        dba_segments a,
-        dba_lobs b
+        dba_segments seg,
+        dba_lobs lob,
+        related_tables tbl
     where
-        b.owner = :OWNER
-        and b.table_name = :TABLE_NAME
-        and a.owner = b.owner
-        and a.segment_name = b.segment_name
+        lob.owner = tbl.owner
+        and lob.table_name = tbl.table_name
+        and seg.owner = lob.owner
+        and seg.segment_name = lob.segment_name
     union all
-    select 
-        a.tablespace_name,
-        a.segment_type, a.segment_subtype,
-        a.owner, a.segment_name, b.column_name as lob_column_name,
-        a.bytes, a.blocks
+    select
+        seg.tablespace_name,
+        seg.segment_type, seg.segment_subtype,
+        seg.owner, seg.segment_name, lob.column_name as lob_column_name,
+        seg.bytes, seg.blocks
     from
-        dba_segments a,
-        dba_lobs b
+        dba_segments seg,
+        dba_lobs lob,
+        related_tables tbl
     where
-        b.owner = :OWNER
-        and b.table_name = :TABLE_NAME
-        and a.owner = b.owner
-        and a.segment_name = b.index_name
+        lob.owner = tbl.owner
+        and lob.table_name = tbl.owner
+        and seg.owner = lob.owner
+        and seg.segment_name = lob.index_name
     ) b
 group by 
     grouping sets (
@@ -1234,9 +1283,10 @@ order by
     b.tablespace_name,
     case when b.segment_type like 'CLUS%' then 0 
         when b.segment_type like 'TABLE%' then 1
-        when b.segment_type like 'INDEX%' and b.segment_name not like 'SYS_IL%' then 2
-        when b.segment_type like 'INDEX%' and b.segment_name like 'SYS_IL%' then 4
-        when b.segment_type like 'LOB%' then 3 end,
+        when b.segment_type = 'NESTED TABLE' then 2
+        when b.segment_type like 'INDEX%' and b.segment_name not like 'SYS_IL%' then 3
+        when b.segment_type like 'INDEX%' and b.segment_name like 'SYS_IL%' then 5
+        when b.segment_type like 'LOB%' then 4 end,
     b.segment_type, b.segment_subtype, 
     b.owner, b.segment_name, b.lob_column_name]]></sql>
 		</query>
@@ -1887,7 +1937,7 @@ order by
     iau.annotations
 from 
     dba_indexes a,
-    dba_tables b,
+    dba_all_tables b,
     dba_lobs c,
     dba_part_indexes d,
     (select
@@ -1993,7 +2043,7 @@ order by
     c.column_name as lob_col_name
 from 
     dba_indexes a,
-    dba_tables b,
+    dba_all_tables b,
     dba_lobs c,
     dba_part_indexes d
 where
@@ -2073,7 +2123,7 @@ order by
     c.column_name as lob_col_name
 from 
     dba_indexes a,
-    dba_tables b,
+    dba_all_tables b,
     dba_lobs c,
     dba_part_indexes d
 where
@@ -2679,7 +2729,7 @@ order by
         </queries>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[Tab modifs]]></name>
+		<name><![CDATA[Tab mod.]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
 		<drillclass><![CDATA[]]></drillclass>
@@ -3958,7 +4008,7 @@ order by
 	</display>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[All subpart stats]]></name>
+		<name><![CDATA[All subp stats]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
 		<drillclass><![CDATA[]]></drillclass>
@@ -4773,48 +4823,7 @@ order by
         </queries>
 	</display>
 	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[References]]></name>
-		<description><![CDATA[]]></description>
-		<tooltip><![CDATA[]]></tooltip>
-		<drillclass><![CDATA[]]></drillclass>
-		<CustomValues>
-			<TYPE><![CDATA[horizontal]]></TYPE>
-		</CustomValues>
-		<query>
-			<sql><![CDATA[select 
-    owner,
-    name,
-    type,
-    referenced_owner,
-    referenced_name,
-    referenced_type,
-    dependency_type
-from 
-    dba_dependencies
-where
-    referenced_owner = :OWNER
-    and referenced_name = :TABLE_NAME
-order by
-    owner, name, type
-]]></sql>
-			<binds>
-				<bind id="OWNER">
-					<prompt><![CDATA[OWNER]]></prompt>
-					<tooltip><![CDATA[OWNER]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-				<bind id="TABLE_NAME">
-					<prompt><![CDATA[TABLE_NAME]]></prompt>
-					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
-					<value><![CDATA[NULL_VALUE]]></value>
-					<bracket><![CDATA[null]]></bracket>
-				</bind>
-			</binds>
-		</query>
-	</display>
-	<display id="null" type="" style="Table" enable="true">
-		<name><![CDATA[Annotations]]></name>
+		<name><![CDATA[Annot.]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
 		<drillclass><![CDATA[]]></drillclass>
@@ -4890,6 +4899,90 @@ from
     dual]]></sql>
             </query>
         </queries>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[References]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 
+    owner,
+    name,
+    type,
+    referenced_owner,
+    referenced_name,
+    referenced_type,
+    dependency_type
+from 
+    dba_dependencies
+where
+    referenced_owner = :OWNER
+    and referenced_name = :TABLE_NAME
+    and referenced_type = 'TABLE'
+order by
+    owner, name, type
+]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[Dependencies]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 
+    owner,
+    name,
+    type,
+    referenced_owner,
+    referenced_name,
+    referenced_type,
+    dependency_type
+from 
+    dba_dependencies
+where
+    owner = :OWNER
+    and name = :TABLE_NAME
+    and type = 'TABLE'
+order by
+    owner, name, type
+]]></sql>
+			<binds>
+				<bind id="OWNER">
+					<prompt><![CDATA[OWNER]]></prompt>
+					<tooltip><![CDATA[OWNER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="TABLE_NAME">
+					<prompt><![CDATA[TABLE_NAME]]></prompt>
+					<tooltip><![CDATA[TABLE_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
+		</query>
 	</display>
 </display>
 </folder>

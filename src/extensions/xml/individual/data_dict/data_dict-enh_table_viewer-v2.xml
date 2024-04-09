@@ -2481,6 +2481,148 @@ select case
         </confirmation>
         </item>
 	</display>
+    <display id="null" type="" style="Table" enable="true">
+        <name><![CDATA[IUT]]></name>
+        <description><![CDATA[Index usage tracking (DB version: 12.2 or higher)]]></description>
+        <tooltip><![CDATA[]]></tooltip>
+        <drillclass><![CDATA[]]></drillclass>
+        <CustomValues>
+            <TYPE><![CDATA[horizontal]]></TYPE>
+        </CustomValues>
+        <queries>
+        <query minversion="12.2">
+            <sql><![CDATA[select
+    owner                           as "Owner",
+    table_name                      as "Table name",
+    index_name                      as "Index name",
+    index_columns_list              as "List of columns",
+    round( index_pct_access   , greatest(0, 2 - floor(log(10, abs(nvl(nullif( index_pct_access   , 0), 1))))) ) as "% Access",
+    total_access_count              as "Total access cnt",
+    total_exec_count                as "Total exec cnt",
+    round( exec_per_day       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( exec_per_day       , 0), 1))))) ) as "Exec per day", 
+    round( avg_rows_returned  , greatest(0, 1 - floor(log(10, abs(nvl(nullif( avg_rows_returned  , 0), 1))))) ) as "Avg rows",
+    round( bucket_0_pct       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( bucket_0_pct       , 0), 1))))) ) as "%0",
+    round( bucket_1_pct       , greatest(0, 2 - floor(log(10, abs(nvl(nullif( bucket_1_pct       , 0), 1))))) ) as "%1",
+    round( bucket_2_10_pct    , greatest(0, 2 - floor(log(10, abs(nvl(nullif( bucket_2_10_pct    , 0), 1))))) ) as "%2-10",
+    round( bucket_11_100_pct  , greatest(0, 2 - floor(log(10, abs(nvl(nullif( bucket_11_100_pct  , 0), 1))))) ) as "%11-100",
+    round( bucket_101_1k_pct  , greatest(0, 2 - floor(log(10, abs(nvl(nullif( bucket_101_1k_pct  , 0), 1))))) ) as "%101-1k",
+    round( bucket_1k_plus_pct , greatest(0, 2 - floor(log(10, abs(nvl(nullif( bucket_1k_plus_pct , 0), 1))))) ) as "%1k+",
+    round(avg_rows_returned_2_10, 1)           as "Avg rows 2-10",
+    round(avg_rows_returned_11_100, 1)         as "Avg rows 11-100",
+    round(avg_rows_returned_101_1k, 1)         as "Avg rows 101-1k",
+    round(avg_rows_returned_1k_plus, 1)        as "Avg rows 1k+",
+    round(avg_rows_1k_plus_to_numrows_pct, 1)  as "%1k+/FTS",
+    bucket_0_access_count           as "Bucket 0 Access cnt",
+    bucket_1_access_count           as "Bucket 1 Access cnt",
+    bucket_2_10_access_count        as "Bucket 2-10 access cnt",
+    bucket_2_10_rows_returned       as "Bucket 2-10 total rows",
+    bucket_11_100_access_count      as "Bucket 11-100 access cnt",
+    bucket_11_100_rows_returned     as "Bucket 11-100 total rows",
+    bucket_101_1000_access_count    as "Bucket 101-1k access cnt",
+    bucket_101_1000_rows_returned   as "Bucket 101-1k total rows",
+    bucket_1000_plus_access_count   as "Bucket 1k+ access cnt",
+    bucket_1000_plus_rows_returned  as "Bucket 1k+ total rows",
+    total_rows_returned             as "Total rows returned",
+    date_created                    as "Created",
+    last_used                       as "Last updated",
+    days_in_use                     as "Days in use"
+from
+    (select /*+ 
+                no_merge 
+                no_merge(tab) no_merge(ind) no_merge(ius) no_merge(obj)
+             */
+        tab.owner,
+        tab.table_name,
+        ius.name  as index_name,
+        (select
+            listagg(col.column_name, ', ') within group (order by col.column_position)
+        from
+            dba_ind_columns col
+        where
+            col.index_owner = ind.owner
+            and col.index_name = ind.index_name
+        )  as index_columns_list,
+        100 * (ratio_to_report(ius.total_exec_count) over ())  as index_pct_access,
+        ius.total_access_count,
+        ius.total_exec_count,
+        ius.total_exec_count 
+                / nullif((trunc(ius.last_used, 'DDD') - trunc(obj.created, 'DDD') + 1), 0)  
+            as exec_per_day, 
+        /* average rows returned, discounting rows in the 1000+ bucket */
+        (ius.total_rows_returned - ius.bucket_1000_plus_rows_returned) 
+                / nullif((ius.total_access_count - ius.bucket_1000_plus_access_count), 0)
+            as avg_rows_returned,
+        100 * ius.bucket_0_access_count / nullif(ius.total_access_count, 0)         as bucket_0_pct,
+        100 * ius.bucket_1_access_count / nullif(ius.total_access_count, 0)         as bucket_1_pct,
+        100 * ius.bucket_2_10_access_count / nullif(ius.total_access_count, 0)      as bucket_2_10_pct,
+        100 * ius.bucket_11_100_access_count / nullif(ius.total_access_count, 0)    as bucket_11_100_pct,
+        100 * ius.bucket_101_1000_access_count / nullif(ius.total_access_count, 0)  as bucket_101_1k_pct,
+        100 * ius.bucket_1000_plus_access_count / nullif(ius.total_access_count, 0) as bucket_1k_plus_pct,
+        ius.bucket_2_10_rows_returned / nullif(ius.bucket_2_10_access_count, 0)             as avg_rows_returned_2_10,
+        ius.bucket_11_100_rows_returned / nullif(ius.bucket_11_100_access_count, 0)         as avg_rows_returned_11_100,
+        ius.bucket_101_1000_rows_returned / nullif(ius.bucket_101_1000_access_count, 0)     as avg_rows_returned_101_1k,
+        ius.bucket_1000_plus_rows_returned / nullif(ius.bucket_1000_plus_access_count, 0)   as avg_rows_returned_1k_plus,
+        100 * ius.bucket_1000_plus_rows_returned 
+                / nullif(ius.bucket_1000_plus_access_count, 0) 
+                / nullif(tab.num_rows, 0)
+            as avg_rows_1k_plus_to_numrows_pct,
+        ius.bucket_0_access_count,
+        ius.bucket_1_access_count,
+        ius.bucket_2_10_access_count,
+        ius.bucket_2_10_rows_returned,
+        ius.bucket_11_100_access_count,
+        ius.bucket_11_100_rows_returned,
+        ius.bucket_101_1000_access_count,
+        ius.bucket_101_1000_rows_returned,
+        ius.bucket_1000_plus_access_count,
+        ius.bucket_1000_plus_rows_returned,
+        ius.total_rows_returned,
+        obj.created  as date_created,
+        ius.last_used,
+        trunc(ius.last_used, 'DDD') - trunc(obj.created, 'DDD') + 1  as days_in_use
+    from
+        dba_all_tables tab,
+        dba_indexes ind,
+        dba_index_usage ius,
+        dba_objects obj
+    where
+        tab.owner = :OWNER
+        and tab.table_name = :TABLE_NAME
+        and ind.table_owner = tab.owner
+        and ind.table_name = tab.table_name
+        and ius.owner = ind.owner
+        and ius.name = ind.index_name
+        and obj.owner = ius.owner
+        and obj.object_id = ius.object_id
+        and obj.subobject_name is null
+    )
+order by
+    owner,
+    table_name,
+    index_name]]></sql>
+            <binds>
+                <bind id="OWNER">
+                    <prompt><![CDATA[OWNER]]></prompt>
+                    <tooltip><![CDATA[OWNER]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="TABLE_NAME">
+                    <prompt><![CDATA[TABLE_NAME]]></prompt>
+                    <tooltip><![CDATA[TABLE_NAME]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+        <query>
+            <sql><![CDATA[select
+    'DBA_INDEX_USAGE requires Oracle 12.2 or higher.'  as "Unavailable feature"
+from
+    dual]]></sql>
+        </query>
+        </queries>
+    </display>
 	<display id="null" type="" style="Table" enable="true">
 		<name><![CDATA[Col usage]]></name>
 		<description><![CDATA[]]></description>

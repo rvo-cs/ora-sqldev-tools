@@ -41,7 +41,7 @@ from dual;
 
 select NVL(:SPOOL_FILENAME, 
         'stats_oper_report' 
-            || '-' || sys_context('USERENV', 'DB_NAME')
+            || '-' || sys_context('USERENV', 'DB_UNIQUE_NAME')
             || '-' || to_char(to_timestamp_tz(:DATETIME_TZ_FROM, 'YYYY-MM-DD HH24:MI:SS TZH:TZM')
                         , 'YYYYMMDD_HH24MISSTZHTZM')
             || '-' || to_char(case when :DATETIME_TZ_TO is null then systimestamp

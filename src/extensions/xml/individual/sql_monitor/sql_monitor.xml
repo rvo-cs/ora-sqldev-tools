@@ -991,7 +991,7 @@ select :SPOOL_DIRECTORY as spool_directory from dual
 where :SPOOL_DIRECTORY is not null;
 
 select 'sql_mon-'
-            || sys_context('USERENV', 'DB_NAME')
+            || sys_context('USERENV', 'DB_UNIQUE_NAME')
             || '-' || :SQL_ID
             || '-' || to_char(:SQL_EXEC_ID)
             || '-' || to_char(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'), 'YYYYMMDD_HH24MISS')
@@ -1093,7 +1093,7 @@ select :SPOOL_DIRECTORY as spool_directory from dual
 where :SPOOL_DIRECTORY is not null;
 
 select 'sql_mon-'
-            || sys_context('USERENV', 'DB_NAME')
+            || sys_context('USERENV', 'DB_UNIQUE_NAME')
             || '-' || :SQL_ID
             || '-' || to_char(:SQL_EXEC_ID)
             || '-' || to_char(to_date(:SQL_EXEC_START, 'YYYY-MM-DD HH24:MI:SS'), 'YYYYMMDD_HH24MISS')

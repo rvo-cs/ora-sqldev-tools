@@ -43,7 +43,7 @@ from dual;
 
 select NVL(:SPOOL_FILENAME, 
         'AWR-' 
-            || sys_context('USERENV', 'DB_NAME')
+            || sys_context('USERENV', 'DB_UNIQUE_NAME')
             || case
                    when sys_context('USERENV', 'CDB_NAME') is not null
                        and sys_context('USERENV', 'CON_NAME') <> 'CDB$ROOT'
@@ -160,7 +160,7 @@ from dual;
 
 select NVL(:SPOOL_FILENAME, 
         'AWR-' 
-            || sys_context('USERENV', 'DB_NAME')
+            || sys_context('USERENV', 'DB_UNIQUE_NAME')
             || case
                    when :INST_ID is not null then
                        '-' || trim('+' from regexp_replace(:INST_ID, '[^[:digit:]]+', '+', 1, 0))

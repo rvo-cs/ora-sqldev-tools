@@ -56,9 +56,9 @@ column def_action       noprint new_value def_action
 column def_error_msg    noprint new_value def_error_msg
 
 select
-    sys_context('USERENV', 'DB_NAME')   as def_db_name,
-    max(a.role)                         as def_role_xc,
-    replace(max(a.role), '''', '''''')  as def_role_xc_int,
+    sys_context('USERENV', 'DB_UNIQUE_NAME') as def_db_name,
+    max(a.role)                              as def_role_xc,
+    replace(max(a.role), '''', '''''')       as def_role_xc_int,
     case
         when count(*) = 0 then 'error'
         when count(*) > 1 then 'error'

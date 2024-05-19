@@ -26,6 +26,10 @@ Files: src/scripts/tools/copy_tracefile/*.sql
 Copyright: 2024 R.Vassallo
 License: Apache License 2.0
 
+Files: src/scripts/tools/create_fixed_spb/*.sql
+Copyright: 2024 R.Vassallo
+License: BSD Zero Clause License
+
 Files: src/scripts/tools/genddl/*.sql
 Copyright: 2021-2023 R.Vassallo
 License: BSD Zero Clause License

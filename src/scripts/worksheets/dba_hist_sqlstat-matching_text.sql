@@ -26,23 +26,45 @@ hist_dbtime as (
     where
         a.dbid = b.dbid and a.instance_number = b.instance_number and a.snap_id = b.snap_id
         and a.stat_name = 'DB time'
-        and b.begin_interval_time >= to_date(:FROM_TIME, 'YYYY-MM-DD HH24') - 1/24/4
-        and b.end_interval_time <= (case when :TO_TIME is not null 
-                                        then to_date(:TO_TIME, 'YYYY-MM-DD HH24') + 1/24/4
-                                        else sysdate end)
+        and b.begin_interval_time >= to_date(:FROM_TIME, 'YYYY-MM-DD HH24') - 1/24/8
+        and b.end_interval_time <= (case 
+                                        when :TO_TIME is not null then 
+                                            to_date(:TO_TIME, 'YYYY-MM-DD HH24') + 1/24/8
+                                        else
+                                            sysdate 
+                                    end)
         and a.dbid = nvl(:DBID, (select dbid from v$database))
-        and ((:INST_ID is null and a.instance_number = sys_context('USERENV', 'INSTANCE'))
-            or a.instance_number = :INST_ID)
+        and /* 
+              :INST_ID is null => current instance only
+                       = n     => instance #n only
+                       = '*'   => all instances in the cluster 
+             */
+            (case
+                 when :INST_ID = '*' then 
+                     'Y'
+                 when :INST_ID is null then
+                     case
+                         when a.instance_number = sys_context('USERENV', 'INSTANCE') then
+                             'Y'
+                     end
+                 when a.instance_number = to_number(:INST_ID) then
+                     'Y'
+             end) = 'Y'
 ),      
 hist_sqlstat as (
     select
         a.dbid,
-        a.instance_number,
+        case
+            when count(distinct a.instance_number) > 1 then
+                '*'
+            else
+                to_char(max(a.instance_number), 'FM9')
+        end as inst_id,
         a.force_matching_signature,
         a.plan_hash_value,
         min(b.begin_interval_time) as min_begin_interval_time,
         max(b.end_interval_time) as max_end_interval_time,
-        max(case when a.force_matching_signature = 0 then a.sql_id else c.sql_id end) as samp_sql_id,
+        max(a.sql_id) as samp_sql_id,
         max(d.command_name) as command_name,
         max(a.parsing_schema_name) keep (dense_rank first order by a.snap_id desc) as parsing_schema_name,
         max(a.module) keep (dense_rank first order by a.snap_id desc) as module,
@@ -63,10 +85,17 @@ hist_sqlstat as (
         case when sum(a.fetches_delta) > 0
                 then round(sum(a.rows_processed_delta) / sum(a.fetches_delta), 1) end as rows_per_fetch,
         round(sum(a.elapsed_time_delta) / power(10, 6)) as elapsed_time_delta_s,
-        round(sum(sum(a.elapsed_time_delta)) 
-                over (partition by a.dbid, a.instance_number, a.force_matching_signature,
-                        case when force_matching_signature = 0 then a.sql_id end) 
-                / power(10, 6)) as sig_elapsed_time_delta_s,
+        round(sum(sum(a.elapsed_time_delta)) over (
+                    partition by 
+                        a.dbid,
+                        a.force_matching_signature,
+                        case 
+                            when force_matching_signature = 0 then 
+                                a.sql_id 
+                        end 
+                ) 
+                / power(10, 6)
+             ) as sig_elapsed_time_delta_s,
         case when sum(a.executions_delta) > 0 
                 then round(sum(a.elapsed_time_delta) / power(10, 3) / sum(a.executions_delta), 2) end as ela_ms_px,
         round(sum(a.cpu_time_delta) / power(10, 6)) as cpu_time_delta_s,
@@ -132,38 +161,58 @@ hist_sqlstat as (
         and a.dbid = c.dbid and a.sql_id = c.sql_id
         and (:SQL_TEXT_RE is null or regexp_like(c.sql_text, :SQL_TEXT_RE, 'i'))
         and (:SQL_TEXT_LIKE is null or upper(c.sql_text) like upper(:SQL_TEXT_LIKE))
+        and (:SQL_ID is null or a.sql_id = :SQL_ID)
+        and (:FORCE_MATCHING_SIG is null or a.force_matching_signature = :FORCE_MATCHING_SIG)
         and c.command_type = d.command_type (+)
         and a.dbid = nvl(:DBID, (select dbid from v$database))
-        and ((:INST_ID is null and a.instance_number = sys_context('USERENV', 'INSTANCE'))
-            or a.instance_number = :INST_ID)
-        and b.begin_interval_time >= to_date(:FROM_TIME, 'YYYY-MM-DD HH24') - 1/24/4
-        and b.end_interval_time <= (case when :TO_TIME is not null 
-                                        then to_date(:TO_TIME, 'YYYY-MM-DD HH24') + 1/24/4
-                                        else sysdate end)
+        and /* 
+              Same conditions on :INST_ID as in the hist_dbtime CTE above
+             */
+            (case
+                 when :INST_ID = '*' then 
+                     'Y'
+                 when :INST_ID is null then
+                     case
+                         when a.instance_number = sys_context('USERENV', 'INSTANCE') then
+                             'Y'
+                     end
+                 when a.instance_number = to_number(:INST_ID) then
+                     'Y'
+             end) = 'Y'
+        and b.begin_interval_time >= to_date(:FROM_TIME, 'YYYY-MM-DD HH24') - 1/24/8
+        and b.end_interval_time <= (case 
+                                        when :TO_TIME is not null then 
+                                            to_date(:TO_TIME, 'YYYY-MM-DD HH24') + 1/24/8
+                                        else
+                                            sysdate 
+                                    end)
     group by
         a.dbid,
-        a.instance_number,
+        /* :PER_INSTANCE_SQLSTAT = 'Y' <=> use per-instance groups */
+        case
+            when lnnvl(upper(:PER_INSTANCE_SQLSTAT) = 'Y') then
+                0
+            else
+                a.instance_number
+        end,
         a.force_matching_signature,
+        /* :GBY_FORCE_MATCHING_SIG = 'N' <=> use per-SQL_id groups */
+        case
+            when lnnvl(upper(:GBY_FORCE_MATCHING_SIG) = 'N') then
+                cast(null as varchar2(13))
+            else
+                a.sql_id
+        end,
         a.plan_hash_value,
-        case when force_matching_signature = 0 then a.sql_id end
+        case
+            when force_matching_signature = 0 then 
+                a.sql_id
+        end
 ),
 hist_sqlstat2 as (
     select
-        case when sum(decode(command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0, 
-                    elapsed_time_delta_s)) over () > 0
-            then round(100 * elapsed_time_delta_s
-                    / sum(decode(command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
-                            elapsed_time_delta_s)) over (), 1)
-            end as pct_dbtime,
-        case when sum(decode(command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
-                    elapsed_time_delta_s)) over () > 0
-            then round(100 * sum(decode(command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
-                                        elapsed_time_delta_s))
-                                    over (order by elapsed_time_delta_s desc) 
-                    / sum(decode(command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
-                            elapsed_time_delta_s)) over (), 1)
-            end as tot_pct_dbtime,
         dbid,
+        inst_id,
         force_matching_signature,
         plan_hash_value,
         min_begin_interval_time,
@@ -227,8 +276,28 @@ hist_sqlstat2 as (
             or command_name not in ('PL/SQL EXECUTE', 'CALL METHOD')
 )
 select
-    a.pct_dbtime,
-    a.tot_pct_dbtime,
+    a.inst_id,
+    round(100 * a.elapsed_time_delta_s
+              / nullif(sum(decode(a.command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
+                        a.elapsed_time_delta_s)) over (), 0)
+         , 1) as pct_dbtime,
+    round(100 * sum(decode(a.command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
+                            a.elapsed_time_delta_s)) over (
+                order by 
+                    a.sig_elapsed_time_delta_s desc,
+                    a.elapsed_time_delta_s desc,
+                    case
+                        when lnnvl(upper(:PER_INSTANCE_SQLSTAT) = 'Y') then
+                            '*'
+                        else
+                            a.inst_id
+                    end,
+                    a.force_matching_signature,
+                    a.samp_sql_id
+                )
+              / nullif(sum(decode(a.command_name, 'PL/SQL EXECUTE', 0, 'CALL METHOD', 0,
+                        a.elapsed_time_delta_s)) over (), 0)
+         , 1) as tot_pct_dbtime,
     a.parsing_schema_name,
     a.module,
     a.action,
@@ -285,9 +354,8 @@ select
     a.captured_sql_time_s,
     a.captured_plsql_time_s,
     c.dbtime_s as total_dbtime_s,
-    case when c.dbtime_s > 0
-        then round(100 * (a.captured_sql_time_s + a.captured_plsql_time_s) / c.dbtime_s) 
-        end as capture_pct
+    round(100 * (a.captured_sql_time_s + a.captured_plsql_time_s) 
+              / nullif(c.dbtime_s, 0))  as capture_pct
 from
     hist_sqlstat2 a,
     dba_hist_sqltext b,
@@ -297,7 +365,13 @@ where
     and a.samp_sql_id = b.sql_id (+)
 order by
     a.sig_elapsed_time_delta_s desc,
-    a.force_matching_signature,
     a.elapsed_time_delta_s desc,
+    case
+        when lnnvl(upper(:PER_INSTANCE_SQLSTAT) = 'Y') then
+            '*'
+        else
+            a.inst_id
+    end,
+    a.force_matching_signature,
     a.samp_sql_id
 ;

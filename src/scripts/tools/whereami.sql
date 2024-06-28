@@ -49,6 +49,7 @@ declare
 
     l_db_version_string     varchar2(20 byte);
     l_inst_version_string   varchar2(20 byte);
+    l_database_role         varchar2(20 byte);
     l_is_db_open            boolean := true;
 begin
     <<get_version_post_18c>>
@@ -118,9 +119,35 @@ begin
         select
             sys_context('USERENV', 'DATABASE_ROLE')  as database_role
         into
-            :DATABASE_ROLE
+            l_database_role
         from
             dual;
+        if l_database_role = 'PRIMARY' then
+            -- Don't mention that this DB has the PRIMARY role
+            -- unless it's known to have a Data Guard configured
+            <<check_dg_config>>
+            declare
+                l_dg_config_ind number;
+            begin
+                execute immediate
+                    q'{select
+                           1 as dg_config_ind
+                       from
+                           v$system_parameter par
+                       where
+                           par.name = 'log_archive_config'
+                           and lower(par.value) like '%dg\_config%' escape '\'
+                       }'
+                into
+                    l_dg_config_ind;
+            exception
+                when no_data_found 
+                    or e_not_exists 
+                then
+                    l_database_role := null;
+            end check_dg_config;
+        end if;
+        :DATABASE_ROLE := l_database_role;
     exception
         when e_invalid_userenv_param then
             null;

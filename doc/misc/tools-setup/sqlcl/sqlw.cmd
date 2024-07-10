@@ -30,7 +30,7 @@ REM        "with JDK included" bundle can be used, provided it's
 REM        recent enough.
 REM -------------------------------------------------------------
 
-SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.19
+SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.23
 
 REM =============================================================
 REM SQL_HOME folder
@@ -40,7 +40,7 @@ REM such that %SQL_HOME%\bin\sql.exe is the included binary
 REM executable for Windows x64.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-24.2.0.180.1721
 
 REM =============================================================
 REM Additions to SQLPATH

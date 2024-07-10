@@ -29,7 +29,7 @@ set -o nounset
 # using Java 8.
 #--------------------------------------------------------------
 
-JAVA_HOME=/usr/local/share/java/oracle/jdk-11.0.21
+JAVA_HOME=/usr/local/share/java/oracle/jdk-11.0.23
 
 #==============================================================
 # SQL_HOME folder
@@ -39,7 +39,7 @@ JAVA_HOME=/usr/local/share/java/oracle/jdk-11.0.21
 # bash shell script.
 #--------------------------------------------------------------
 
-SQL_HOME=/usr/local/share/oracle/sqlcl/sqlcl-23.4.0.023.2321
+SQL_HOME=/usr/local/share/oracle/sqlcl/sqlcl-24.2.0.180.1721
 
 #==============================================================
 # Additions to SQLPATH

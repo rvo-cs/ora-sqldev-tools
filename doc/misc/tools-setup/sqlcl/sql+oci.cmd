@@ -36,7 +36,7 @@ REM        "with JDK included" bundle can be used, provided it's
 REM        recent enough.
 REM -------------------------------------------------------------
 
-SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.19
+SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.23
 
 REM =============================================================
 REM SQL_HOME folder
@@ -46,7 +46,7 @@ REM such that %SQL_HOME%\bin\sql.exe is the included binary
 REM executable for Windows x64.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-23.4.0.023.2321
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-24.2.0.180.1721
 
 REM =============================================================
 REM Additions to SQLPATH
@@ -171,7 +171,7 @@ REM Required for jdbc:oci: the OCI native driver from the Oracle Client
 REM must be found in the classpath before any other Oracle JDBC driver.
 REM The ORACLE_HOME env. variable is set in the calling environment.
 
-SET CPLIST=%ORACLE_HOME%\ojdbc8.jar
+SET CPLIST=%ORACLE_HOME%\ojdbc11.jar
 
 REM Remark: simple approach here so far: all the JARs shipped with SQLcl
 REM are put in the classpath (as opposed to enumerating them one by one),

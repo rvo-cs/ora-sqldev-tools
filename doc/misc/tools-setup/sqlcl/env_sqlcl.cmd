@@ -13,7 +13,7 @@ REM library directory (containing the native OCI driver) must be present
 REM in the PATH and precede any other client installations.
 REM -----------------------------------------------------------------------
 
-set ORACLE_HOME=F:\Produits\Oracle\instantclient\instantclient_21_11
+set ORACLE_HOME=F:\Produits\Oracle\instantclient\instantclient_21_14
 
 set PATH=%ORACLE_HOME%;%PATH%
 

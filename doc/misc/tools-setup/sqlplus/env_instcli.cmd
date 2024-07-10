@@ -7,7 +7,7 @@
 
 @ECHO OFF
 
-set ORACLE_HOME=F:\Produits\Win_7\Oracle\instantclient\instantclient_18_5
+set ORACLE_HOME=F:\Produits\Oracle\instantclient\instantclient_19_23
 
 set PATH=%ORACLE_HOME%;%PATH%
 

@@ -8,7 +8,7 @@
 <name><![CDATA[Config]]></name>
 <display id="d958355d-016f-1000-8002-c0a8010c12cc" type="" style="Table" enable="true">
 	<name><![CDATA[All System Parameters]]></name>
-	<description><![CDATA[Al Systeml Parameters]]></description>
+	<description><![CDATA[All System Parameters]]></description>
 	<tooltip><![CDATA[All System Parameters]]></tooltip>
 	<drillclass><![CDATA[]]></drillclass>
 	<CustomValues>

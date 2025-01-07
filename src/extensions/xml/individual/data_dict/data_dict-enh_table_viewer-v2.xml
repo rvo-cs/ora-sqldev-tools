@@ -1266,7 +1266,7 @@ from
         related_tables tbl
     where
         lob.owner = tbl.owner
-        and lob.table_name = tbl.owner
+        and lob.table_name = tbl.table_name
         and seg.owner = lob.owner
         and seg.segment_name = lob.index_name
     ) b

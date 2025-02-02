@@ -136,7 +136,7 @@ order by
 			<bind id="FROM_TIME">
 				<prompt><![CDATA[From time?]]></prompt>
 				<tooltip><![CDATA[From time (YYYY-MM-DD HH24:MI:SS)]]></tooltip>
-				<value><![CDATA[2021-10-01 00:00:00]]></value>
+				<value><![CDATA[2025-01-01 00:00:00]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="TO_TIME">

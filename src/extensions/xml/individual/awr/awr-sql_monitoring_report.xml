@@ -175,7 +175,7 @@ order by
 			<bind id="B_INST_ID">
 				<prompt><![CDATA[Instance Id?]]></prompt>
 				<tooltip><![CDATA[Instance Id; null = current instance; * = all]]></tooltip>
-				<value><![CDATA[NULL_VALUE]]></value>
+				<value><![CDATA[*]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="B_FROM_TIME">

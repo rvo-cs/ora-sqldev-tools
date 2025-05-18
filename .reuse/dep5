@@ -10,6 +10,10 @@ Files: src/install/common/it_session_helper/*.sql
 Copyright: 2023 R.Vassallo
 License: BSD Zero Clause License
 
+Files: src/install/common/it_optim_bundle_helper/*.sql
+Copyright: 2024-2025 R.Vassallo
+License: BSD Zero Clause License
+
 Files: src/scripts/config/*.sql
 Copyright: 2021 R.Vassallo
 License: BSD Zero Clause License

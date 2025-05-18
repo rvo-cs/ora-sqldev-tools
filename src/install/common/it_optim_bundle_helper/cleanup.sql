@@ -1,0 +1,17 @@
+--
+-- undefine substitution variables
+--
+undefine def_fix_cntrl_hlpr_user
+undefine def_fix_cntrl_hlpr_tabspc
+undefine def_fix_cntrl_hlpr_temp_tabspc
+undefine def_fix_cntrl_hlpr_pkg_role
+undefine def_fix_cntrl_hlpr_with_pubsyn
+undefine def_fix_cntrl_hlpr_pubsyn_prfx
+undefine def_drop_fix_cntrl_hlpr_user
+undefine def_db_version_major
+undefine def_db_version_minor
+undefine def_db_version_lt_12_2
+undefine def_db_version_lt_18
+undefine def_db_version_ge_18
+undefine def_echo
+

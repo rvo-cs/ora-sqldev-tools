@@ -1,0 +1,661 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  SPDX-FileCopyrightText: 2025 R.Vassallo
+  SPDX-License-Identifier: BSD Zero Clause License
+ -->
+<displays>
+<folder>
+<name><![CDATA[ASH]]></name>
+<display id="8a865103-0170-49a0-8540-27170048ee14" type="" style="Table" enable="true">
+    <name><![CDATA[Live ASH - Temp. tablespace usage]]></name>
+    <description><![CDATA[A chart based on live ASH data, showing usage of temporary tablespaces by active sessions.
+
+CAVEAT: because ASH does not track inactive sessions, temp. space allocated by inactive sessions is not accounted for here.
+]]></description>
+    <tooltip><![CDATA[]]></tooltip>
+    <drillclass><![CDATA[]]></drillclass>
+    <CustomValues>
+        <TYPE><![CDATA[horizontal]]></TYPE>
+    </CustomValues>
+    <query>
+        <sql><![CDATA[with
+temp_tbs as (
+    select
+        con_id,
+        ts#,
+        tablespace,
+        block_size,
+        count(distinct con_id || ',' || ts# || ',' || rfile#) as cnt_tempfiles,
+        sum(blocks) as blocks,
+        sum(bytes) as bytes
+    from
+        (select
+            tmpf.con_id,
+            tmpf.ts#,
+            tmpf.rfile#,
+            (select
+                ts.name 
+            from 
+                gv$tablespace ts 
+            where 
+                ts.inst_id = tmpf.inst_id
+                and ts.ts# = tmpf.ts# 
+                and ts.con_id = tmpf.con_id
+            ) as tablespace,
+            tmpf.block_size,
+            tmpf.blocks,
+            tmpf.bytes
+        from
+            gv$tempfile tmpf
+        )
+    group by
+        con_id,
+        ts#,
+        tablespace,
+        block_size
+),
+tempseg_usage as (
+    select
+        con_id,
+        tablespace,
+        sum(blocks) as blocks,
+        listagg(case
+                    when user_rnk <= 3 then
+                        nvl(username, '(null)') || ' [' || to_char(user_pct) || '%]'
+                end, ', ') within group (order by user_rnk)
+            as top3_user
+    from
+        (select
+            con_id,
+            tablespace,
+            "USER" as username,
+            sum(blocks) as blocks,
+            row_number() 
+                    over (partition by con_id, tablespace 
+                          order by sum(blocks) desc nulls last) as user_rnk,
+            round(100 * ratio_to_report(sum(blocks)) 
+                    over (partition by con_id, tablespace), 1) as user_pct
+        from
+            gv$tempseg_usage
+        group by
+            con_id,
+            tablespace,
+            "USER"
+        )
+    group by
+        con_id,
+        tablespace
+),
+time_upper_bound as (
+    select 
+        nvl(cast(to_timestamp(:TO_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)), 
+            localtimestamp(3)) as end_time
+    from 
+        dual
+),
+unadjusted_time_span as (
+    select
+        case    
+            when :TIME_SPAN_HR is null then
+                nvl(cast(to_timestamp(:FROM_TIME, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                    cast((select max(oldest_sample_time) from gv$ash_info) as timestamp(3)))
+                - numtodsinterval(1, 'SECOND')
+            else
+                end_time - numtodsinterval(:TIME_SPAN_HR, 'HOUR') 
+        end  as start_time,
+        end_time
+    from
+        time_upper_bound
+)
+select
+    case
+        when ts.con_id = 1 then
+            'CDB$ROOT'
+        else
+            (select pdb.pdb_name from cdb_pdbs pdb where pdb.pdb_id = ts.con_id)
+    end as pdb_name,
+    ts.ts#,
+    case
+        when grouping(ts.ts#) = 0 then
+            ts.tablespace
+        else 
+            '-- total --'
+    end as tablespace,
+    ts.block_size,
+    sum(ts.cnt_tempfiles) as tempfiles,
+    sum(ts.blocks) as total_blocks,
+    sum(nvl(usg.blocks, 0)) as used_blocks,
+    round(sum(ts.block_size * ts.blocks) / power(2,20)) as total_mb,
+    round(sum(ts.block_size * nvl(usg.blocks, 0)) / power(2,20)) as used_mb,
+    case
+        when grouping(ts.ts#) = 0 then
+            round(sum(100 * (1 - nvl(usg.blocks / nullif(ts.blocks, 0), 0))), 1)
+    end as free_pct,
+    case
+        when grouping(ts.ts#) = 0 then
+            max(usg.top3_user) 
+    end as top3_user,
+    ts.con_id,
+    (select cast(max(oldest_sample_time) as date) from gv$ash_info)  as "Oldest sample time",
+    -- subsequent columns for binding in child reports
+    'Report bind values -->'       as "Bind values -->",
+    :FROM_TIME      as "fromTime",
+    :TO_TIME        as "toTime",
+    :TIME_SPAN_HR   as "timeSpanHour",
+    (select
+        greatest(
+            1,
+            round(case 
+                     when :SAMPLE_TIME_S is not null then 
+                         to_number(:SAMPLE_TIME_S)
+                     else 
+                         ceil(86400 * (cast(end_time as date) - cast(start_time as date)) / 300)
+                  end)
+        )
+    from
+        unadjusted_time_span
+    ) as "sampleTimeSec"
+from
+    temp_tbs ts,
+    tempseg_usage usg
+where
+    ts.con_id <> 2 /* exclude ¨PDB$SEED */
+    and ts.con_id = usg.con_id (+)
+    and ts.tablespace = usg.tablespace (+)
+group by grouping sets
+    ( (ts.con_id, ts.block_size),
+      (ts.con_id, ts.block_size, ts.ts#, ts.tablespace) )
+order by
+    con_id,
+    block_size,
+    case when ts# is null then 2 else 1 end,
+    tablespace]]></sql>
+        <binds>
+            <bind id="FROM_TIME">
+                <prompt><![CDATA[Start time?]]></prompt>
+                <tooltip><![CDATA[Start time -- ignored if time span is specified (default: localtimestamp - 7 days; format: YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+                <value><![CDATA[NULL_VALUE]]></value>
+                <bracket><![CDATA[null]]></bracket>
+            </bind>
+            <bind id="TO_TIME">
+                <prompt><![CDATA[End time?]]></prompt>
+                <tooltip><![CDATA[End time (default: sysdate; format: YYYY-MM-DD HH24:MI:SS)]]></tooltip>
+                <value><![CDATA[NULL_VALUE]]></value>
+                <bracket><![CDATA[null]]></bracket>
+            </bind>
+            <bind id="TIME_SPAN_HR">
+                <prompt><![CDATA[Time span?]]></prompt>
+                <tooltip><![CDATA[Time span (hours)]]></tooltip>
+                <value><![CDATA[1]]></value>
+                <bracket><![CDATA[null]]></bracket>
+            </bind>
+            <bind id="SAMPLE_TIME_S">
+                <prompt><![CDATA[Sampling interval?]]></prompt>
+                <tooltip><![CDATA[Sampling interval, in seconds (minimum: 1 s; computed if null)]]></tooltip>
+                <value><![CDATA[NULL_VALUE]]></value>
+                <bracket><![CDATA[null]]></bracket>
+            </bind>
+        </binds>
+    </query>
+    <display id="null" type="" style="Chart" enable="true">
+        <name><![CDATA[Usage Chart]]></name>
+        <description><![CDATA[]]></description>
+        <tooltip><![CDATA[]]></tooltip>
+        <drillclass><![CDATA[]]></drillclass>
+        <CustomValues>
+            <PLOT_HGRID_WIDTH><![CDATA[THINNER]]></PLOT_HGRID_WIDTH>
+            <Y1AXIS_SCALE_INCREMENT><![CDATA[10.0]]></Y1AXIS_SCALE_INCREMENT>
+            <Y2AXIS_SCALE_MAXIMUM><![CDATA[80.0]]></Y2AXIS_SCALE_MAXIMUM>
+            <Y1AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y1AXIS_LINE_WIDTH>
+            <Y1AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y1AXIS_TITLE_ALIGNMENT>
+            <LEGEND_LOCATION><![CDATA[AUTOMATIC]]></LEGEND_LOCATION>
+            <PLOT_SERIES_OPTIONS_COLOR><![CDATA[\,-16750849,-3394816,-10066279,-16751002,-26368]]></PLOT_SERIES_OPTIONS_COLOR>
+            <LEGEND_ALIGNMENT><![CDATA[LEFT]]></LEGEND_ALIGNMENT>
+            <GRADIENT><![CDATA[false]]></GRADIENT>
+            <XAXIS_LINE_WIDTH><![CDATA[THINNEST]]></XAXIS_LINE_WIDTH>
+            <DATA_MAP_COLUMNS><![CDATA[\,"SAMPLE_TIME"]]></DATA_MAP_COLUMNS>
+            <Y1AXIS_SCALE_MAXIMUM><![CDATA[60.0]]></Y1AXIS_SCALE_MAXIMUM>
+            <XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
+            <Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
+            <TYPE><![CDATA[LINE_VERT_ABS]]></TYPE>
+            <GRID_WIDTH><![CDATA[THINNER]]></GRID_WIDTH>
+            <PLOT_DATALABELS_BAR_POSITION><![CDATA[ABOVE]]></PLOT_DATALABELS_BAR_POSITION>
+            <FOOTNOTE_ALIGNMENT><![CDATA[LEFT]]></FOOTNOTE_ALIGNMENT>
+            <XAXIS_TICK_LABEL_SKIP_MODE><![CDATA[AUTOMATIC]]></XAXIS_TICK_LABEL_SKIP_MODE>
+            <DATA_MAP_COLNAMES><![CDATA[\,"CON_ID","DBID","SAMPLE_TIME","SLOT_DURATION_S","TEMP_MBYTES","TS#"]]></DATA_MAP_COLNAMES>
+            <DATA_MAP_SERIES><![CDATA[\,Temp. usage (MB)]]></DATA_MAP_SERIES>
+            <Y2AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y2AXIS_LOGARITHMIC_BASE>
+            <STYLE><![CDATA[Default]]></STYLE>
+            <TITLE_ALIGNMENT><![CDATA[LEFT]]></TITLE_ALIGNMENT>
+            <Y2AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y2AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_MINIMUM><![CDATA[10.0]]></Y2AXIS_SCALE_MINIMUM>
+            <PLOT_SERIES_OPTIONS_LINE_WIDTH><![CDATA[\,THINNER,THICKER,THICKER,THICKER,THICKER]]></PLOT_SERIES_OPTIONS_LINE_WIDTH>
+            <Y2AXIS_LINE_WIDTH><![CDATA[THINNEST]]></Y2AXIS_LINE_WIDTH>
+            <DATA_MAP_VALUES><![CDATA[\,"TEMP_MBYTES"]]></DATA_MAP_VALUES>
+            <Y1AXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></Y1AXIS_TICK_LABEL_ROTATE>
+            <Y2AXIS_SCALE_INCREMENT><![CDATA[20.0]]></Y2AXIS_SCALE_INCREMENT>
+            <PLOT_VGRID_WIDTH><![CDATA[THINNER]]></PLOT_VGRID_WIDTH>
+            <Y2AXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></Y2AXIS_TITLE_ALIGNMENT>
+            <SUBTITLE_ALIGNMENT><![CDATA[LEFT]]></SUBTITLE_ALIGNMENT>
+        </CustomValues>
+        <query>
+            <sql><![CDATA[with
+time_upper_bound as (
+    select
+        nvl(cast(to_timestamp(:toTime, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)), 
+            localtimestamp(3)) as end_time
+    from
+        dual
+),
+unadjusted_time_span as (
+    select
+        case 
+            when :timeSpanHour is null then
+                nvl(cast(to_timestamp(:fromTime, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                    cast((select max(oldest_sample_time) from gv$ash_info) as timestamp(3)))
+                - numtodsinterval(1, 'SECOND')
+            else 
+                end_time - numtodsinterval(:timeSpanHour, 'HOUR') 
+        end  as start_time,
+        end_time
+    from
+        time_upper_bound
+),
+time_span as (
+    select /*+ inline */
+        slot_duration_s,
+        ceil(sqrt(ceil(time_span_s / slot_duration_s))) + 1  as gen_factor,
+        start_time,
+        end_time
+    from
+        (select
+            :sampleTimeSec as slot_duration_s,
+            start_time,
+            end_time,
+            86400 * (cast(end_time as date) - cast(start_time as date))  as time_span_s
+        from
+            unadjusted_time_span
+        )
+),
+ash_data as (
+    select
+        floor( ( extract(second from end_time - sample_time)
+                    + 60 * extract(minute from end_time - sample_time)
+                    + 3600 * extract(hour from end_time - sample_time)
+                    + 86400 * extract(day from end_time - sample_time) ) 
+               / slot_duration_s )  as slot_id,
+        user_id,
+        sum(temp_space_allocated) as temp_bytes
+    from
+        (select
+            con_id,
+            (select slot_duration_s from time_span) as slot_duration_s,
+            (select end_time from time_span) as end_time,
+            sample_time,
+            user_id,
+            temp_space_allocated
+        from
+            gv$active_session_history
+        )
+    where
+        con_id = :CON_ID
+        and sample_time > /* time_span.start_time */ 
+            case 
+                when :timeSpanHour is null 
+                then
+                    nvl(cast(to_timestamp(:fromTime, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                        cast((select max(oldest_sample_time) from gv$ash_info) as timestamp(3)))
+                    - numtodsinterval(1, 'SECOND')
+                else
+                    nvl(cast(to_timestamp(:toTime, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                        cast(systimestamp as timestamp(3))) 
+                    - numtodsinterval(:timeSpanHour, 'HOUR') 
+            end
+        and sample_time <= /* time_span.end_time */
+            nvl(cast(to_timestamp(:toTime, 'YYYY-MM-DD HH24:MI:SS') as timestamp(3)),
+                localtimestamp(3))
+    group by
+        floor( ( extract(second from end_time - sample_time)
+                    + 60 * extract(minute from end_time - sample_time)
+                    + 3600 * extract(hour from end_time - sample_time)
+                    + 86400 * extract(day from end_time - sample_time) ) 
+               / slot_duration_s ),
+        user_id
+),
+temp_tbs_users as (
+    select
+        usr.user_id
+    from
+        cdb_users usr
+    where
+        usr.con_id = :CON_ID
+        and lnnvl(usr.temporary_tablespace <> :TABLESPACE)
+),
+filtered_ash_data as (
+    select
+        slot_id,
+        sum(temp_bytes) as temp_bytes
+    from
+        ash_data ash
+    where
+        :TS# is null
+    group by
+        slot_id
+    union all
+    select
+        slot_id,
+        sum(temp_bytes) as temp_bytes
+    from
+        ash_data ash,
+        temp_tbs_users usr
+    where
+        :TS# is not null
+        and ash.user_id = usr.user_id
+    group by
+        slot_id
+),
+gen_50 as (
+    select /*+ inline */
+        level - 1 as n,
+        gen_factor
+    from time_span 
+    connect by level <= gen_factor
+),
+gen_2500 as (
+    select /*+ leading(a b) use_nl(b) */
+        a.gen_factor * a.n + b.n  as n
+    from 
+        gen_50 a, gen_50 b
+),
+time_slots as (
+    select /*+ no_merge(a) no_merge(b) leading(a b) */
+        b.n as slot_id,
+        a.slot_duration_s,
+        a.end_time - numtodsinterval((b.n + 1) * a.slot_duration_s, 'SECOND')
+            as start_time,
+        a.end_time - numtodsinterval(b.n * a.slot_duration_s, 'SECOND')
+            as end_time
+    from
+        time_span a,
+        gen_2500 b
+    where
+        a.start_time <= a.end_time 
+                - numtodsinterval((b.n + 1) * a.slot_duration_s, 'SECOND')
+),
+time_slot_wt_temp_usage as (
+    select
+        /*+ no_merge(b) leading(a b) use_merge(b) */
+        a.end_time as sample_time,
+        round(nvl(b.temp_bytes, 0) / slot_duration_s) as temp_bytes,
+        a.slot_duration_s
+    from 
+        time_slots a,
+        filtered_ash_data b 
+    where
+         a.slot_id = b.slot_id (+)
+)
+select
+    :CON_ID as con_id,
+    sample_time,
+    round(temp_bytes / power(2, 20)) as temp_mbytes,
+    slot_duration_s,
+    :TS# as ts#
+from
+    time_slot_wt_temp_usage
+order by
+    sample_time]]></sql>
+            <binds>
+                <bind id="toTime">
+                    <prompt><![CDATA[toTime]]></prompt>
+                    <tooltip><![CDATA[toTime]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="timeSpanHour">
+                    <prompt><![CDATA[timeSpanHour]]></prompt>
+                    <tooltip><![CDATA[timeSpanHour]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="fromTime">
+                    <prompt><![CDATA[fromTime]]></prompt>
+                    <tooltip><![CDATA[fromTime]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="sampleTimeSec">
+                    <prompt><![CDATA[sampleTimeSec]]></prompt>
+                    <tooltip><![CDATA[sampleTimeSec]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="DBID">
+                    <prompt><![CDATA[DBID]]></prompt>
+                    <tooltip><![CDATA[DBID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="CON_ID">
+                    <prompt><![CDATA[CON_ID]]></prompt>
+                    <tooltip><![CDATA[CON_ID]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="TABLESPACE">
+                    <prompt><![CDATA[TABLESPACE]]></prompt>
+                    <tooltip><![CDATA[TABLESPACE]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="TS#">
+                    <prompt><![CDATA[TS#]]></prompt>
+                    <tooltip><![CDATA[TS#]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+            </binds>
+        </query>
+        <display id="null" type="" style="Table" enable="true">
+            <name><![CDATA[Top consuming SQLs]]></name>
+            <description><![CDATA[]]></description>
+            <tooltip><![CDATA[]]></tooltip>
+            <drillclass><![CDATA[]]></drillclass>
+            <CustomValues>
+                <TYPE><![CDATA[horizontal]]></TYPE>
+            </CustomValues>
+            <query>
+                <sql><![CDATA[with
+time_span as (
+    select
+        :sampleTimeSec as slot_duration_s,
+        :SAMPLE_TIME - numtodsinterval(1 + :sampleTimeSec, 'SECOND') as start_time,
+        :SAMPLE_TIME as end_time
+    from
+        dual
+),
+sql_execs as (
+    select
+        user_id,
+        max(sample_time) as sample_time,
+        top_level_sql_id,
+        sql_id,
+        sql_exec_id,
+        sql_exec_start,
+        max(is_sqlid_current) as is_sqlid_current,
+        module,
+        action,
+        client_id,
+        ecid,
+        max(temp_space_allocated) as temp_bytes
+    from
+        gv$active_session_history
+    where
+        con_id = :CON_ID
+        and sample_time > :SAMPLE_TIME - numtodsinterval(1 + :sampleTimeSec, 'SECOND') 
+        and sample_time <= :SAMPLE_TIME
+    group by
+        user_id,
+        top_level_sql_id,
+        sql_id,
+        sql_exec_id,
+        sql_exec_start,
+        module,
+        action,
+        client_id,
+        ecid
+),
+temp_tbs as (
+    select
+        con_id,
+        ts#,
+        tablespace
+    from
+        (select
+            tmpf.con_id,
+            tmpf.ts#,
+            (select
+                ts.name 
+            from 
+                gv$tablespace ts 
+            where 
+                ts.inst_id = tmpf.inst_id
+                and ts.ts# = tmpf.ts# 
+                and ts.con_id = tmpf.con_id
+            ) as tablespace
+        from
+            gv$tempfile tmpf
+        )
+    group by
+        con_id,
+        ts#,
+        tablespace
+),
+temp_tbs_users as (
+    select
+        usr.user_id,
+        usr.username
+    from
+        cdb_users usr,
+        temp_tbs tmp
+    where
+        usr.con_id = :CON_ID
+        and usr.con_id = tmp.con_id
+        and usr.temporary_tablespace = tmp.tablespace
+        and tmp.ts# = :TS#
+),
+filtered_sql_execs as (
+    select
+        (select dbid from v$database) as dbid,
+        sqlex.*,
+        lag(run_pct, 1, 0) over (order by rn) as lag_run_pct
+    from
+        (select
+            sqle0.*,
+            row_number() over (order by temp_bytes desc, sql_id)   as rn,
+            100 * temp_bytes / nullif(sum(temp_bytes) over (), 0)  as pct_usage,
+            100 * sum(temp_bytes) over (order by temp_bytes desc, sql_id) / nullif(sum(temp_bytes) over (), 0)  as run_pct
+        from
+            (select
+                usr.username,
+                ash.sample_time,
+                ash.top_level_sql_id,
+                ash.sql_id,
+                ash.sql_exec_id,
+                ash.sql_exec_start,
+                ash.is_sqlid_current,
+                ash.module,
+                ash.action,
+                ash.client_id,
+                ash.ecid,
+                ash.temp_bytes
+            from
+                sql_execs ash,
+                temp_tbs_users usr
+            where
+                :TS# is not null
+                and usr.user_id = ash.user_id
+            union all
+            select
+                usr.username,
+                ash.sample_time,
+                ash.top_level_sql_id,
+                ash.sql_id,
+                ash.sql_exec_id,
+                ash.sql_exec_start,
+                ash.is_sqlid_current,
+                ash.module,
+                ash.action,
+                ash.client_id,
+                ash.ecid,
+                ash.temp_bytes
+            from
+                sql_execs ash,
+                cdb_users usr
+            where
+                :TS# is null
+                and usr.user_id (+) = ash.user_id
+                and usr.con_id (+) = :CON_ID
+            ) sqle0
+        ) sqlex
+)
+select
+    cast(fse.sample_time as date)  as sample_time,
+    fse.username,
+    fse.module,
+    fse.action,
+    fse.client_id,
+    fse.ecid,
+    fse.top_level_sql_id,
+    fse.sql_id,
+    fse.sql_exec_id,
+    fse.sql_exec_start,
+    fse.is_sqlid_current,
+    round(86400 * (cast(fse.sample_time as date) - fse.sql_exec_start))  as ela_s, 
+    round( fse.temp_bytes / power(2,20) , greatest(0, 2 - floor(log(10, nvl(nullif(abs( fse.temp_bytes / power(2,20) ), 0), 1)))) )  as temp_mb,
+    round(pct_usage, 1)   as "%Usage",
+    round(fse.run_pct, 1) as "Sum%",
+    coalesce(txt.sql_text, (select sql.sql_fulltext from gv$sqlarea sql
+                             where sql.sql_id = fse.sql_id and rownum = 1)) as sql_text
+from
+    filtered_sql_execs fse,
+    dba_hist_sqltext txt
+where
+    txt.dbid (+) = fse.dbid
+    and txt.sql_id (+) = fse.sql_id
+    and fse.rn <= 30
+    and (fse.rn < 10 or fse.lag_run_pct < 95)
+order by
+    fse.rn]]></sql>
+                <binds>
+                    <bind id="sampleTimeSec">
+                        <prompt><![CDATA[sampleTimeSec]]></prompt>
+                        <tooltip><![CDATA[sampleTimeSec]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="SAMPLE_TIME">
+                        <prompt><![CDATA[SAMPLE_TIME]]></prompt>
+                        <tooltip><![CDATA[SAMPLE_TIME]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="CON_ID">
+                        <prompt><![CDATA[CON_ID]]></prompt>
+                        <tooltip><![CDATA[CON_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="TS#">
+                        <prompt><![CDATA[TS#]]></prompt>
+                        <tooltip><![CDATA[TS#]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        <display>
+    </display>
+</display>
+</folder>
+</displays>

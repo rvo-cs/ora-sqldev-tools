@@ -10,7 +10,9 @@
     <name><![CDATA[Live ASH - Temp. tablespace usage]]></name>
     <description><![CDATA[A chart based on live ASH data, showing usage of temporary tablespaces by active sessions.
 
-CAVEAT: because ASH does not track inactive sessions, temp. space allocated by inactive sessions is not accounted for here.
+CAVEAT: because ASH does not track inactive sessions, temp. space allocated by idle sessions is not accounted for.
+This can lead to vastly underestimated figures in the case of parallel queries because receiving PX processes might
+not be sampled at all, whereas they are the ones writing into temp. workareas.
 ]]></description>
     <tooltip><![CDATA[]]></tooltip>
     <drillclass><![CDATA[]]></drillclass>
@@ -466,44 +468,58 @@ order by
             </CustomValues>
             <query>
                 <sql><![CDATA[with
-time_span as (
-    select
-        :sampleTimeSec as slot_duration_s,
-        :SAMPLE_TIME - numtodsinterval(1 + :sampleTimeSec, 'SECOND') as start_time,
-        :SAMPLE_TIME as end_time
-    from
-        dual
-),
 sql_execs as (
+    /* NB: in RAC, for the same ASH sample_id, sample_time may differ slightly on each instance. */
     select
         user_id,
-        max(sample_time) as sample_time,
+        max(sample_time)            as sample_time,
         top_level_sql_id,
         sql_id,
         sql_exec_id,
         sql_exec_start,
-        max(is_sqlid_current) as is_sqlid_current,
-        module,
-        action,
-        client_id,
-        ecid,
-        max(temp_space_allocated) as temp_bytes
+        max(is_sqlid_current)       as is_sqlid_current,
+        max(module)                 as module,
+        max(action)                 as action,
+        max(client_id)              as client_id,
+        max(ecid)                   as ecid,
+        sum(temp_space_allocated)   as temp_space_allocated
     from
-        gv$active_session_history
-    where
-        con_id = :CON_ID
-        and sample_time > :SAMPLE_TIME - numtodsinterval(1 + :sampleTimeSec, 'SECOND') 
-        and sample_time <= :SAMPLE_TIME
+        (select    
+            inst_id,
+            user_id,
+            max(sample_time) as sample_time,
+            top_level_sql_id,
+            sql_id,
+            sql_exec_id,
+            sql_exec_start,
+            max(is_sqlid_current)  as is_sqlid_current,
+            max(module)            as module,
+            max(action)            as action,
+            max(client_id)         as client_id,
+            max(ecid)              as ecid,
+            sum(temp_space_allocated) / count(distinct sample_id)  as temp_space_allocated
+        from
+            gv$active_session_history
+        where
+            con_id = :CON_ID
+            and sample_time > :SAMPLE_TIME - numtodsinterval(0.1 + :sampleTimeSec, 'SECOND') 
+            and sample_time <= :SAMPLE_TIME
+        group by
+            inst_id,
+            user_id,
+            top_level_sql_id,
+            sql_id,
+            sql_exec_id,
+            sql_exec_start
+        )
     group by
         user_id,
         top_level_sql_id,
         sql_id,
         sql_exec_id,
-        sql_exec_start,
-        module,
-        action,
-        client_id,
-        ecid
+        sql_exec_start
+    having
+        sum(temp_space_allocated) > 0
 ),
 temp_tbs as (
     select
@@ -568,7 +584,7 @@ filtered_sql_execs as (
                 ash.action,
                 ash.client_id,
                 ash.ecid,
-                ash.temp_bytes
+                ash.temp_space_allocated  as temp_bytes
             from
                 sql_execs ash,
                 temp_tbs_users usr
@@ -588,7 +604,7 @@ filtered_sql_execs as (
                 ash.action,
                 ash.client_id,
                 ash.ecid,
-                ash.temp_bytes
+                ash.temp_space_allocated  as temp_bytes
             from
                 sql_execs ash,
                 cdb_users usr
@@ -600,7 +616,8 @@ filtered_sql_execs as (
         ) sqlex
 )
 select
-    cast(fse.sample_time as date)  as sample_time,
+    cast(fse.sample_time as date)
+        + round(extract(second from fse.sample_time) - floor(extract(second from fse.sample_time))) / 86400 as sample_time,
     fse.username,
     fse.module,
     fse.action,

@@ -10,7 +10,9 @@
     <name><![CDATA[Histo ASH - Temp. tablespace usage]]></name>
     <description><![CDATA[A chart based on persisted ASH data, showing usage of temporary tablespaces by active sessions.
 
-CAVEAT: because ASH does not track inactive sessions, temp. space allocated by inactive sessions is not accounted for here.
+CAVEAT: because ASH does not track inactive sessions, temp. space allocated by idle sessions is not accounted for.
+This can lead to vastly underestimated figures in the case of parallel queries because receiving PX processes might
+not be sampled at all, whereas they are the ones writing into temp. workareas.
 ]]></description>
     <tooltip><![CDATA[]]></tooltip>
     <drillclass><![CDATA[]]></drillclass>
@@ -503,35 +505,41 @@ time_span as (
         dual
 ),
 sql_execs as (
+    /* 
+       NB: in RAC, for the same ASH sample_id, sample_time may differ slightly on each
+       instance; further, instances may not persist the same sample_id to AWR, creating
+       even more sample_time discrepancies in persisted ASH.
+     */
     select
         dbid,
         user_id,
-        max(sample_time) as sample_time,
+        max(sample_time)           as sample_time,
         top_level_sql_id,
         sql_id,
         sql_exec_id,
         sql_exec_start,
-        max(is_sqlid_current) as is_sqlid_current,
-        module,
-        action,
-        client_id,
-        ecid,
-        max(temp_space_allocated) as temp_bytes
+        max(is_sqlid_current)      as is_sqlid_current,
+        max(module)                as module,
+        max(action)                as action,
+        max(client_id)             as client_id,
+        max(ecid)                  as ecid,
+        sum(temp_space_allocated)  as temp_space_allocated
     from
         (select
             ash.dbid,
-            ash.sample_time,
+            ash.instance_number,
+            max(ash.sample_time)       as sample_time,
             ash.user_id,
             ash.top_level_sql_id,
             ash.sql_id,
             ash.sql_exec_id,
             ash.sql_exec_start,
-            ash.is_sqlid_current,
-            ash.temp_space_allocated,
-            ash.module,
-            ash.action,
-            ash.client_id,
-            ash.ecid
+            max(ash.is_sqlid_current)  as is_sqlid_current,
+            max(ash.module)            as module,
+            max(ash.action)            as action,
+            max(ash.client_id)         as client_id,
+            max(ash.ecid)              as ecid,
+            sum(ash.temp_space_allocated) / count(distinct ash.sample_id)  as temp_space_allocated
         from
             dba_hist_active_sess_history ash
         where
@@ -572,21 +580,26 @@ sql_execs as (
                             snp.dbid = nvl(:DBID, (select dbid from v$database))
                         )
                     )
+            and ash.sample_time > :SAMPLE_TIME - numtodsinterval(1 + :sampleTimeSec, 'SECOND') 
+            and ash.sample_time <= :SAMPLE_TIME
+        group by
+            ash.dbid,
+            ash.instance_number,
+            ash.user_id,
+            ash.top_level_sql_id,
+            ash.sql_id,
+            ash.sql_exec_id,
+            ash.sql_exec_start
         )
-    where
-        sample_time > :SAMPLE_TIME - numtodsinterval(1 + :sampleTimeSec, 'SECOND') 
-        and sample_time <= :SAMPLE_TIME
     group by
         dbid,
         user_id,
         top_level_sql_id,
         sql_id,
         sql_exec_id,
-        sql_exec_start,
-        module,
-        action,
-        client_id,
-        ecid
+        sql_exec_start
+    having
+        sum(temp_space_allocated) > 0
 ),
 temp_tbs as (
     select
@@ -651,7 +664,7 @@ filtered_sql_execs as (
                 ash.action,
                 ash.client_id,
                 ash.ecid,
-                ash.temp_bytes
+                ash.temp_space_allocated  as temp_bytes
             from
                 sql_execs ash,
                 temp_tbs_users usr
@@ -672,7 +685,7 @@ filtered_sql_execs as (
                 ash.action,
                 ash.client_id,
                 ash.ecid,
-                ash.temp_bytes
+                ash.temp_space_allocated  as temp_bytes
             from
                 sql_execs ash,
                 cdb_users usr
@@ -684,7 +697,8 @@ filtered_sql_execs as (
         ) sqlex
 )
 select
-    cast(fse.sample_time as date)  as sample_time,
+    cast(fse.sample_time as date)
+        + round(extract(second from fse.sample_time) - floor(extract(second from fse.sample_time))) / 86400  as sample_time,
     fse.username,
     fse.module,
     fse.action,

@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: 2024 R.Vassallo
- * SPDX-License-Identifier: Apache License 2.0
+ * SPDX-FileCopyrightText: 2025 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
  */
 
 /*
@@ -29,10 +29,15 @@ USAGE
               use the same filename as the input trace file, in the default
               destination directory configured in settings.
 
+PREREQUISITES
+    This script requires Javascript, therefore it can only be run in SQLcl
+    or SQL Developer, using a JDK with Javascript support enabled.
+
 NOTES
-    1. Only trace files in text format (*.trc) are supported
-    2. This script prompts for missing arguments as needed, and also for
-       the user to confirm the copy operation.
+    1. This script prompts for missing arguments as needed, and also for
+       the user to confirm the copy operation
+    2. This version now uses the BFILE interface, so it should work regardless
+       of line lengths in the source tracefile
 */
     
 whenever sqlerror exit failure rollback
@@ -88,7 +93,7 @@ select
     ) as errmsg,        -- error message
     decode(
         count(coalesce(chck.column_value, ctrl.column_value)),
-        0, '_impl_a', 
+        0, '_impl_a0', 
         '-bad_args'
     ) as script_suffix  -- suffix of the impl. script to start next
 from

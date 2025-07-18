@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: 2024 R.Vassallo
- * SPDX-License-Identifier: Apache License 2.0
+ * SPDX-FileCopyrightText: 2025 R.Vassallo
+ * SPDX-License-Identifier: BSD Zero Clause License
  */
 
 -- Default directory object for the OS directory where trace files
@@ -8,8 +8,9 @@
 --
 define def_default_trc_directory = "DIAG_TRACE_DIR"
 
--- Default destination folder for trace file copies; speficy ""
--- to use the current working directory as the default destination
+-- Default destination folder for trace file copies; if running on SQLcl,
+-- but not if using (legacy) SQL Developer, "" may be specified in order
+-- to use the current working directory as the default destination folder
 --
 define def_default_dest_folder = "E:\Home\romain\Temp"
  

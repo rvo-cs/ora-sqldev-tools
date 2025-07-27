@@ -23,13 +23,18 @@ set -o nounset
 # This is the root directory of the JDK to be used for running
 # SQLcl, such that the java command is ${JAVA_HOME}/bin/java
 #
-# Remark: releases of SQLcl "stand-alone" 22.x and higher
-# require the JDK 11 or 17, with GraalVM being officially
-# supported since SQLcl 23.3; SQLcl 21.4 was the last release
-# using Java 8.
+# Remarks:
+#  a) Releases of SQLcl "stand-alone" 22.x and higher
+#     require the JDK 11 or 17 (SQLcl 21.4 was the last
+#     release using Java 8); SQLcl 25.2 and higher require
+#     the JDK 17 or 21.
+#
+#  b) JavaScript support requires GraalVM for Java 17,
+#     with the JavaScript runtime plugin (GraalVM has
+#     been supported since SQLcl 23.3).
 #--------------------------------------------------------------
 
-JAVA_HOME=/usr/local/share/java/oracle/jdk-11.0.23
+JAVA_HOME=/usr/local/share/java/oracle/graalvm-jdk-17.0.13+10.1
 
 #==============================================================
 # SQL_HOME folder
@@ -39,7 +44,7 @@ JAVA_HOME=/usr/local/share/java/oracle/jdk-11.0.23
 # bash shell script.
 #--------------------------------------------------------------
 
-SQL_HOME=/usr/local/share/oracle/sqlcl/sqlcl-24.2.0.180.1721
+SQL_HOME=/usr/local/share/oracle/sqlcl/sqlcl-25.2.2.199.0918
 
 #==============================================================
 # Additions to SQLPATH
@@ -147,6 +152,9 @@ fi
 if [[ -n "${SQLCL_JAVA_IO_TMPDIR:+X}" ]]; then
     JVM_OPTS="${JVM_OPTS} -Djava.io.tmpdir=${SQLCL_JAVA_IO_TMPDIR}"
 fi
+
+# Disable the error URL mention in JDBC error messages
+JVM_OPTS="${JVM_OPTS} -Doracle.jdbc.enableErrorUrl=false"
 
 # Set logging configuration
 if [[ -n "${LOGGING_CONFIG:+X}" ]]; then

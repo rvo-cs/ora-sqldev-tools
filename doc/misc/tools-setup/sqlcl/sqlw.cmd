@@ -22,15 +22,21 @@ REM
 REM Remarks:
 REM     a) Releases of SQLcl "stand-alone" 22.x and higher
 REM        require the JDK 11 or 17 (SQLcl 21.4 was the last
-REM        release using Java 8), with GraalVM being officially
-REM        supported since SQLcl 23.3.
+REM        release using Java 8); SQLcl 25.2 and higher require
+REM        the JDK 17 or 21.
 REM
-REM     b) in general, the JDK shipped with SQL Developer in the
+REM     b) JavaScript support requires GraalVM for Java 17,
+REM        with the JavaScript runtime plugin (GraalVM has
+REM        been supported since SQLcl 23.3).
+REM
+REM     c) in general, the JDK shipped with SQL Developer in the
 REM        "with JDK included" bundle can be used, provided it's
-REM        recent enough.
+REM        recent enough, and JavaScript support is not needed.
+REM        (If JavaScript is required, then GraalVM is currently
+REM        the only option.)
 REM -------------------------------------------------------------
 
-SET JAVA_HOME=F:\Produits\Java\Oracle\jdk-11.0.23
+SET JAVA_HOME=F:\Produits\Java\Oracle\graalvm-jdk-17.0.13+10.1
 
 REM =============================================================
 REM SQL_HOME folder
@@ -40,7 +46,7 @@ REM such that %SQL_HOME%\bin\sql.exe is the included binary
 REM executable for Windows x64.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-24.2.0.180.1721
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-25.2.2.199.0918
 
 REM =============================================================
 REM Additions to SQLPATH
@@ -139,6 +145,9 @@ IF DEFINED SQLCL_JAVA_IO_TMPDIR (
     SET JVM_OPTS=%JVM_OPTS% -Djava.io.tmpdir=%SQLCL_JAVA_IO_TMPDIR%
     SET SQLCL_JAVA_IO_TMPDIR=
 )
+
+REM Disable the error URL mention in JDBC error messages
+SET JVM_OPTS=%JVM_OPTS% -Doracle.jdbc.enableErrorUrl=false
 
 REM Set logging configuration
 IF DEFINED LOGGING_CONFIG (

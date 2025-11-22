@@ -20,6 +20,8 @@
     :INST_ID                             as "Inst#",
     :CON_NAME_RE                         as "Con_name_RE",
     :SERVICE_RE                          as "Service_RE",
+    :MODULE_RE                           as "Module_RE",
+    :ACTION_RE                           as "Action_RE",
     :USERNAME_LIKE                       as "Username_like",
     :USERNAME_RE                         as "Username_RE",
     :LIVE_SESSIONS_ONLY                  as "Live_sessions_only",
@@ -62,6 +64,24 @@ from
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
+                <bind id="SERVICE_RE">
+                    <prompt><![CDATA[Service name regexp?]]></prompt>
+                    <tooltip><![CDATA[Show only matching services (regexp, CI)]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="MODULE_RE">
+                    <prompt><![CDATA[Module name regexp?]]></prompt>
+                    <tooltip><![CDATA[Show only matching modules (regexp, CI)]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="ACTION_RE">
+                    <prompt><![CDATA[Action name regexp?]]></prompt>
+                    <tooltip><![CDATA[Show sessions with matching actions only (regexp, CI)]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
                 <bind id="USERNAME_LIKE">
                     <prompt><![CDATA[Username like?]]></prompt>
                     <tooltip><![CDATA[Show only sessions of matching users (LIKE pattern, CI)]]></tooltip>
@@ -74,12 +94,6 @@ from
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
-                <bind id="SERVICE_RE">
-                    <prompt><![CDATA[Service name regexp?]]></prompt>
-                    <tooltip><![CDATA[Show only matching services (regexp, CI)]]></tooltip>
-                    <value><![CDATA[NULL_VALUE]]></value>
-                    <bracket><![CDATA[null]]></bracket>
-                </bind>
                 <bind id="LIVE_SESSIONS_ONLY">
                     <prompt><![CDATA[Live sessions only?]]></prompt>
                     <tooltip><![CDATA[Exclude ended sessions iff 'Y']]></tooltip>
@@ -89,7 +103,7 @@ from
                 <bind id="SESSION_INACTIVITY_THRES">
                     <prompt><![CDATA[Inactivity threshold?]]></prompt>
                     <tooltip><![CDATA[Hide sessions if inactive for more than the specified amount of time; unit: s; 0 or null = unlimited]]></tooltip>
-                    <value><![CDATA[60]]></value>
+                    <value><![CDATA[0]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
                 <bind id="SHOW_BACKGROUND">
@@ -158,6 +172,8 @@ from
             <sql><![CDATA[select
     :INST_ID                             as "Inst#",
     :SERVICE_RE                          as "Service_RE",
+    :MODULE_RE                           as "Module_RE",
+    :ACTION_RE                           as "Action_RE",
     :USERNAME_LIKE                       as "Username_like",
     :USERNAME_RE                         as "Username_RE",
     :LIVE_SESSIONS_ONLY                  as "Live_sessions_only",
@@ -194,6 +210,24 @@ from
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
+                <bind id="SERVICE_RE">
+                    <prompt><![CDATA[Service name regexp?]]></prompt>
+                    <tooltip><![CDATA[Show only matching services (regexp, CI)]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="MODULE_RE">
+                    <prompt><![CDATA[Module name regexp?]]></prompt>
+                    <tooltip><![CDATA[Show only matching modules (regexp, CI)]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
+                <bind id="ACTION_RE">
+                    <prompt><![CDATA[Action name regexp?]]></prompt>
+                    <tooltip><![CDATA[Show sessions with matching actions only (regexp, CI)]]></tooltip>
+                    <value><![CDATA[NULL_VALUE]]></value>
+                    <bracket><![CDATA[null]]></bracket>
+                </bind>
                 <bind id="USERNAME_LIKE">
                     <prompt><![CDATA[Username like?]]></prompt>
                     <tooltip><![CDATA[Show only sessions of matching users (LIKE pattern, CI)]]></tooltip>
@@ -206,12 +240,6 @@ from
                     <value><![CDATA[NULL_VALUE]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
-                <bind id="SERVICE_RE">
-                    <prompt><![CDATA[Service name regexp?]]></prompt>
-                    <tooltip><![CDATA[Show only matching services (regexp, CI)]]></tooltip>
-                    <value><![CDATA[NULL_VALUE]]></value>
-                    <bracket><![CDATA[null]]></bracket>
-                </bind>
                 <bind id="LIVE_SESSIONS_ONLY">
                     <prompt><![CDATA[Live sessions only?]]></prompt>
                     <tooltip><![CDATA[Exclude ended sessions iff 'Y']]></tooltip>
@@ -221,7 +249,7 @@ from
                 <bind id="SESSION_INACTIVITY_THRES">
                     <prompt><![CDATA[Inactivity threshold?]]></prompt>
                     <tooltip><![CDATA[Hide sessions if inactive for more than the specified amount of time; unit: s; 0 or null = unlimited]]></tooltip>
-                    <value><![CDATA[60]]></value>
+                    <value><![CDATA[0]]></value>
                     <bracket><![CDATA[null]]></bracket>
                 </bind>
                 <bind id="SHOW_BACKGROUND">
@@ -1082,6 +1110,22 @@ where
                     1
             end)
     and 1 = (case
+                when :Module_RE is null then
+                    1
+                when trim(:Module_RE) = '^$' and module is null then
+                    1
+                when regexp_like(module, :Module_RE, 'i') then
+                    1
+            end)
+    and 1 = (case
+                when :Action_RE is null then
+                    1
+                when trim(:Action_RE) = '^$' and action is null then
+                    1
+                when regexp_like(action, :Action_RE, 'i') then
+                    1
+            end)
+    and 1 = (case
                 when :Con_name_RE is null then
                     1
                 when regexp_like(con_name, :Con_name_RE, 'i') then
@@ -1147,6 +1191,18 @@ order by
                     <bind id="Service_RE">
                         <prompt><![CDATA[Service_RE]]></prompt>
                         <tooltip><![CDATA[Service_RE]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Module_RE">
+                        <prompt><![CDATA[Module_RE]]></prompt>
+                        <tooltip><![CDATA[Module_RE]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Action_RE">
+                        <prompt><![CDATA[Action_RE]]></prompt>
+                        <tooltip><![CDATA[Action_RE]]></tooltip>
                         <value><![CDATA[NULL_VALUE]]></value>
                         <bracket><![CDATA[null]]></bracket>
                     </bind>
@@ -1920,6 +1976,22 @@ where
                 when regexp_like(service_name, :Service_RE, 'i') then
                     1
             end)
+    and 1 = (case
+                when :Module_RE is null then
+                    1
+                when trim(:Module_RE) = '^$' and module is null then
+                    1
+                when regexp_like(module, :Module_RE, 'i') then
+                    1
+            end)
+    and 1 = (case
+                when :Action_RE is null then
+                    1
+                when trim(:Action_RE) = '^$' and action is null then
+                    1
+                when regexp_like(action, :Action_RE, 'i') then
+                    1
+            end)
 order by
     decode(type, 'USER', 1, 'BACKGROUND', 2),
     inst_id,
@@ -1970,6 +2042,18 @@ order by
                     <bind id="Service_RE">
                         <prompt><![CDATA[Service_RE]]></prompt>
                         <tooltip><![CDATA[Service_RE]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Module_RE">
+                        <prompt><![CDATA[Module_RE]]></prompt>
+                        <tooltip><![CDATA[Module_RE]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Action_RE">
+                        <prompt><![CDATA[Action_RE]]></prompt>
+                        <tooltip><![CDATA[Action_RE]]></tooltip>
                         <value><![CDATA[NULL_VALUE]]></value>
                         <bracket><![CDATA[null]]></bracket>
                     </bind>

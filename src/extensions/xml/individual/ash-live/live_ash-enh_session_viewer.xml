@@ -2161,7 +2161,292 @@ from dual]]></sql>
             </confirmation>
         </item>
         <item reload="false" reloadparent="false" removeFromParent="false">
+            <title>Cancel SQL...</title>
+            <help><![CDATA[This terminates the specified SQL_id in the target session.]]></help>
+            <prompt type="confirm">
+                <label>Session: #Sid#, #Serial## (#Inst_id#)    Username: #"Username"#</label>
+            </prompt>
+            <prompt type="text/combo">  <!-- index: 1 -->
+                <label>SQL id:</label>
+                <value><![CDATA[select
+    sql_id
+from 
+    (select
+        1 as rn, ses.sql_id
+    from
+        gv$session ses
+    where
+        ses.inst_id = #Inst_id#
+        and ses.sid = #Sid#
+        and ses.serial# = #Serial##
+        and ses.sql_id = '#SQL_ID#'
+        and ses.status = 'ACTIVE'
+    union all
+    select
+        2 as rn, 'NULL' as sql_id
+    from
+        dual
+    )
+order by
+    rn]]></value>
+                <default><![CDATA[select
+    coalesce(
+        (select
+            ses.sql_id
+        from
+            gv$session ses
+        where
+            ses.inst_id = #Inst_id#
+            and ses.sid = #Sid#
+            and ses.serial# = #Serial##
+            and ses.sql_id = '#SQL_ID#'
+            and ses.status = 'ACTIVE'
+        ),
+        'NULL'
+    ) as sql_id
+from
+    dual]]></default>
+            </prompt>
+            <prompt type="codearea" reload="true:1" required="false">   <!-- index: 2 -->
+                <label>SQL text:</label>
+                <default><![CDATA[select
+    '-- SQL id: ' || sqa.sql_id || chr(10)
+    || case
+           when regexp_instr(sqa.sql_fulltext, '^.*$', 1, 201, 0, 'm') > 0 then
+               substr(sqa.sql_fulltext, 1,
+                      regexp_instr(sqa.sql_fulltext, '^.*$', 1, 201, 0, 'm') - 1)
+               || '-- [...]' || chr(10)
+               || '--------------------------------------------' || chr(10)
+               || '-- Note: only the first 200 lines are shown.'
+           else
+               sqa.sql_fulltext
+       end as sql_text
+from
+    gv$session ses,
+    gv$sqlarea sqa
+where
+    ses.inst_id = #Inst_id#
+    and ses.sid = #Sid#
+    and ses.serial# = #Serial##
+    and ses.sql_id = :1
+    and ses.status = 'ACTIVE'
+    and sqa.inst_id = ses.inst_id
+    and sqa.sql_id = ses.sql_id
+    and rownum = 1]]></default>
+            </prompt>
+            <prompt type="text/combo" required="true">  <!-- index: 3 -->
+                <label>Method:</label>
+                <value><![CDATA[select
+    method
+from
+    (select
+        1 as rn, 'Alter system statement' as method
+    from
+        sys.session_privs
+    where
+        privilege = 'ALTER SYSTEM'
+        and (select
+                to_number(regexp_substr(v.version, '(\d+)', 1, 1))
+            from
+                product_component_version v
+            where 
+                v.product like 'Oracle Database%' 
+                and rownum = 1
+            ) >= 19
+    union all
+    select
+        2 as rn, '## Unsufficient privilege for this action ##'
+    from
+        dual
+    where
+        (select
+            to_number(regexp_substr(v.version, '(\d+)', 1, 1))
+        from
+            product_component_version v
+        where 
+            v.product like 'Oracle Database%' 
+            and rownum = 1
+        ) >= 19
+    union all
+    select
+        3 as rn, '## Cancel SQL requires 19c or higher ##'
+    from
+        dual
+    order by rn
+    )
+where
+    rownum <= 1]]></value>
+                <default><![CDATA[select
+    method
+from
+    (select
+        1 as rn, 'Alter system statement' as method
+    from
+        sys.session_privs
+    where
+        privilege = 'ALTER SYSTEM'
+        and (select
+                to_number(regexp_substr(v.version, '(\d+)', 1, 1))
+            from
+                product_component_version v
+            where 
+                v.product like 'Oracle Database%' 
+                and rownum = 1
+            ) >= 19
+    union all
+    select
+        2 as rn, '## Unsufficient privilege for this action ##'
+    from
+        dual
+    where
+        (select
+            to_number(regexp_substr(v.version, '(\d+)', 1, 1))
+        from
+            product_component_version v
+        where 
+            v.product like 'Oracle Database%' 
+            and rownum = 1
+        ) >= 19
+    union all
+    select
+        3 as rn, '## Cancel SQL requires 19c or higher ##'
+    from
+        dual
+    order by rn
+    )
+where
+    rownum <= 1]]></default>
+            </prompt>
+            <prompt type="confirm">
+                <label>Confirm CANCEL SQL?</label>
+            </prompt>
+            <sql><![CDATA[declare
+    l_session_id        number       := #Sid#;
+    l_session_serial    number       := #Serial##;
+    l_session_instance  number       := #Inst_id#;
+    l_session_sqlid     varchar2(13) := '#1#';
+
+begin
+    execute immediate 'alter system cancel sql '''
+            || to_char(l_session_id) || ',' || to_char(l_session_serial)
+            || ',@' || to_char(l_session_instance)
+            || case
+                   when l_session_sqlid <> 'NULL' then
+                       ',' || l_session_sqlid
+               end
+            || '''';
+end;
+]]></sql>
+            <confirmation>
+                <title>Cancel SQL</title>
+                <sql><![CDATA[
+select
+    'SQL statement in session #Sid#,#Serial##(#Inst_id#) was canceled'
+    as diag_text
+from dual]]></sql>
+                <prompt><![CDATA[#0.DIAG_TEXT#]]></prompt>
+            </confirmation>
+        </item>
+        <item reload="false" reloadparent="false" removeFromParent="false">
             <title>Kill session...</title>
+            <help><![CDATA[This terminates the specified session.]]></help>
+            <prompt type="confirm">
+                <label>Session: #Sid#, #Serial## (#Inst_id#)    Username: #"Username"#</label>
+            </prompt>
+            <prompt type="check" required="true">       <!-- index: 1 -->
+                <label>IMMEDIATE</label>
+                <value><![CDATA[STATIC:Y]]></value>
+                <default><![CDATA[STATIC:]]></default>
+            </prompt>
+            <prompt type="check" required="true">       <!-- index: 2 -->
+                <label>NOREPLAY</label>
+                <value><![CDATA[STATIC:Y]]></value>
+                <default><![CDATA[STATIC:]]></default>
+            </prompt>
+            <prompt type="text/combo" required="true">  <!-- index: 3 -->
+                <label>Method:</label>
+                <value><![CDATA[select
+    method
+from
+    (select
+        1 as rn, 'Alter system statement' as method
+    from
+        sys.session_privs
+    where
+        privilege = 'ALTER SYSTEM'
+    union all
+    select
+        2 as rn, '## Unsufficient privilege for this action ##'
+    from
+        dual
+    order by rn
+    )
+where
+    rownum <= 1]]></value>
+                <default><![CDATA[select
+    method
+from
+    (select
+        1 as rn, 'Alter system statement' as method
+    from
+        sys.session_privs
+    where
+        privilege = 'ALTER SYSTEM'
+    union all
+    select
+        2 as rn, '## Unsufficient privilege for this action ##'
+    from
+        dual
+    order by rn
+    )
+where
+    rownum <= 1]]></default>
+            </prompt>
+            <prompt type="confirm">
+                <label>Confirm KILL session?</label>
+            </prompt>
+            <sql><![CDATA[declare
+    l_session_id        number      := #Sid#;
+    l_session_serial    number      := #Serial##;
+    l_session_instance  number      := #Inst_id#;
+    l_immediate_check   varchar2(1) := '#1#';
+    l_noreplay_check    varchar2(1) := '#2#';
+
+    e_sess_marked_for_kill exception;
+    pragma exception_init(e_sess_marked_for_kill, -31);
+begin
+    execute immediate 'alter system kill session '''
+            || to_char(l_session_id) || ',' || to_char(l_session_serial)
+            || ',@' || to_char(l_session_instance) || ''''
+            || case when l_immediate_check = 'Y' then ' immediate' end
+            || case when l_noreplay_check = 'Y' then ' noreplay' end;
+exception
+    when e_sess_marked_for_kill then
+        null;
+end;
+]]></sql>
+            <confirmation>
+                <title>Kill session</title>
+                <sql><![CDATA[
+select
+    nvl((select
+            'Status of session ' || to_char(ses.sid) || ',' || to_char(ses.serial#)
+                    || '(' || to_char(ses.inst_id) || ') is now ' || ses.status
+        from
+            gv$session ses
+        where
+            ses.inst_id = #Inst_id#
+            and ses.sid = #Sid#
+            and ses.serial# = #Serial##
+        ),
+        'Session #Sid#,#Serial##(#Inst_id#) was killed, and ended'
+    ) as diag_text
+from dual]]></sql>
+                <prompt><![CDATA[#0.DIAG_TEXT#]]></prompt>
+            </confirmation>
+        </item>
+        <item reload="false" reloadparent="false" removeFromParent="false">
+            <title>Disconnect session...</title>
             <help><![CDATA[This terminates the specified session.
 
 Remark: this only works for sessions in the local instance.
@@ -2239,7 +2524,7 @@ where
     :2 is null]]></default>
             </prompt>
             <prompt type="confirm">
-                <label>Confirm KILL session?</label>
+                <label>Confirm DISCONNECT session?</label>
             </prompt>
             <sql><![CDATA[declare
     l_session_id        number        := #Sid#;
@@ -2291,12 +2576,12 @@ exception
 end;
 ]]></sql>
             <confirmation>
-                <title>Session killed</title>
+                <title>Disconnect session</title>
                 <sql><![CDATA[
 select
     nvl((select
-            'Session ' || to_char(ses.sid) || ',' || to_char(ses.serial#)
-                    || '(' || sys_context('USERENV', 'INSTANCE') || ') status is now ' || ses.status
+            'Status of session ' || to_char(ses.sid) || ',' || to_char(ses.serial#)
+                    || '(' || sys_context('USERENV', 'INSTANCE') || ') is now ' || ses.status
         from
             v$session ses
         where

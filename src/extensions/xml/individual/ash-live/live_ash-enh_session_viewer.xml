@@ -3183,6 +3183,107 @@ order by
             </queries>
         </display>
         <display id="null" type="" style="Table" enable="true">
+            <name><![CDATA[SQL work areas]]></name>
+            <description><![CDATA[]]></description>
+            <tooltip><![CDATA[]]></tooltip>
+            <drillclass><![CDATA[]]></drillclass>
+            <CustomValues>
+                <TYPE><![CDATA[horizontal]]></TYPE>
+            </CustomValues>
+            <query>
+                <sql><![CDATA[select
+    :Inst_id                                          as inst_id,
+    :Sid                                              as sid,
+    :SQL_ID                                           as sql_id,
+    :SQL_CHILD#                                       as child_number,
+    qwa.operation_type,
+    qwa.operation_id,
+    qwa.policy,
+    :Sql_exec_id                                      as sql_exec_id, 
+    to_date(:Sql_exec_start, 'YYYY-MM-DD HH24:MI:SS') as sql_exec_start,
+    waa.qcinst_id, 
+    waa.qcsid,
+    round(waa.active_time     / power(10,6))          as active_time_s, 
+    round(waa.work_area_size  / power(2,20), 1)       as work_area_mb, 
+    round(waa.expected_size   / power(2,20), 1)       as expected_mb, 
+    round(waa.actual_mem_used / power(2,20), 1)       as actual_mem_used_mb,
+    round(waa.max_mem_used    / power(2,20), 1)       as max_mem_used_mb, 
+    waa.number_passes, 
+    round(waa.tempseg_size    / power(2,20), 1)         as tempseg_size_mb, 
+    waa.tablespace,
+    round(qwa.estimated_optimal_size / power(2,20), 1)  as est_optimal_size_mb,
+    round(qwa.estimated_onepass_size / power(2,20), 1)  as est_onepass_size_mb,
+    round(qwa.last_memory_used       / power(2,20), 1)  as last_mem_used_mb,
+    case
+        when qwa.total_executions > 0 then 
+            qwa.last_execution
+    end as last_exec,
+    case
+        when qwa.total_executions > 0 then 
+            qwa.last_degree
+    end as last_degree,
+    qwa.total_executions                           as total_exec,
+    qwa.optimal_executions                         as optimal_exec,
+    qwa.onepass_executions                         as onepass_exec,
+    qwa.multipasses_executions                     as multipass_exec,
+    round(qwa.active_time       / power(10,6), 1)  as avg_active_s,
+    round(qwa.max_tempseg_size  / power(2,20), 1)  as max_tempseg_mb,
+    round(qwa.last_tempseg_size / power(2,20), 1)  as last_tempseg_mb
+from
+    gv$sql_workarea qwa,
+    gv$sql_workarea_active waa
+where
+    qwa.inst_id = :Inst_id
+    and qwa.sql_id = :SQL_ID
+    and qwa.child_number = :SQL_CHILD#
+    and waa.inst_id (+) = qwa.inst_id
+    and waa.sql_id (+) = qwa.sql_id
+    and waa.sql_exec_id (+) = :Sql_exec_id
+    and waa.sql_exec_start (+) = to_date(:Sql_exec_start, 'YYYY-MM-DD HH24:MI:SS')
+    and waa.operation_id (+) = qwa.operation_id
+order by
+    qwa.operation_id]]></sql>
+                <binds>
+                    <bind id="Inst_id">
+                        <prompt><![CDATA[Inst_id]]></prompt>
+                        <tooltip><![CDATA[Inst_id]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Sid">
+                        <prompt><![CDATA[Sid]]></prompt>
+                        <tooltip><![CDATA[Sid]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="SQL_ID">
+                        <prompt><![CDATA[SQL_ID]]></prompt>
+                        <tooltip><![CDATA[SQL_ID]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="SQL_CHILD#">
+                        <prompt><![CDATA[SQL_CHILD#]]></prompt>
+                        <tooltip><![CDATA[SQL_CHILD#]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Sql_exec_id">
+                        <prompt><![CDATA[Sql_exec_id]]></prompt>
+                        <tooltip><![CDATA[Sql_exec_id]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                    <bind id="Sql_exec_start">
+                        <prompt><![CDATA[Sql_exec_start]]></prompt>
+                        <tooltip><![CDATA[Sql_exec_start]]></tooltip>
+                        <value><![CDATA[NULL_VALUE]]></value>
+                        <bracket><![CDATA[null]]></bracket>
+                    </bind>
+                </binds>
+            </query>
+        </display>
+        <display id="null" type="" style="Table" enable="true">
             <name><![CDATA[SQL Details]]></name>
             <description><![CDATA[]]></description>
             <tooltip><![CDATA[]]></tooltip>
@@ -3209,10 +3310,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -3230,20 +3332,23 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_reads,                     -- 12.2 and higher
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -3349,10 +3454,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -3370,20 +3476,23 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_reads,                     -- 12.2 and higher
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -3487,10 +3596,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -3508,20 +3618,23 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_reads,                     -- 12.2 and higher
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -3624,10 +3737,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -3645,19 +3759,22 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -3755,10 +3872,11 @@ order by
     a.exact_matching_signature, 
     a.force_matching_signature,
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -3776,19 +3894,22 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.is_obsolete,
     a.is_bind_sensitive,
     a.is_bind_aware,
@@ -3894,10 +4015,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -3915,20 +4037,23 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_reads,                     -- 12.2 and higher
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -4022,10 +4147,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -4043,20 +4169,23 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_reads,                     -- 12.2 and higher
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -4148,10 +4277,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -4169,20 +4299,23 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_reads,                     -- 12.2 and higher
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -4273,10 +4406,11 @@ order by
     a.is_resolved_adaptive_plan,        -- 12.1 and higher
     a.full_plan_hash_value,             -- 12.1 and higher
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -4294,19 +4428,22 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.im_scans,                         -- 12.1 and higher
     a.im_scan_bytes_uncompressed,       -- 12.1 and higher
     a.im_scan_bytes_inmemory,           -- 12.1 and higher
@@ -4392,10 +4529,11 @@ order by
     a.exact_matching_signature, 
     a.force_matching_signature,
     a.plan_hash_value,
+    a.optimizer_mode,
     a.executions,
     a.px_servers_executions     as px_execs,
-    a.fetches, 
     a.end_of_fetch_count        as eof_count,
+    round(a.fetches              / nullif(a.executions, 0), 1)                  as fetch_px,
     a.rows_processed,
     round(a.rows_processed       / nullif(a.executions, 0), 1)                  as rows_px,
     a.buffer_gets,
@@ -4413,19 +4551,22 @@ order by
     a.parsing_schema_name,
     b.command_name,
     a.sql_fulltext,
-    a.optimizer_mode,
-    a.sorts,
+    round(a.physical_read_requests  / nullif(a.executions, 0), 1)               as phys_read_req_px,
+    round(a.physical_read_bytes  / power(2,20) / nullif(a.executions, 0), 2)    as phys_read_mb_px,
+    round(a.physical_write_requests / nullif(a.executions, 0), 1)               as phys_write_req_px,
+    round(a.physical_write_bytes / power(2,20) / nullif(a.executions, 0), 2)    as phys_write_mb_px,
+    round(a.sorts                / nullif(a.executions, 0), 1)                  as sort_px,
     a.disk_reads,
     a.direct_writes,
-    a.physical_read_requests,
-    round(a.physical_read_bytes  / power(2,20), 2)  as phys_read_mb,
-    a.physical_write_requests,
-    round(a.physical_write_bytes / power(2,20), 2)  as phys_write_mb,
-    a.optimized_phy_read_requests,
-    a.io_interconnect_bytes,
-    a.io_cell_uncompressed_bytes,
-    a.io_cell_offload_eligible_bytes,
-    a.io_cell_offload_returned_bytes,
+    a.physical_read_requests                                     as phys_read_req,
+    round(a.physical_read_bytes  / power(2,20), 2)               as phys_read_mb,
+    a.physical_write_requests                                    as phys_write_req,
+    round(a.physical_write_bytes / power(2,20), 2)               as phys_write_mb,
+    a.optimized_phy_read_requests                                as optimized_phys_read_req,
+    round(a.io_interconnect_bytes          / power(2,20), 1)     as io_interconnect_mb,
+    round(a.io_cell_uncompressed_bytes     / power(2,20), 1)     as io_cell_uncompressed_mb,
+    round(a.io_cell_offload_eligible_bytes / power(2,20), 1)     as io_cell_offload_eligible_mb,
+    round(a.io_cell_offload_returned_bytes / power(2,20), 1)     as io_cell_offload_returned_mb,
     a.is_obsolete,
     a.is_bind_sensitive,
     a.is_bind_aware,

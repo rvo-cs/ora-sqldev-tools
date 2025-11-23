@@ -2336,7 +2336,7 @@ from
             where 
                 v.product like 'Oracle Database%' 
                 and rownum = 1
-            ) >= 19
+            ) >= 18
     union all
     select
         2 as rn, '## Unsufficient privilege for this action ##'
@@ -2350,10 +2350,10 @@ from
         where 
             v.product like 'Oracle Database%' 
             and rownum = 1
-        ) >= 19
+        ) >= 18
     union all
     select
-        3 as rn, '## Cancel SQL requires 19c or higher ##'
+        3 as rn, '## Cancel SQL is an 18c feature ##'
     from
         dual
     order by rn
@@ -2376,7 +2376,7 @@ from
             where 
                 v.product like 'Oracle Database%' 
                 and rownum = 1
-            ) >= 19
+            ) >= 18
     union all
     select
         2 as rn, '## Unsufficient privilege for this action ##'
@@ -2390,10 +2390,10 @@ from
         where 
             v.product like 'Oracle Database%' 
             and rownum = 1
-        ) >= 19
+        ) >= 18
     union all
     select
-        3 as rn, '## Cancel SQL requires 19c or higher ##'
+        3 as rn, '## Cancel SQL is an 18c feature ##'
     from
         dual
     order by rn

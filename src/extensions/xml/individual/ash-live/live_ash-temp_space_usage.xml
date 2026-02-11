@@ -31,7 +31,7 @@ temp_tbs as (
         sum(blocks) as blocks,
         sum(bytes) as bytes
     from
-        (select
+        (select distinct
             tmpf.con_id,
             tmpf.ts#,
             tmpf.rfile#,

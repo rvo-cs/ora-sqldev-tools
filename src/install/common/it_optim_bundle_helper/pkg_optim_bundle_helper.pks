@@ -31,20 +31,6 @@ create or replace package pkg_optim_bundle_helper authid current_user is
     subtype t_optim_bundle_descr is varchar2(50);
     subtype t_verbose_yes_or_no  is varchar2(40);
 
-    -- Record type for describing the content of the optimizer bundle
-    -- parameter file (bundlefcp_DBBP.xml)
-    --
-    type r_bundlefcp is record (
-        bundle_id           number,
-        bundle_description  varchar2(50),
-        bug_id              number,
-        fix_control_id      number,
-        bundle_value        number
-    );
-
-    type t_bundlefcp is table of r_bundlefcp;
-
-    
     -- Record types for comparison functions
 
     -- gv$system_fix_control vs parameters in SPFILE */
@@ -177,7 +163,7 @@ create or replace package pkg_optim_bundle_helper authid current_user is
     function optim_bundle_fixes (
         in_bundle_id in number default null
     ) 
-    return t_bundlefcp
+    return tab_bundlefcp
     pipelined;
     
     /*

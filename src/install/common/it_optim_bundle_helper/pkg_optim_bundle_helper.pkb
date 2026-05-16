@@ -20,7 +20,7 @@ create or replace package body pkg_optim_bundle_helper as
             in_session_serial# in number default null) return boolean;
 
     function optim_bundle_fixes_tab(in_bundle_id in number default null) 
-    return t_bundlefcp
+    return tab_bundlefcp
     is
         l_bundlefcp_bfile bfile;
         l_bundlefcp_clob  clob;
@@ -29,8 +29,9 @@ create or replace package body pkg_optim_bundle_helper as
         l_lang_ctx        number;
         l_warning_indic   number;
 
-        l_tab_bundlefcp   t_bundlefcp;
+        l_tab_bundlefcp   tab_bundlefcp;
     begin
+        l_tab_bundlefcp := new tab_bundlefcp();
         l_bundlefcp_bfile := bfilename(gc_bundlefcp_dir, gc_bundlefcp_fname);
         dbms_lob.open(l_bundlefcp_bfile);
         
@@ -53,31 +54,42 @@ create or replace package body pkg_optim_bundle_helper as
         
         dbms_lob.close(l_bundlefcp_bfile);
 
-        select
-            fcp.bundle_id, 
-            fcp.description, 
-            fcp.bug_id, 
-            fcp.fix_control, 
-            fcp.bundle_value
-        bulk collect into l_tab_bundlefcp
-        from
-            xmltable(
-                '/bundlefcp/bundle/fcbuglist/bug/fix_control' 
-                passing xmlparse(document l_bundlefcp_clob)
-                returning sequence by ref
-                columns
-                    bundle_id    number         path '../../../@id',
-                    description  varchar2(50)   path '../../../@description',
-                    bug_id       number         path '../@id',
-                    fix_control  number         path './text()',
-                    bundle_value number         path './@default_value'
-            ) fcp
-        where
-            in_bundle_id is null
-            or fcp.bundle_id <= in_bundle_id
-        order by
-            fcp.bundle_id,
-            fcp.bug_id;
+        for c in (
+            select 
+                fcp.bundle_id, 
+                fcp.description, 
+                fcp.bug_id, 
+                fcp.fix_control, 
+                fcp.bundle_value
+            from
+                xmltable(
+                    '/bundlefcp/bundle/fcbuglist/bug/fix_control' 
+                    passing xmlparse(document l_bundlefcp_clob)
+                    returning sequence by ref
+                    columns
+                        bundle_id    number         path '../../../@id',
+                        description  varchar2(50)   path '../../../@description',
+                        bug_id       number         path '../@id',
+                        fix_control  number         path './text()',
+                        bundle_value number         path './@default_value'
+                ) fcp
+            where
+                in_bundle_id is null
+                or fcp.bundle_id <= in_bundle_id
+            order by
+                fcp.bundle_id,
+                fcp.bug_id
+        )
+        loop
+            l_tab_bundlefcp.extend;
+            l_tab_bundlefcp(l_tab_bundlefcp.last) := new obj_bundlefcp(
+                    bundle_id          => c.bundle_id, 
+                    bundle_description => c.description, 
+                    bug_id             => c.bug_id, 
+                    fix_control_id     => c.fix_control, 
+                    bundle_value       => c.bundle_value
+                );
+        end loop;
             
         dbms_lob.freetemporary(l_bundlefcp_clob);
         
@@ -85,10 +97,10 @@ create or replace package body pkg_optim_bundle_helper as
     end optim_bundle_fixes_tab;
     
 
-    function optim_bundle_fixes(in_bundle_id in number default null) return t_bundlefcp
+    function optim_bundle_fixes(in_bundle_id in number default null) return tab_bundlefcp
     pipelined
     is
-        l_tab_bundlefcp t_bundlefcp;
+        l_tab_bundlefcp tab_bundlefcp;
     begin
         l_tab_bundlefcp := optim_bundle_fixes_tab(in_bundle_id);
         if l_tab_bundlefcp is not null then
@@ -107,7 +119,7 @@ create or replace package body pkg_optim_bundle_helper as
     is
         cursor c_cmp_sysfc_spfile (
             in_bundle_id         in  number, 
-            in_tab_optim_bundle  in  t_bundlefcp
+            in_tab_optim_bundle  in  tab_bundlefcp
         ) is
             with
             fc_spfile_instances as (
@@ -313,7 +325,7 @@ create or replace package body pkg_optim_bundle_helper as
     is
         cursor c_cmp_sysfc_syspar (
             in_bundle_id         in  number,
-            in_tab_optim_bundle  in  t_bundlefcp
+            in_tab_optim_bundle  in  tab_bundlefcp
         )
         is
             with
@@ -500,7 +512,7 @@ create or replace package body pkg_optim_bundle_helper as
     is
         cursor c_cmp_spp_syspar (
             in_bundle_id         in  number,
-            in_tab_optim_bundle  in  t_bundlefcp
+            in_tab_optim_bundle  in  tab_bundlefcp
         )
         is
             with
@@ -797,7 +809,7 @@ create or replace package body pkg_optim_bundle_helper as
     is
         cursor c_cmp_sesfc_sespar (
             in_bundle_id         in  number,
-            in_tab_optim_bundle  in  t_bundlefcp
+            in_tab_optim_bundle  in  tab_bundlefcp
         )
         is
             with
@@ -978,7 +990,7 @@ create or replace package body pkg_optim_bundle_helper as
             in_session_id        in  number,
             in_session_serial#   in  number,
             in_bundle_id         in  number,
-            in_tab_optim_bundle  in  t_bundlefcp
+            in_tab_optim_bundle  in  tab_bundlefcp
         )
         is
             with
@@ -1210,7 +1222,7 @@ create or replace package body pkg_optim_bundle_helper as
             in_session_id           in  number,
             in_session_serial#      in  number,
             in_bundle_id            in  number,
-            in_tab_optim_bundle     in  t_bundlefcp,
+            in_tab_optim_bundle     in  tab_bundlefcp,
             in_wt_optim_bundle      in  varchar2,
             in_wt_system_params     in  varchar2,
             in_wt_session_params    in  varchar2,

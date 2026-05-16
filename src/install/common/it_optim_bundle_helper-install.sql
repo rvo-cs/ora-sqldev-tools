@@ -41,6 +41,8 @@ alter session set current_schema = "&&def_fix_cntrl_hlpr_user";
 
 @@it_optim_bundle_helper/obj_fixctl.sql
 @@it_optim_bundle_helper/tab_fixctl.sql
+@@it_optim_bundle_helper/obj_bundlefcp.sql
+@@it_optim_bundle_helper/tab_bundlefcp.sql
 
 @@it_optim_bundle_helper/pkg_optim_bundle_helper.pks
 show errors

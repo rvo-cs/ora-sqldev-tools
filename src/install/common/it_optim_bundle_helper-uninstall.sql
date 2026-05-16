@@ -28,6 +28,8 @@ prompt ------------------------
 prompt
 
 drop package "&&def_fix_cntrl_hlpr_user".pkg_optim_bundle_helper;
+drop type "&&def_fix_cntrl_hlpr_user".tab_bundlefcp;
+drop type "&&def_fix_cntrl_hlpr_user".obj_bundlefcp;
 drop type "&&def_fix_cntrl_hlpr_user".tab_fixctl;
 drop type "&&def_fix_cntrl_hlpr_user".obj_fixctl;
 

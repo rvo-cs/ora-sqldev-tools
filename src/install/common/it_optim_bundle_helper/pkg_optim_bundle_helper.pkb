@@ -858,6 +858,7 @@ create or replace package body pkg_optim_bundle_helper as
                         name in ('_fix_control', '_fix_control_1', '_fix_control_2', '_fix_control_3',
                                  '_fix_control_4', '_fix_control_5', '_fix_control_6', '_fix_control_7',
                                  '_fix_control_8', '_fix_control_9')
+                        and inst_id = sys_context('USERENV', 'INSTANCE')
                     )
                 where
                     rn = 1
@@ -1307,8 +1308,6 @@ create or replace package body pkg_optim_bundle_helper as
             fc_session_parameter as (
                 /* parameters of the current session */
                 select
-                    inst_id,
-                    sid,
                     con_id,
                     to_number(fc_bugno_vc2)  as bugno,
                     case 
@@ -1325,8 +1324,6 @@ create or replace package body pkg_optim_bundle_helper as
                     update_comment
                 from
                     (select
-                        inst_id,
-                        to_number(sys_context('USERENV', 'SID')) as sid,
                         con_id,
                         substr(value, 1, instr(value, ':') - 1) as fc_bugno_vc2,
                         substr(value, instr(value, ':') + 1)    as fc_value_vc2,
@@ -1336,7 +1333,6 @@ create or replace package body pkg_optim_bundle_helper as
                         update_comment,
                         row_number() over (
                                 partition by
-                                    inst_id,
                                     con_id,
                                     substr(value, 1, instr(value, ':') - 1)
                                 order by
@@ -1350,6 +1346,7 @@ create or replace package body pkg_optim_bundle_helper as
                         name in ('_fix_control', '_fix_control_1', '_fix_control_2', '_fix_control_3',
                                  '_fix_control_4', '_fix_control_5', '_fix_control_6', '_fix_control_7',
                                  '_fix_control_8', '_fix_control_9')
+                        and inst_id = sys_context('USERENV', 'INSTANCE')
                     )
                 where
                     rn = 1

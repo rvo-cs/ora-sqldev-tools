@@ -66,7 +66,7 @@ column 3 clear
 column 4 clear
 set termout on
 
-@@copy_tracefile-settings
+@@copy_tracefile-settings.sql
 
 -- Sanity- and syntax-checking of script arguments: there should be
 -- at most 3 arguments, of the DIR=..., TRC=..., and DST=... form,
@@ -192,7 +192,7 @@ column errmsg        clear
 column script_suffix clear
 set termout on
 
-@@copy_tracefile/copy_tracefile&&def_script_suffix
+@@copy_tracefile/copy_tracefile&&def_script_suffix..sql
 
 undefine 1
 undefine 2

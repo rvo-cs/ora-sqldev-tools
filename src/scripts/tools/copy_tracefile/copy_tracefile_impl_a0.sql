@@ -10,6 +10,6 @@ script
 set termout on
 whenever sqlerror exit failure rollback
 
-@@copy_tracefile_impl_&&def_script_suffix
+@@copy_tracefile_impl_&&def_script_suffix..sql
 
 undefine def_script_suffix

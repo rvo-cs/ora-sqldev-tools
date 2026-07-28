@@ -51,7 +51,7 @@ from
 column script_suffix clear
 set termout on
 
-@@copy_tracefile_impl_&&def_script_suffix
+@@copy_tracefile_impl_&&def_script_suffix..sql
 
 undefine def_confirm
 undefine def_script_suffix

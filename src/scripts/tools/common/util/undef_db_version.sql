@@ -1,5 +1,9 @@
+undefine def_db_version_major
+undefine def_db_version_minor
 undefine def_db_version_ge_12
+undefine def_db_version_lt_12_2
 undefine def_db_version_ge_12_2
+undefine def_db_version_lt_18
 undefine def_db_version_ge_18
 undefine def_db_version_ge_19
 undefine def_db_version_ge_21

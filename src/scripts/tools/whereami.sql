@@ -19,6 +19,7 @@ define def_inst_num         = ""
 define def_instance_info    = ""
 define def_session_id       = ""
 define def_con_name         = ""
+define def_db_service_name  = ""
 define def_session_user     = ""
 define def_current_schema   = ""
 define def_diag_trace       = ""
@@ -233,6 +234,7 @@ column session_id      noprint  new_value def_session_id
 column session_user    noprint  new_value def_session_user
 column current_schema  noprint  new_value def_current_schema
 column con_name        noprint  new_value def_con_name
+column db_service_name noprint  new_value def_db_service_name
 column db_info         noprint  new_value def_db_info
 column db_is_not_open  noprint  new_value def_db_not_open
 column db_role_plus    noprint  new_value def_db_role_plus
@@ -249,6 +251,7 @@ select
     sys_context('USERENV', 'SESSION_USER')      as session_user,
     sys_context('USERENV', 'CURRENT_SCHEMA')    as current_schema,
     nvl(:CON_NAME, '--N/A--')                   as con_name,
+    sys_context('USERENV', 'SERVICE_NAME')      as db_service_name,
     nvl2(coalesce(:DB_VERSION, :CON_ID), '(', null)
         || case 
                when :DB_VERSION is not null then
@@ -329,6 +332,7 @@ prompt Instance        : &&def_inst_name  &&def_instance_info
 prompt Inst#           : &&def_inst_num
 prompt Session id.     : &&def_session_id
 prompt Container Name  : &&def_con_name
+prompt Service Name    : &&def_db_service_name
 prompt Session user    : &&def_session_user
 prompt Current schema  : &&def_current_schema
 prompt Deft trace file : &&def_trace_file
@@ -374,6 +378,7 @@ column inst_num        clear
 column session_id      clear
 column session_user    clear
 column current_schema  clear
+column db_service_name clear
 column con_name        clear
 column db_info         clear
 column db_is_not_open  clear
@@ -390,6 +395,7 @@ undefine def_session_id
 undefine def_session_user
 undefine def_current_schema
 undefine def_con_name
+undefine def_db_service_name
 undefine def_db_info
 undefine def_db_not_open
 undefine def_db_role_plus

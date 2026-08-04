@@ -1,0 +1,7 @@
+undefine def_sqlcl_client_unknown
+undefine def_sqlcl_client_errmsg
+undefine def_sqlcl_client
+undefine def_sqlcl_client_version
+undefine def_sqlcl_client_version_major
+undefine def_sqlcl_client_version_minor
+

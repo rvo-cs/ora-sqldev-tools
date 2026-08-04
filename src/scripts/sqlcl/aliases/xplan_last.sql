@@ -9,16 +9,7 @@ script
     ctx.getMap().put("DEF_XPLAN_LAST_FEEDBACK_SQLID", ctx.getFeedbackSQLID().toString())
     ctx.getMap().put("DEF_XPLAN_LAST_FEEDBACK", ctx.getFeedback().toString())
     /* append -qbregistry to the plan format automatically, if using 19c or higher */
-    var dbVersionStr = ctx.getMap().get("_O_RELEASE")
-    if (dbVersionStr == null) {
-        /* workaround for _O_RELEASE being defined seemingly lazily */
-        ctx.setSupressOutput(true)
-        sqlcl.setStmt('define _O_RELEASE')
-        sqlcl.run()
-        ctx.setSupressOutput(false)
-        dbVersionStr = ctx.getMap().get("_O_RELEASE")
-    }
-    var dbVersionMajor = parseInt(dbVersionStr.substring(0, 2))
+    var dbVersionMajor = parseInt(ctx.getMap().get("ORA_DB_VERSION_MAJOR"))
     if (dbVersionMajor >= 19) {
         var planFormat = ctx.getMap().get("DEF_XPLAN_LAST_FORMAT")
         if (planFormat.search(/[+\-]qbregistry\b/i) < 0) {

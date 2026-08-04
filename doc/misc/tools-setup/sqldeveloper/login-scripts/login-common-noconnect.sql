@@ -12,6 +12,7 @@ define tpt_dir = "F:\Products\Contrib\git-src\tpt-oracle"
 -- Root dir. of my own local Git repository for SQL Developer-related tools
 define rvocs_orasqldevtools_dir = "E:\Home\romain\projets\git-src\ora-sqldev-tools"
 
+@@sqlcl-version-settings
 @@login-common-aliases
 
 -- Must CD somewhere, otherwise the SPOOL temp.sql, CALL temp.sql pattern won't work

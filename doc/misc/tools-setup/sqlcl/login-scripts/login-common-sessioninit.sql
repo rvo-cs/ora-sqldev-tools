@@ -40,6 +40,11 @@ alter session set plsql_warnings = 'ENABLE:ALL,DISABLE:6009';
 /* Other settings */
 /*----------------*/
 
+@&&rvocs_orasqldevtools_dir/src/scripts/tools/common/util/def_db_version
+define ora_db_version_major = "&&def_db_version_major"
+define ora_db_version_minor = "&&def_db_version_minor"
+@&&rvocs_orasqldevtools_dir/src/scripts/tools/common/util/undef_db_version
+
 @@plscope_settings_all
 @@disable_px_on_cdb_views
 @@ddl_transform_params

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 R.Vassallo
+ * SPDX-FileCopyrightText: 2026 R.Vassallo
  * SPDX-License-Identifier: BSD Zero Clause License
  */
 
@@ -7,26 +7,32 @@
     sqlcl_aliases.sql
 
     DESCRIPTION
-        This script sets SQLcl aliases for other SQL scripts here.
-
-    PREREQUISITE
-        The following substitution variable must be defined and
-        point to the _root_ directory of your working copy of the
-        ora-sqldev-tools Git repository.
-        
-        DEFINE RVOCS_ORASQLDEVTOOLS_DIR = "path to working copy root dir."
-
-        E.g. &RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/sqlcl_aliases.sql is the
-        full path to this script.
-        
+        Depending on the values of the ORA_SQLCL_VERSION_MAJOR and
+        ORA_SQLCL_VERSION_MINOR substitution variables, this script
+        calls the relevant alias creation scripts for the current
+        version of SQLcl.
  */
 
-set define off
-alias group=rvo-cs show_system_stats=@&RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/config/system_stats_report;
-alias desc show_system_stats : a report showing the state of system statistics + related optimizer parameters
-set define on
+define def_script_suffix = "none"
 
-@@sqlcl/aliases/sql_trace
-@@sqlcl/aliases/sql_optimizer_trace
-@@sqlcl/aliases/sql_compiler_trace
-@@sqlcl/aliases/xplan_last
+set termout off
+set define off
+
+script
+    var sqlclVersMajor = ctx.getMap().get("ORA_SQLCL_CLIENT_VERSION_MAJOR")
+    var sqlclVersMinor = ctx.getMap().get("ORA_SQLCL_CLIENT_VERSION_MINOR")
+    if (sqlclVersMajor > 23 || (sqlclVersMajor = 23 && sqlclVersMinor >= 4)) {
+        ctx.getMap().put("DEF_SCRIPT_SUFFIX", "post_23_4")
+    } else if (sqlclVersMajor < 23 || (sqlclVersMajor = 23 && sqlclVersMinor < 4)) {
+        ctx.getMap().put("DEF_SCRIPT_SUFFIX", "pre_23_4")
+    } else {
+        ctx.getMap().put("DEF_SCRIPT_SUFFIX", "none")
+    }
+/
+
+set define on
+set termout on
+
+@@sqlcl_aliases-&&def_script_suffix..sql
+
+undefine def_script_suffix

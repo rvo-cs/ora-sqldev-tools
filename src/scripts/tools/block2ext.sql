@@ -1,13 +1,14 @@
 /*
-dbi-block2ext.sql
+block2ext.sql
 
 PURPOSE
     Finds the extent (or free extent) corresponding to the file id 
     and block id specified as arguments.
 
 ORIGIN
-    Almost straight from the original query published by F. Pachot in:
-    https://blog.dbi-services.com/efficiently-query-dba_extents-for-file_id-block_id/
+    Derived from the original query published by F. Pachot in:
+      . https://db-blog.web.cern.ch/blog/franck-pachot/2018-09-efficiently-query-dbaextents-fileid-blockid
+      . https://blog.dbi-services.com/efficiently-query-dba_extents-for-file_id-block_id/
 
 ################################################################
 ###  IMPORTANT:                                              ### 
@@ -62,7 +63,7 @@ d as ( /* DMT extents ts#, segfile#, segblock# */
     from 
         sys.uet$
 ),
-s as ( /* segment information for the tablespace that contains afn file */
+s as ( /* segment information + ts blocksize */
     select /*+ materialized */
         s.ts#                       as segtsn,
         s.file#                     as segrfn,

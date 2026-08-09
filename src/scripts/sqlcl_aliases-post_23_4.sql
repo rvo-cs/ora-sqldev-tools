@@ -18,6 +18,12 @@ alias -silent -group rvo-cs -desc "show_system_stats : a report showing the stat
 @&RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/config/system_stats_report
 '
 /
+
+-- Workaround for ansiconsole being disabled in SQLcl 26.2 after column ... noprint
+alias -silent -group rvo-cs -desc "fix_ctx_columnmap : removes cleared columns from ctx.getColumnMap()" fix_ctx_columnmap=q'
+@&RVOCS_ORASQLDEVTOOLS_DIR/src/scripts/sqlcl/misc/fix_ctx_columnmap.sql
+'
+/
 set define on
 
 @@sqlcl/aliases/sql_trace-post_23_4

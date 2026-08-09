@@ -49,3 +49,10 @@ define ora_db_version_minor = "&&def_db_version_minor"
 @@disable_px_on_cdb_views
 @@ddl_transform_params
 
+
+/*----------------------------------------------------------------------------------*/
+/* Workaround for ansiconsole being disabled in SQLcl 26.2 after column ... noprint */
+/*----------------------------------------------------------------------------------*/
+
+@&&rvocs_orasqldevtools_dir/src/scripts/sqlcl/misc/fix_ctx_columnmap.sql
+

@@ -14,6 +14,7 @@ set longchunksize 200000
 
 set history nofails
 set history filter none
+set history default secret
 
 define _EDITOR="C:\Program Files (x86)\Vim\vim74\gvim.exe"
 

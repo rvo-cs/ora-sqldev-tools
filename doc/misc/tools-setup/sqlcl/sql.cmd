@@ -29,20 +29,21 @@ REM Remarks:
 REM     a) Releases of SQLcl "stand-alone" 22.x and higher
 REM        require the JDK 11 or 17 (SQLcl 21.4 was the last
 REM        release using Java 8); SQLcl 25.2 and higher require
-REM        the JDK 17 or 21.
+REM        the JDK 17 or 21; SQLcl 26.2 and higher also support
+REM        the JDK 25.
 REM
 REM     b) JavaScript support requires GraalVM for Java 17,
 REM        with the JavaScript runtime plugin (GraalVM has
-REM        been supported since SQLcl 23.3).
+REM        been supported since SQLcl 23.3), or the GraalJS
+REM        JavaScript engine module.
 REM
 REM     c) in general, the JDK shipped with SQL Developer in the
 REM        "with JDK included" bundle can be used, provided it's
 REM        recent enough, and JavaScript support is not needed.
-REM        (If JavaScript is required, then GraalVM is currently
-REM        the only option.)
+REM        (Please see above if JavaScript is required.)
 REM -------------------------------------------------------------
 
-SET JAVA_HOME=F:\Produits\Java\Oracle\graalvm-jdk-17.0.13+10.1
+SET JAVA_HOME=F:\Produits\Java\OpenJDK\jdk-25.0.4.1+1
 
 REM =============================================================
 REM SQL_HOME folder
@@ -52,7 +53,7 @@ REM such that %SQL_HOME%\bin\sql.exe is the included binary
 REM executable for Windows x64.
 REM -------------------------------------------------------------
 
-SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-25.2.2.199.0918
+SET SQL_HOME=F:\Produits\Oracle\SQLcl\sqlcl\sqlcl-26.2.1.209.2118
 
 REM =============================================================
 REM Additions to SQLPATH
@@ -135,12 +136,6 @@ CHCP 65001 >NUL 2>&1
 REM ------------------
 REM Set JVM arguments
 
-SET JVM_OPTS=-Djava.awt.headless=true -Dfile.encoding=UTF-8
-SET JVM_OPTS=%JVM_OPTS% -Dpolyglot.engine.WarnInterpreterOnly=false
-SET JVM_OPTS=%JVM_OPTS% -Xss100m
-SET JVM_OPTS=%JVM_OPTS% -XX:+IgnoreUnrecognizedVMOptions
-REM SET JVM_OPTS=%JVM_OPTS% -XX:+PrintFlagsFinal
-
 IF DEFINED SQLCL_JAVA_HEAPSIZE_MIN_MAX (
     SET JVM_OPTS=%JVM_OPTS% %SQLCL_JAVA_HEAPSIZE_MIN_MAX%
     SET SQLCL_JAVA_HEAPSIZE_MIN_MAX=
@@ -154,16 +149,45 @@ IF DEFINED SQLCL_JAVA_IO_TMPDIR (
     SET SQLCL_JAVA_IO_TMPDIR=
 )
 
+SET JVM_OPTS=%JVM_OPTS% -Xss100m
+
+REM SET JVM_OPTS=%JVM_OPTS% -XX:+IgnoreUnrecognizedVMOptions
+
+SET JVM_OPTS=%JVM_OPTS% -Dfile.encoding=UTF-8
+SET JVM_OPTS=%JVM_OPTS% -Djava.awt.headless=true
+
+REM ---vvvv--- GraalJS JavaScript engine [begin] ---vvvv---
+REM Add the GraalJS engine
+SET JVM_OPTS=%JVM_OPTS% --module-path F:\Produits\Java\GraalJS\lib
+SET JVM_OPTS=%JVM_OPTS% --add-modules org.graalvm.polyglot
+SET JVM_OPTS=%JVM_OPTS% --add-modules org.graalvm.js
+
+REM Silence GraalJS warnings
+SET JVM_OPTS=%JVM_OPTS% --enable-native-access=org.graalvm.truffle
+
+REM Required if using JDK 25
+SET JVM_OPTS=%JVM_OPTS% --sun-misc-unsafe-memory-access=allow
+
+REM Silence restricted access warning
+SET JVM_OPTS=%JVM_OPTS% --enable-native-access=ALL-UNNAMED
+
+REM Inhibit Nashorn deprecation warning
+SET JVM_OPTS=%JVM_OPTS% -Dnashorn.args=--no-deprecation-warning
+
+REM Enable Graal scripts
+SET JVM_OPTS=%JVM_OPTS% -Dpolyglot.js.nashorn-compat=true
+
+REM Silence Polyglot complaints about lack of native compilation for JavaScript
+SET JVM_OPTS=%JVM_OPTS% -Dpolyglot.engine.WarnInterpreterOnly=false
+REM ---^^^^--- GraalJS JavaScript engine [end] ---^^^^---
+
 REM Inhibit warnings about illegal reflective access when reading the Windows registry
 SET JVM_OPTS=%JVM_OPTS% --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED
 REM ... and about reflective access by JLine to private static class of ProcessBuilder
 SET JVM_OPTS=%JVM_OPTS% --add-opens=java.base/java.lang=ALL-UNNAMED
 
-REM Inhibit Nashorn deprecation warning
-SET JVM_OPTS=%JVM_OPTS% -Dnashorn.args=--no-deprecation-warning
-
-REM Enable graal scripts
-SET JVM_OPTS=%JVM_OPTS% -Dpolyglot.js.nashorn-compat=true
+REM Instruct the VM to use the System proxies
+SET JVM_OPTS=%JVM_OPTS% -Djava.net.useSystemProxies=true
 
 REM Force using the supplied JDBC thin driver (SQLcl >= 24.2)
 SET JVM_OPTS=%JVM_OPTS% -Doracle.sqlcl.skipOracleHome=true
@@ -177,6 +201,7 @@ SET JVM_OPTS=%JVM_OPTS% -Dsqlcl.home=%SQL_HOME%
 REM Set logging configuration
 IF DEFINED LOGGING_CONFIG (
     SET JVM_OPTS=%JVM_OPTS% -Djava.util.logging.config.file=%LOGGING_CONFIG%
+    SET LOGGING_CONFIG=
 )
 
 REM -----------------------
